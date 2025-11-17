@@ -223,3 +223,263 @@ export class LightningBoltWeapon extends Weapon {
     });
   }
 }
+
+/**
+ * Orbital Weapon - Rotates around player, damages on contact
+ */
+export class OrbitalWeapon {
+  private scene: Phaser.Scene;
+  private player: Player;
+  private orbitals: Phaser.GameObjects.Arc[] = [];
+  private config: WeaponConfig;
+  private angle = 0;
+  private orbitRadius = 80;
+  private numOrbitals = 3;
+
+  constructor(scene: Phaser.Scene, player: Player) {
+    this.scene = scene;
+    this.player = player;
+
+    this.config = {
+      name: 'Orbital Blades',
+      damage: 20,
+      cooldown: 100, // Damage tick rate
+      range: 100,
+      projectileSpeed: 0,
+      level: 1
+    };
+
+    // Create orbitals
+    for (let i = 0; i < this.numOrbitals; i++) {
+      const orbital = scene.add.circle(0, 0, 12, 0x00ffff);
+      scene.physics.add.existing(orbital);
+      this.orbitals.push(orbital);
+    }
+  }
+
+  update(time: number, delta: number): void {
+    // Rotate orbitals
+    this.angle += (delta / 1000) * 2; // 2 radians per second
+
+    this.orbitals.forEach((orbital, index) => {
+      const angleOffset = (Math.PI * 2 / this.numOrbitals) * index;
+      const currentAngle = this.angle + angleOffset;
+
+      const x = this.player.x + Math.cos(currentAngle) * this.orbitRadius;
+      const y = this.player.y + Math.sin(currentAngle) * this.orbitRadius;
+
+      orbital.setPosition(x, y);
+
+      // Check collision with enemies
+      this.checkEnemyCollision(orbital);
+    });
+  }
+
+  private checkEnemyCollision(orbital: Phaser.GameObjects.Arc): void {
+    const enemies = this.getActiveEnemies();
+
+    enemies.forEach(enemy => {
+      const distance = Phaser.Math.Distance.Between(
+        orbital.x,
+        orbital.y,
+        enemy.x,
+        enemy.y
+      );
+
+      if (distance < 30) {
+        enemy.takeDamage(this.config.damage);
+
+        // Flash effect
+        orbital.setAlpha(0.5);
+        this.scene.time.delayedCall(50, () => {
+          orbital.setAlpha(1);
+        });
+      }
+    });
+  }
+
+  private getActiveEnemies(): any[] {
+    const enemyGroup = this.scene.data.get('enemyGroup') as Phaser.GameObjects.Group;
+    if (!enemyGroup) return [];
+
+    return enemyGroup.getChildren()
+      .filter((child: any) => child.isActive);
+  }
+
+  levelUp(): void {
+    this.config.level++;
+    this.config.damage = Math.floor(this.config.damage * 1.2);
+    this.orbitRadius = Math.min(150, this.orbitRadius + 10);
+
+    // Add more orbitals at higher levels
+    if (this.config.level % 3 === 0 && this.numOrbitals < 8) {
+      this.numOrbitals++;
+      const orbital = this.scene.add.circle(0, 0, 12, 0x00ffff);
+      this.scene.physics.add.existing(orbital);
+      this.orbitals.push(orbital);
+    }
+  }
+
+  destroy(): void {
+    this.orbitals.forEach(o => o.destroy());
+    this.orbitals = [];
+  }
+}
+
+/**
+ * Area of Effect Weapon - Explodes in an area
+ */
+export class AoEWeapon extends Weapon {
+  constructor(scene: Phaser.Scene, player: Player) {
+    super(scene, player, {
+      name: 'Explosion',
+      damage: 40,
+      cooldown: 3000, // 3 seconds
+      range: 250,
+      projectileSpeed: 0,
+      level: 1
+    });
+  }
+
+  protected fire(target: any): void {
+    // Don't fire projectiles, create explosion at target location
+
+    // Explosion visual
+    const explosion = this.scene.add.circle(target.x, target.y, 10, 0xff6600, 0.8);
+
+    // Animate explosion
+    this.scene.tweens.add({
+      targets: explosion,
+      radius: this.config.range,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => {
+        explosion.destroy();
+      }
+    });
+
+    // Damage all enemies in range
+    const enemies = this.getActiveEnemies();
+    enemies.forEach(enemy => {
+      const distance = Phaser.Math.Distance.Between(
+        target.x,
+        target.y,
+        enemy.x,
+        enemy.y
+      );
+
+      if (distance <= this.config.range) {
+        enemy.takeDamage(this.config.damage);
+      }
+    });
+  }
+}
+
+/**
+ * Beam Weapon - Continuous laser beam
+ */
+export class BeamWeapon {
+  private scene: Phaser.Scene;
+  private player: Player;
+  private config: WeaponConfig;
+  private beam?: Phaser.GameObjects.Line;
+  private lastDamageTime = 0;
+  private currentTarget?: any;
+
+  constructor(scene: Phaser.Scene, player: Player) {
+    this.scene = scene;
+    this.player = player;
+
+    this.config = {
+      name: 'Laser Beam',
+      damage: 5, // Per tick
+      cooldown: 100, // Damage tick rate
+      range: 400,
+      projectileSpeed: 0,
+      level: 1
+    };
+
+    // Create beam line
+    this.beam = scene.add.line(0, 0, 0, 0, 0, 0, 0xff0000, 0);
+    this.beam.setLineWidth(3);
+    this.beam.setDepth(10);
+  }
+
+  update(time: number, delta: number): void {
+    // Find closest enemy
+    const target = this.findClosestEnemy();
+
+    if (target) {
+      this.currentTarget = target;
+
+      // Check range
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        target.x,
+        target.y
+      );
+
+      if (distance <= this.config.range) {
+        // Show beam
+        this.beam?.setAlpha(0.8);
+        this.beam?.setTo(this.player.x, this.player.y, target.x, target.y);
+
+        // Apply damage
+        if (time - this.lastDamageTime >= this.config.cooldown) {
+          target.takeDamage(this.config.damage);
+          this.lastDamageTime = time;
+
+          // Beam flash effect
+          this.beam?.setAlpha(1);
+        }
+      } else {
+        this.beam?.setAlpha(0);
+      }
+    } else {
+      this.beam?.setAlpha(0);
+    }
+  }
+
+  private findClosestEnemy(): any | null {
+    const enemies = this.getActiveEnemies();
+    if (enemies.length === 0) return null;
+
+    let closest: any | null = null;
+    let closestDistance = Infinity;
+
+    enemies.forEach(enemy => {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        enemy.x,
+        enemy.y
+      );
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closest = enemy;
+      }
+    });
+
+    return closest;
+  }
+
+  private getActiveEnemies(): any[] {
+    const enemyGroup = this.scene.data.get('enemyGroup') as Phaser.GameObjects.Group;
+    if (!enemyGroup) return [];
+
+    return enemyGroup.getChildren()
+      .filter((child: any) => child.isActive);
+  }
+
+  levelUp(): void {
+    this.config.level++;
+    this.config.damage = Math.floor(this.config.damage * 1.3);
+    this.config.range = Math.min(600, this.config.range + 50);
+  }
+
+  destroy(): void {
+    this.beam?.destroy();
+  }
+}
