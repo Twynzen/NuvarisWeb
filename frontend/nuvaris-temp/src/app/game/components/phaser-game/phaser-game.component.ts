@@ -3,6 +3,9 @@ import * as Phaser from 'phaser';
 import { GameScene } from '../../scenes/game.scene';
 import { LevelUpScene } from '../../scenes/level-up.scene';
 
+import { MenuScene } from '../../scenes/menu.scene';
+import { CharacterSelectionScene } from '../../scenes/character-selection.scene';
+
 @Component({
   selector: 'app-phaser-game',
   templateUrl: './phaser-game.component.html',
@@ -42,7 +45,7 @@ export class PhaserGameComponent implements OnInit, AfterViewInit, OnDestroy {
     },
     canvas: undefined,
     canvasStyle: 'display: block; width: 100%; height: 100%;',
-    scene: [GameScene, LevelUpScene]
+    scene: [MenuScene, CharacterSelectionScene, GameScene, LevelUpScene]
   };
 
   constructor(private ngZone: NgZone) { }

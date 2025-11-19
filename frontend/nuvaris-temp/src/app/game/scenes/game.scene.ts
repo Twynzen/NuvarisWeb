@@ -70,7 +70,7 @@ export class GameScene extends Phaser.Scene {
     this.audioManager.preloadAudio(this.load);
   }
 
-  create(): void {
+  create(data: { character?: any }): void {
     const { width, height } = this.cameras.main;
     this.gameStartTime = this.time.now;
 
@@ -79,6 +79,21 @@ export class GameScene extends Phaser.Scene {
 
     // Create player
     this.player = new Player(this, width / 2, height / 2);
+
+    // Apply character stats if available
+    if (data && data.character) {
+      const char = data.character;
+      console.log(`🎮 Playing as: ${char.name}`);
+
+      // Apply stats multipliers based on 1-5 scale (3 is baseline)
+      this.player.maxHealth *= (char.stats.health / 3);
+      this.player.health = this.player.maxHealth;
+      this.player.speed *= (char.stats.speed / 3);
+      this.player.damage *= (char.stats.damage / 3);
+
+      // Visual flair (tint)
+      // this.player.setTint(char.color); 
+    }
 
     // Create systems
     this.particleManager = new ParticleManager(this);
