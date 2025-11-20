@@ -114,6 +114,43 @@ export class ParticleManager {
   }
 
   /**
+   * Create character-specific projectile trail effect
+   */
+  createProjectileTrail(x: number, y: number, characterId: string): void {
+    // Determine color based on character
+    let color: number;
+    switch (characterId) {
+      case 'arcadio':
+        color = 0xff0000; // Red
+        break;
+      case 'lars':
+        color = 0x1a237e; // Dark blue
+        break;
+      case 'yurany':
+        color = 0xffffff; // White
+        break;
+      default:
+        color = 0x00ffff; // Default cyan
+    }
+
+    // Create multiple particles for a richer effect
+    for (let i = 0; i < 3; i++) {
+      const offsetX = Phaser.Math.Between(-3, 3);
+      const offsetY = Phaser.Math.Between(-3, 3);
+      const particle = this.scene.add.circle(x + offsetX, y + offsetY, Phaser.Math.Between(2, 5), color, 0.7);
+
+      this.scene.tweens.add({
+        targets: particle,
+        alpha: 0,
+        scale: 0,
+        duration: 300,
+        delay: i * 30,
+        onComplete: () => particle.destroy()
+      });
+    }
+  }
+
+  /**
    * Create blood splatter
    */
   createBloodSplatter(x: number, y: number): void {

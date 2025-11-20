@@ -57,19 +57,30 @@ export class XPManager {
    * Get gem from pool
    */
   private getGemFromPool(): XPGem | null {
-    // Find inactive gem
-    const inactive = this.gemPool.getChildren()
-      .find(child => child instanceof XPGem && !child.isActive) as XPGem | undefined;
-
-    if (inactive) {
-      return inactive;
+    // Safety check - ensure pool exists and is valid
+    if (!this.gemPool || typeof this.gemPool.getChildren !== 'function') {
+      console.warn('GemPool is invalid or destroyed, cannot get gem');
+      return null;
     }
 
-    // Create new if pool not full
-    if (this.gemPool.getLength() < this.gemPool.maxSize!) {
-      const gem = new XPGem(this.scene, 0, 0);
-      this.gemPool.add(gem);
-      return gem;
+    try {
+      // Find inactive gem
+      const inactive = this.gemPool.getChildren()
+        .find(child => child instanceof XPGem && !child.isActive) as XPGem | undefined;
+
+      if (inactive) {
+        return inactive;
+      }
+
+      // Create new if pool not full
+      if (this.gemPool.getLength() < this.gemPool.maxSize!) {
+        const gem = new XPGem(this.scene, 0, 0);
+        this.gemPool.add(gem);
+        return gem;
+      }
+    } catch (error) {
+      console.error('Error getting gem from pool:', error);
+      return null;
     }
 
     return null;
@@ -148,6 +159,9 @@ export class XPManager {
    * Get active gems
    */
   getActiveGems(): XPGem[] {
+    if (!this.gemPool || typeof this.gemPool.getChildren !== 'function') {
+      return [];
+    }
     return this.gemPool.getChildren()
       .filter(child => child instanceof XPGem && child.isActive) as XPGem[];
   }

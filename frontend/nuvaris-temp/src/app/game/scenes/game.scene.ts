@@ -74,6 +74,13 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     this.gameStartTime = this.time.now;
 
+    // Ensure physics is active (in case we're restarting after game over)
+    this.physics.resume();
+
+    // Reset game over state
+    this.isGameOver = false;
+    this.isPaused = false;
+
     // Detect mobile
     this.isMobile = this.sys.game.device.os.android || this.sys.game.device.os.iOS;
 
@@ -85,12 +92,13 @@ export class GameScene extends Phaser.Scene {
 
     // Create player at valid position
     const startPos = this.labGenerator.getRandomFloorPosition();
-    this.player = new Player(this, startPos.x, startPos.y);
+    const characterId = (data && data.character && data.character.id) ? data.character.id : 'arcadio';
+    this.player = new Player(this, startPos.x, startPos.y, characterId);
 
     // Apply character stats if available
     if (data && data.character) {
       const char = data.character;
-      console.log(`🎮 Playing as: ${char.name}`);
+      console.log(`🎮 Playing as: ${char.name} (${char.id})`);
 
       // Apply stats multipliers based on 1-5 scale (3 is baseline)
       this.player.maxHealth *= (char.stats.health / 3);
@@ -188,8 +196,8 @@ export class GameScene extends Phaser.Scene {
     // Apply damage
     const died = enemy.takeDamage(projectile.damage);
 
-    // Hit effect
-    this.particleManager.createHitEffect(enemy.x, enemy.y, 0xffff00);
+    // Hit effect - use character-specific color
+    this.particleManager.createHitEffect(enemy.x, enemy.y, projectile.particleColor);
 
     if (died) {
       this.particleManager.createBloodSplatter(enemy.x, enemy.y);
@@ -408,7 +416,7 @@ export class GameScene extends Phaser.Scene {
             enemy.y
           );
 
-          if (distance < 20) {
+          if (distance < 60) { // Increased from 20 to account for larger sprites
             this.onProjectileHitEnemy(projectile, enemy);
           }
         });
@@ -761,7 +769,7 @@ export class GameScene extends Phaser.Scene {
 
     // Show "YOU DIED" text
     const { width, height } = this.cameras.main;
-    const text = this.add.text(width / 2, height / 2 - 50, 'YOU DIED', {
+    const text = this.add.text(width / 2, height / 2 - 150, 'YOU DIED', {
       fontFamily: '"Rubik Glitch", cursive',
       fontSize: '96px',
       color: '#ff0000',
@@ -773,11 +781,30 @@ export class GameScene extends Phaser.Scene {
     text.setScrollFactor(0);
     text.setDepth(2000);
 
+    // Show dead character sprite
+    const deadSprite = this.add.sprite(
+      width / 2,
+      height / 2,
+      `${this.player.characterId}-dead`
+    );
+    deadSprite.setDisplaySize(200, 200); // Fixed size for death screen
+    deadSprite.setScrollFactor(0);
+    deadSprite.setDepth(2000);
+    deadSprite.setAlpha(0);
+
+    // Fade in the dead sprite
+    this.tweens.add({
+      targets: deadSprite,
+      alpha: 1,
+      duration: 1000,
+      ease: 'Power2'
+    });
+
     // Restart Button
     const btnWidth = 240;
     const btnHeight = 60;
     const btnX = width / 2;
-    const btnY = height / 2 + 80;
+    const btnY = height / 2 + 150;
 
     const btnContainer = this.add.container(btnX, btnY);
     btnContainer.setScrollFactor(0);

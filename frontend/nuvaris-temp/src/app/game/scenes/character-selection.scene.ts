@@ -125,25 +125,33 @@ export class CharacterSelectionScene extends Phaser.Scene {
         bg.setStrokeStyle(2, 0x444444);
         container.add(bg);
 
-        // Character Silhouette (Placeholder)
-        // We'll use a simple shape for now, but style it "gothic"
-        const silhouette = this.add.graphics();
-        silhouette.fillStyle(0xffffff, 0.1);
+        // Character Concept Art
+        const conceptKey = `${char.id}-concept`;
+        // Check if texture exists, otherwise fallback to shape (safety)
+        if (this.textures.exists(conceptKey)) {
+            const image = this.add.image(0, -50, conceptKey);
 
-        if (char.id === 'lars') {
-            // Boxy, sturdy
-            silhouette.fillRect(-40, -100, 80, 120);
-        } else if (char.id === 'arcadio') {
-            // Tall, thin
-            silhouette.fillTriangle(0, -120, -40, 20, 40, 20);
+            // Scale to fit width, maintaining aspect ratio
+            const scale = (width - 20) / image.width;
+            image.setScale(scale);
+
+            // Crop or mask if too tall? For now just let it fit.
+            // Actually, let's limit height to avoid overlapping text
+            if (image.displayHeight > 200) {
+                image.setDisplaySize(image.displayWidth * (200 / image.displayHeight), 200);
+            }
+
+            container.add(image);
         } else {
-            // Small, agile
-            silhouette.fillCircle(0, -40, 50);
+            // Fallback Shape
+            const silhouette = this.add.graphics();
+            silhouette.fillStyle(0xffffff, 0.1);
+            silhouette.fillRect(-40, -100, 80, 120);
+            container.add(silhouette);
         }
-        container.add(silhouette);
 
         // Name
-        const nameText = this.add.text(0, 40, char.name, {
+        const nameText = this.add.text(0, 80, char.name, {
             fontFamily: '"Rubik Glitch", cursive',
             fontSize: '32px',
             color: '#ffffff'
@@ -152,7 +160,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
         container.add(nameText);
 
         // Title
-        const titleText = this.add.text(0, 75, char.title.toUpperCase(), {
+        const titleText = this.add.text(0, 115, char.title.toUpperCase(), {
             fontFamily: '"Press Start 2P", cursive',
             fontSize: '10px',
             color: '#888888',
@@ -162,8 +170,8 @@ export class CharacterSelectionScene extends Phaser.Scene {
         container.add(titleText);
 
         // Stats Bars
-        this.createStatBar(container, -width / 2 + 40, 130, 'VIT', char.stats.health);
-        this.createStatBar(container, -width / 2 + 40, 160, 'SPD', char.stats.speed);
+        this.createStatBar(container, -width / 2 + 40, 150, 'VIT', char.stats.health);
+        this.createStatBar(container, -width / 2 + 40, 170, 'SPD', char.stats.speed);
         this.createStatBar(container, -width / 2 + 40, 190, 'DMG', char.stats.damage);
 
         // Interactive

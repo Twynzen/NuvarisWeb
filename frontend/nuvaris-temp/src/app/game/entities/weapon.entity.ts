@@ -110,9 +110,13 @@ export class Weapon {
         targetY,
         damage,
         this.config.projectileSpeed,
-        this.config.pierce || 0
+        this.config.pierce || 0,
+        this.player.characterId
       );
     }
+
+    // Trigger player shooting animation
+    this.player.onShoot(target.x, target.y);
   }
 
   /**
@@ -449,7 +453,7 @@ export class BeamWeapon {
     // Create beam line
     this.beam = scene.add.line(0, 0, 0, 0, 0, 0, GameConfig.colors.projectile.player, 0);
     this.beam.setLineWidth(3);
-    this.beam.setDepth(GameConfig.depths.projectiles);
+    this.beam.setDepth(GameConfig.depths.projectile);
   }
 
   update(time: number, delta: number): void {

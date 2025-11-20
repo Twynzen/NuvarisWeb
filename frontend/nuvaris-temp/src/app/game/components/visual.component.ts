@@ -20,6 +20,10 @@ export class VisualComponent extends Phaser.GameObjects.Container {
     private currentConfig: VisualConfig;
     private originalScale: { x: number, y: number } = { x: 1, y: 1 };
 
+    private animationTimer?: Phaser.Time.TimerEvent;
+    private currentAnimKey: string = '';
+    private currentFrameIndex: number = 0;
+
     constructor(scene: Phaser.Scene, config: VisualConfig) {
         super(scene);
         this.currentConfig = config;
@@ -50,12 +54,16 @@ export class VisualComponent extends Phaser.GameObjects.Container {
                 );
             }
         } else {
-            // Sprite mode (placeholder for now)
+            // Sprite mode
             this.mainVisual = this.scene.add.sprite(
                 0,
                 0,
                 this.currentConfig.texture || 'missing'
             );
+
+            if (this.currentConfig.width && this.currentConfig.height) {
+                this.mainVisual.setDisplaySize(this.currentConfig.width, this.currentConfig.height);
+            }
         }
 
         this.add(this.mainVisual);
@@ -67,6 +75,15 @@ export class VisualComponent extends Phaser.GameObjects.Container {
     public setConfig(config: Partial<VisualConfig>): void {
         this.currentConfig = { ...this.currentConfig, ...config };
         this.createVisual();
+    }
+
+    /**
+     * Switch to sprite mode with specific texture
+     */
+    public setSprite(texture: string): void {
+        if (this.currentConfig.type !== 'sprite' || this.currentConfig.texture !== texture) {
+            this.setConfig({ type: 'sprite', texture: texture });
+        }
     }
 
     /**
@@ -103,12 +120,9 @@ export class VisualComponent extends Phaser.GameObjects.Container {
 
     /**
      * Squash and Stretch effect
-     * @param axis 'x' or 'y'
-     * @param scale Scale factor (e.g., 1.2 for stretch, 0.8 for squash)
-     * @param duration Duration in ms
      */
     public squashAndStretch(axis: 'x' | 'y', scale: number, duration: number = 100): void {
-        const targetScaleX = axis === 'x' ? scale : (2 - scale); // Preserve volume roughly
+        const targetScaleX = axis === 'x' ? scale : (2 - scale);
         const targetScaleY = axis === 'y' ? scale : (2 - scale);
 
         this.scene.tweens.add({
@@ -122,11 +136,60 @@ export class VisualComponent extends Phaser.GameObjects.Container {
     }
 
     /**
-     * Play animation (for sprites)
+     * Play manual animation based on GameConfig keys
      */
-    public playAnimation(key: string): void {
+    public playAnimation(key: string, frameRate: number = 8, ignoreIfPlaying: boolean = true): void {
+        if (ignoreIfPlaying && this.currentAnimKey === key) return;
+
+        // Stop previous animation
+        if (this.animationTimer) {
+            this.animationTimer.remove();
+            this.animationTimer = undefined;
+        }
+
+        this.currentAnimKey = key;
+        this.currentFrameIndex = 0;
+
+        const frames = (GameConfig.animations as any)[key];
+        if (!frames || frames.length === 0) {
+            // Fallback if animation not found, try to set as static texture
+            this.setSprite(key);
+            return;
+        }
+
+        // Set initial frame
+        this.setSprite(frames[0]);
+
+        if (frames.length > 1) {
+            const delay = 1000 / frameRate;
+            this.animationTimer = this.scene.time.addEvent({
+                delay: delay,
+                callback: () => {
+                    this.currentFrameIndex = (this.currentFrameIndex + 1) % frames.length;
+                    this.setSprite(frames[this.currentFrameIndex]);
+                },
+                loop: true
+            });
+        }
+    }
+
+    /**
+     * Stop current animation
+     */
+    public stopAnimation(): void {
+        if (this.animationTimer) {
+            this.animationTimer.remove();
+            this.animationTimer = undefined;
+        }
+        this.currentAnimKey = '';
+    }
+
+    /**
+     * Set Flip
+     */
+    public setFlip(x: boolean, y: boolean): void {
         if (this.mainVisual instanceof Phaser.GameObjects.Sprite) {
-            this.mainVisual.play(key);
+            this.mainVisual.setFlip(x, y);
         }
     }
 }

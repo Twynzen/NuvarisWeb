@@ -41,17 +41,17 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.health = this.config.maxHealth;
 
     // Create visual using VisualComponent
+    // Default to worm asset for now
     this.visual = new VisualComponent(scene, {
-      type: 'shape',
-      shape: 'rectangle',
-      width: this.config.size || 30,
-      height: this.config.size || 30,
-      color: this.config.color
+      type: 'sprite',
+      texture: 'worm-move-1',
+      width: (this.config.size || 30) * 4.5,
+      height: (this.config.size || 30) * 4.5
     });
     this.add(this.visual);
 
     // Set depth
-    this.setDepth(GameConfig.depths.enemies);
+    this.setDepth(GameConfig.depths.enemy);
 
     // Add physics
     scene.physics.add.existing(this);
@@ -73,13 +73,27 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.health = config.maxHealth;
     this.target = target;
 
-    // Update visual
+    // Update visual based on type
     const size = config.size || GameConfig.sizes.enemy.zombie;
+
+    // Determine asset key based on type
+    // Mapping 'zombie' -> 'worm', 'runner' -> 'spider' for now as per user request
+    let animKey = 'worm-move';
+    if (config.type === 'runner' || config.type === 'spider') {
+      animKey = 'spider-move';
+    } else {
+      animKey = 'worm-move';
+    }
+
     this.visual.setConfig({
-      width: size,
-      height: size,
-      color: config.color
+      type: 'sprite',
+      width: size * 4.5,
+      height: size * 4.5
     });
+
+    // Start animation
+    this.visual.playAnimation(animKey, 8);
+
     this.body.setSize(size, size);
 
     // Position
@@ -112,6 +126,7 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.setActive(false);
     this.setVisible(false);
     this.body.setVelocity(0, 0);
+    this.visual.stopAnimation();
 
     if (this.healthBar) {
       this.healthBar.destroy();
@@ -198,14 +213,16 @@ export class Enemy extends Phaser.GameObjects.Container {
 
     this.body.setVelocity(velocityX, velocityY);
 
-    // Juice: Rotate slightly based on movement
-    if (velocityX !== 0) {
-      this.visual.setRotation(velocityX * 0.0005);
-    }
+    // Rotate visual to face player
+    // Assuming assets face RIGHT (0 rad) or DOWN (PI/2). 
+    // Worm/Spider assets usually face DOWN or RIGHT. 
+    // If they face DOWN by default, we subtract 90 deg (PI/2).
+    // Let's assume they face DOWN based on typical top-down assets.
+    this.visual.setRotation(angle - (Math.PI / 2));
 
-    // Update health bar position
+    // Update health bar position (keep it horizontal)
     if (this.healthBar) {
-      this.healthBar.setPosition(0, 0);
+      this.healthBar.setRotation(-(angle - (Math.PI / 2))); // Counter-rotate
     }
   }
 

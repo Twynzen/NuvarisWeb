@@ -14,6 +14,9 @@ export class Projectile extends Phaser.GameObjects.Container {
   private spawnTime = 0;
   public pierce = 0;
   private hitEnemies: any[] = [];
+  private characterId: string = 'arcadio'; // Store character ID for particle effects
+  private lastTrailTime = 0; // Timer for particle trail
+  public particleColor: number = 0xff0000; // Color for hit particles
 
   /**
    * Fire projectile towards target
@@ -21,21 +24,21 @@ export class Projectile extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
 
-    // Create visual using VisualComponent
+    // Create visual using VisualComponent - will be updated when fired
     this.visual = new VisualComponent(scene, {
-      type: 'shape',
-      shape: 'circle',
-      radius: GameConfig.sizes.projectile / 2,
-      color: GameConfig.colors.projectile.player
+      type: 'sprite',
+      texture: 'arcadio-hit', // Default, will be updated
+      width: 20,
+      height: 20
     });
     this.add(this.visual);
 
     // Set depth
-    this.setDepth(GameConfig.depths.projectiles);
+    this.setDepth(GameConfig.depths.projectile);
 
     // Add physics
     scene.physics.add.existing(this);
-    this.body.setSize(GameConfig.sizes.projectile, GameConfig.sizes.projectile);
+    this.body.setSize(20, 20);
 
     // Add to scene
     scene.add.existing(this);
@@ -48,17 +51,42 @@ export class Projectile extends Phaser.GameObjects.Container {
   /**
    * Fire projectile towards target
    */
-  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number = 300, pierce: number = 0): void {
+  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number = 300, pierce: number = 0, characterId: string = 'arcadio'): void {
     this.damage = damage;
     this.speed = speed;
     this.pierce = pierce;
     this.spawnTime = this.scene.time.now;
     this.hitEnemies = [];
+    this.characterId = characterId; // Store for particle effects
+    this.lastTrailTime = this.scene.time.now;
+
+    // Set particle color based on character
+    switch (characterId) {
+      case 'arcadio':
+        this.particleColor = 0xff0000; // Red
+        break;
+      case 'lars':
+        this.particleColor = 0x1a237e; // Dark blue
+        break;
+      case 'yurany':
+        this.particleColor = 0xffffff; // White
+        break;
+      default:
+        this.particleColor = 0xffff00; // Default yellow
+    }
+
+    // Update visual to use character's hit sprite
+    this.visual.setConfig({
+      type: 'sprite',
+      texture: `${characterId}-hit`,
+      width: 30,
+      height: 30
+    });
 
     // Ensure body exists
     if (!this.body) {
       this.scene.physics.add.existing(this);
-      (this.body as Phaser.Physics.Arcade.Body).setSize(GameConfig.sizes.projectile, GameConfig.sizes.projectile);
+      (this.body as Phaser.Physics.Arcade.Body).setSize(20, 20);
     }
 
     // Position
@@ -97,10 +125,19 @@ export class Projectile extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Update loop - check lifetime
+   * Update loop - check lifetime and create particle trail
    */
   override update(time: number, delta: number): void {
     if (!this.isActive) return;
+
+    // Create particle trail effect every 50ms
+    if (time - this.lastTrailTime > 50) {
+      const particleManager = this.scene.data.get('particleManager');
+      if (particleManager) {
+        particleManager.createProjectileTrail(this.x, this.y, this.characterId);
+      }
+      this.lastTrailTime = time;
+    }
 
     // Check lifetime
     if (time - this.spawnTime > this.lifetime) {

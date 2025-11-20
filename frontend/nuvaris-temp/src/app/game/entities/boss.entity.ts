@@ -46,11 +46,10 @@ export class Boss extends Phaser.GameObjects.Container {
 
     // Create visual using VisualComponent
     this.visual = new VisualComponent(scene, {
-      type: 'shape',
-      shape: 'rectangle',
-      width: this.config.size,
-      height: this.config.size,
-      color: this.config.color
+      type: 'sprite',
+      texture: 'boss-face-1',
+      width: this.config.size * 4.5,
+      height: this.config.size * 4.5
     });
     this.add(this.visual);
 
@@ -66,7 +65,7 @@ export class Boss extends Phaser.GameObjects.Container {
     this.add(this.nameText);
 
     // Set depth
-    this.setDepth(GameConfig.depths.enemies + 1); // Boss above normal enemies
+    this.setDepth(GameConfig.depths.enemy + 1); // Boss above normal enemies
 
     // Add physics
     scene.physics.add.existing(this);
@@ -90,10 +89,12 @@ export class Boss extends Phaser.GameObjects.Container {
 
     // Update visuals
     this.visual.setConfig({
-      width: config.size,
-      height: config.size,
-      color: config.color
+      type: 'sprite',
+      width: config.size * 4.5,
+      height: config.size * 4.5
     });
+    this.visual.playAnimation('boss-move', 6);
+
     this.nameText.setText(config.name);
     this.body.setSize(config.size, config.size);
 
@@ -139,6 +140,7 @@ export class Boss extends Phaser.GameObjects.Container {
     this.setActive(false);
     this.setVisible(false);
     this.body.setVelocity(0, 0);
+    this.visual.stopAnimation();
 
     if (this.healthBar) {
       this.healthBar.destroy();
@@ -193,7 +195,8 @@ export class Boss extends Phaser.GameObjects.Container {
 
         // Emit boss defeated event
         this.scene.events.emit('boss-defeated', {
-          name: this.config.name
+          name: this.config.name,
+          boss: this
         });
 
         // Despawn
@@ -295,6 +298,9 @@ export class Boss extends Phaser.GameObjects.Container {
     const velocityY = Math.sin(angle) * this.config.speed;
 
     this.body.setVelocity(velocityX, velocityY);
+
+    // Rotate visual to face player
+    this.visual.setRotation(angle - (Math.PI / 2));
   }
 
   /**

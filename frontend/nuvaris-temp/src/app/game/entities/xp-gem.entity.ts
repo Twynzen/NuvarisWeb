@@ -27,7 +27,7 @@ export class XPGem extends Phaser.GameObjects.Container {
     this.add(this.visual);
 
     // Set depth
-    this.setDepth(GameConfig.depths.items);
+    this.setDepth(GameConfig.depths.item);
 
     // Add physics
     scene.physics.add.existing(this);
