@@ -5,15 +5,19 @@ import { GameConfig } from '../config/game.config';
 export class Projectile extends Phaser.GameObjects.Container {
   public override body!: Phaser.Physics.Arcade.Body;
 
-  private visual: VisualComponent;
+  private visual!: VisualComponent;
 
   public damage = 10;
   public speed = 300;
   public lifetime = 3000; // 3 seconds
   public isActive = false;
-
   private spawnTime = 0;
+  public pierce = 0;
+  private hitEnemies: any[] = [];
 
+  /**
+   * Fire projectile towards target
+   */
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
 
@@ -44,10 +48,18 @@ export class Projectile extends Phaser.GameObjects.Container {
   /**
    * Fire projectile towards target
    */
-  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number = 300): void {
+  fire(x: number, y: number, targetX: number, targetY: number, damage: number, speed: number = 300, pierce: number = 0): void {
     this.damage = damage;
     this.speed = speed;
+    this.pierce = pierce;
     this.spawnTime = this.scene.time.now;
+    this.hitEnemies = [];
+
+    // Ensure body exists
+    if (!this.body) {
+      this.scene.physics.add.existing(this);
+      (this.body as Phaser.Physics.Arcade.Body).setSize(GameConfig.sizes.projectile, GameConfig.sizes.projectile);
+    }
 
     // Position
     this.setPosition(x, y);
@@ -79,7 +91,9 @@ export class Projectile extends Phaser.GameObjects.Container {
     this.isActive = false;
     this.setActive(false);
     this.setVisible(false);
-    this.body.setVelocity(0, 0);
+    if (this.body) {
+      this.body.setVelocity(0, 0);
+    }
   }
 
   /**
@@ -95,11 +109,22 @@ export class Projectile extends Phaser.GameObjects.Container {
   }
 
   /**
+   * Check if can hit target
+   */
+  canHit(target: any): boolean {
+    return !this.hitEnemies.includes(target);
+  }
+
+  /**
    * Handle collision
    */
-  onHit(): void {
-    // Juice: Small impact effect before despawn
-    // (Could add particle burst here later)
-    this.despawn();
+  onHit(target: any): void {
+    this.hitEnemies.push(target);
+
+    if (this.pierce > 0) {
+      this.pierce--;
+    } else {
+      this.despawn();
+    }
   }
 }

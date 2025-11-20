@@ -25,9 +25,12 @@ export class EnemySpawner {
   private maxEnemies = 300;
   private spawnDistance = 100; // Distance outside viewport
 
-  constructor(scene: Phaser.Scene, target: Phaser.GameObjects.Container) {
+  private spawnValidator?: (x: number, y: number) => boolean;
+
+  constructor(scene: Phaser.Scene, target: Phaser.GameObjects.Container, spawnValidator?: (x: number, y: number) => boolean) {
     this.scene = scene;
     this.target = target;
+    this.spawnValidator = spawnValidator;
     this.gameStartTime = scene.time.now;
 
     // Create enemy pool
@@ -244,10 +247,21 @@ export class EnemySpawner {
     });
   }
 
+  private isSpawning = true;
+
+  /**
+   * Stop spawning
+   */
+  stop(): void {
+    this.isSpawning = false;
+  }
+
   /**
    * Update spawner - spawn enemies based on current wave
    */
   update(time: number, delta: number): void {
+    if (!this.isSpawning) return;
+
     const gameTime = (time - this.gameStartTime) / 1000; // Convert to seconds
 
     // Find current wave
@@ -309,16 +323,32 @@ export class EnemySpawner {
     const centerX = this.target.x;
     const centerY = this.target.y;
 
-    // Random angle
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    let x = 0;
+    let y = 0;
+    let attempts = 0;
+    const maxAttempts = 20;
 
-    // Distance outside viewport
-    const distance = Math.max(camera.width, camera.height) / 2 + this.spawnDistance;
+    while (attempts < maxAttempts) {
+      // Random angle
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
 
-    // Calculate position
-    const x = centerX + Math.cos(angle) * distance;
-    const y = centerY + Math.sin(angle) * distance;
+      // Distance outside viewport
+      const distance = Math.max(camera.width, camera.height) / 2 + this.spawnDistance;
 
+      // Calculate position
+      x = centerX + Math.cos(angle) * distance;
+      y = centerY + Math.sin(angle) * distance;
+
+      // Validate
+      if (!this.spawnValidator || this.spawnValidator(x, y)) {
+        return { x, y };
+      }
+
+      attempts++;
+    }
+
+    // Fallback: return the last calculated position even if invalid, 
+    // or maybe closer to player? Let's just return it to avoid infinite loops.
     return { x, y };
   }
 

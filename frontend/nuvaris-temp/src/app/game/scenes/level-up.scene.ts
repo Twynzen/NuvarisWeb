@@ -17,9 +17,12 @@ export class LevelUpScene extends Phaser.Scene {
     super({ key: 'LevelUpScene' });
   }
 
+  private cardContainers: Phaser.GameObjects.Container[] = [];
+
   create(data: { level: number }): void {
-    this.selectedOption = undefined; // Reset selection state
-    this.scene.bringToTop(); // Ensure scene is on top
+    this.selectedOption = undefined;
+    this.cardContainers = [];
+    this.scene.bringToTop();
 
     const { width, height } = this.cameras.main;
 
@@ -41,7 +44,7 @@ export class LevelUpScene extends Phaser.Scene {
     title.setDepth(1001);
 
     // Subtitle
-    const subtitle = this.add.text(width / 2, height / 4 + 70, 'Choose an upgrade', {
+    const subtitle = this.add.text(width / 2, height / 4 + 70, 'FATE IS CHOOSING...', {
       fontSize: '24px',
       color: '#ffffff'
     });
@@ -65,17 +68,136 @@ export class LevelUpScene extends Phaser.Scene {
       this.createCard(x, y, cardWidth, cardHeight, option, index);
     });
 
-    // Animate entrance
-    this.cameras.main.flash(300, 255, 255, 255);
+    // Start Roulette Animation
+    this.startRoulette();
+  }
 
-    // Input hint
-    const hint = this.add.text(width / 2, height - 50, 'Click to choose', {
-      fontSize: '18px',
-      color: '#cccccc'
+  private startRoulette(): void {
+    let currentIndex = 0;
+    let loops = 0;
+    const maxLoops = 3;
+    let speed = 100;
+
+    // Recursive function for roulette effect
+    const spin = () => {
+      // Highlight current card
+      this.highlightCard(currentIndex);
+
+      // Calculate next step
+      currentIndex++;
+      if (currentIndex >= this.options.length) {
+        currentIndex = 0;
+        loops++;
+      }
+
+      // Slow down logic
+      if (loops >= maxLoops) {
+        speed += 50; // Decelerate
+      }
+
+      // Stop condition (random stop after maxLoops)
+      if (loops > maxLoops && Math.random() > 0.5 && speed > 300) {
+        this.selectOption(this.options[currentIndex]);
+        return;
+      }
+
+      // Continue spinning
+      this.time.delayedCall(speed, spin);
+    };
+
+    // Start spinning
+    this.time.delayedCall(500, spin);
+  }
+
+  private highlightCard(index: number): void {
+    this.cardContainers.forEach((container, i) => {
+      const bg = container.getAt(0) as Phaser.GameObjects.Rectangle;
+      if (i === index) {
+        bg.setFillStyle(0x444444);
+        container.setScale(1.1);
+      } else {
+        bg.setFillStyle(0x222222);
+        container.setScale(1.0);
+      }
     });
-    hint.setOrigin(0.5);
-    hint.setScrollFactor(0);
-    hint.setDepth(1001);
+  }
+
+  /**
+   * Create option card
+   */
+  private createCard(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    option: AbilityOption,
+    index: number
+  ): void {
+    const container = this.add.container(x, y);
+    container.setScrollFactor(0);
+    container.setDepth(1001);
+    this.cardContainers.push(container);
+
+    // Rarity colors
+    const rarityColors = {
+      basica: 0xaaaaaa,
+      epica: 0x9945ff,
+      legendaria: 0xffa500
+    };
+
+    const color = rarityColors[option.rarity];
+
+    // Card background
+    const bg = this.add.rectangle(0, 0, width, height, 0x222222);
+    bg.setStrokeStyle(4, color);
+    container.add(bg);
+
+    // Rarity text
+    const rarityText = this.add.text(0, -height / 2 + 30, option.rarity.toUpperCase(), {
+      fontSize: '16px',
+      color: `#${color.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    });
+    rarityText.setOrigin(0.5);
+    container.add(rarityText);
+
+    // Icon placeholder
+    const icon = this.add.circle(0, -50, 40, color);
+    container.add(icon);
+
+    // Name
+    const name = this.add.text(0, 20, option.name, {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      align: 'center',
+      wordWrap: { width: width - 20 }
+    });
+    name.setOrigin(0.5);
+    container.add(name);
+
+    // Description
+    const desc = this.add.text(0, 80, option.description, {
+      fontSize: '16px',
+      color: '#cccccc',
+      align: 'center',
+      wordWrap: { width: width - 40 }
+    });
+    desc.setOrigin(0.5);
+    container.add(desc);
+
+    // Entrance animation
+    container.setAlpha(0);
+    container.setScale(0.5);
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 300,
+      delay: index * 100,
+      ease: 'Back.easeOut'
+    });
   }
 
   /**
@@ -182,8 +304,9 @@ export class LevelUpScene extends Phaser.Scene {
         description: 'Projectiles pierce 1 enemy',
         rarity: 'epica',
         effect: () => {
-          // TODO: Implement piercing
-          console.log('Piercing shots activated!');
+          gameScene.player.getWeapons().forEach((w: any) => {
+            if (w.config) w.config.pierce = (w.config.pierce || 0) + 1;
+          });
         }
       },
       {
@@ -192,8 +315,7 @@ export class LevelUpScene extends Phaser.Scene {
         description: '15% chance for 2x damage',
         rarity: 'epica',
         effect: () => {
-          // TODO: Implement crits
-          console.log('Critical hits activated!');
+          gameScene.player.critChance += 0.15;
         }
       },
       {
@@ -202,8 +324,7 @@ export class LevelUpScene extends Phaser.Scene {
         description: 'Heal 5% of damage dealt',
         rarity: 'epica',
         effect: () => {
-          // TODO: Implement lifesteal
-          console.log('Life steal activated!');
+          gameScene.player.lifesteal += 0.05;
         }
       },
       {
@@ -212,8 +333,9 @@ export class LevelUpScene extends Phaser.Scene {
         description: 'Fire 1 additional projectile',
         rarity: 'epica',
         effect: () => {
-          // TODO: Implement multishot
-          console.log('Multi shot activated!');
+          gameScene.player.getWeapons().forEach((w: any) => {
+            if (w.config) w.config.count = (w.config.count || 1) + 1;
+          });
         }
       },
 
@@ -235,8 +357,10 @@ export class LevelUpScene extends Phaser.Scene {
         description: '5s invulnerability (1 use)',
         rarity: 'legendaria',
         effect: () => {
-          // TODO: Implement shield
-          console.log('Shield activated!');
+          gameScene.player.isInvulnerable = true;
+          gameScene.time.delayedCall(5000, () => {
+            gameScene.player.isInvulnerable = false;
+          });
         }
       },
       {
@@ -254,134 +378,6 @@ export class LevelUpScene extends Phaser.Scene {
   }
 
   /**
-   * Create option card
-   */
-  private createCard(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    option: AbilityOption,
-    index: number
-  ): void {
-    const container = this.add.container(x, y);
-    container.setScrollFactor(0);
-    container.setDepth(1001);
-
-    // Rarity colors
-    const rarityColors = {
-      basica: 0xaaaaaa,
-      epica: 0x9945ff,
-      legendaria: 0xffa500
-    };
-
-    const color = rarityColors[option.rarity];
-
-    // Card background
-    const bg = this.add.rectangle(0, 0, width, height, 0x222222);
-    bg.setStrokeStyle(4, color);
-    container.add(bg);
-
-    // Rarity text
-    const rarityText = this.add.text(0, -height / 2 + 30, option.rarity.toUpperCase(), {
-      fontSize: '16px',
-      color: `#${color.toString(16).padStart(6, '0')}`,
-      fontStyle: 'bold'
-    });
-    rarityText.setOrigin(0.5);
-    container.add(rarityText);
-
-    // Icon placeholder (could be replaced with actual icons)
-    const icon = this.add.circle(0, -50, 40, color);
-    container.add(icon);
-
-    // Name
-    const name = this.add.text(0, 20, option.name, {
-      fontSize: '24px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      align: 'center',
-      wordWrap: { width: width - 20 }
-    });
-    name.setOrigin(0.5);
-    container.add(name);
-
-    // Description
-    const desc = this.add.text(0, 80, option.description, {
-      fontSize: '16px',
-      color: '#cccccc',
-      align: 'center',
-      wordWrap: { width: width - 40 }
-    });
-    desc.setOrigin(0.5);
-    container.add(desc);
-
-    // Keyboard hint
-    const keyHint = this.add.text(0, height / 2 - 30, `Press ${index + 1}`, {
-      fontSize: '14px',
-      color: '#888888'
-    });
-    keyHint.setOrigin(0.5);
-    container.add(keyHint);
-
-    // Make interactive
-    bg.setInteractive({ useHandCursor: true });
-
-    // Hover effect
-    bg.on('pointerover', () => {
-      bg.setFillStyle(0x333333);
-      this.tweens.add({
-        targets: container,
-        scaleX: 1.05,
-        scaleY: 1.05,
-        duration: 100
-      });
-    });
-
-    bg.on('pointerout', () => {
-      bg.setFillStyle(0x222222);
-      this.tweens.add({
-        targets: container,
-        scaleX: 1,
-        scaleY: 1,
-        duration: 100
-      });
-    });
-
-    // Click to select
-    bg.on('pointerdown', () => {
-      this.selectOption(option);
-    });
-
-    // Keyboard shortcut
-    const keyCodes = [
-      Phaser.Input.Keyboard.KeyCodes.ONE,
-      Phaser.Input.Keyboard.KeyCodes.TWO,
-      Phaser.Input.Keyboard.KeyCodes.THREE
-    ];
-
-    if (this.input.keyboard) {
-      const key = this.input.keyboard.addKey(keyCodes[index]);
-      key.on('down', () => {
-        this.selectOption(option);
-      });
-    }
-
-    // Entrance animation
-    container.setAlpha(0);
-    container.setScale(0.5);
-    this.tweens.add({
-      targets: container,
-      alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 300,
-      delay: index * 100,
-      ease: 'Back.easeOut'
-    });
-  }
-
-  /**
    * Select an option
    */
   private selectOption(option: AbilityOption): void {
@@ -394,11 +390,22 @@ export class LevelUpScene extends Phaser.Scene {
 
     console.log(`Selected: ${option.name} (${option.rarity})`);
 
-    // Flash
-    this.cameras.main.flash(200, 255, 255, 255);
+    // Flash final selection
+    const index = this.options.indexOf(option);
+    if (index !== -1 && this.cardContainers[index]) {
+      const container = this.cardContainers[index];
+      this.tweens.add({
+        targets: container,
+        scaleX: 1.2,
+        scaleY: 1.2,
+        duration: 200,
+        yoyo: true,
+        repeat: 2
+      });
+    }
 
     // Close scene after delay
-    this.time.delayedCall(300, () => {
+    this.time.delayedCall(1500, () => {
       this.scene.stop();
       this.scene.resume('GameScene');
     });

@@ -6,7 +6,7 @@ import { GameConfig } from '../config/game.config';
 export class Player extends Phaser.GameObjects.Container {
   public override body!: Phaser.Physics.Arcade.Body;
 
-  private visual: VisualComponent;
+  private visual!: VisualComponent;
   private weapons: Weapon[] = [];
 
   // Stats
@@ -15,6 +15,10 @@ export class Player extends Phaser.GameObjects.Container {
   public speed = GameConfig.balance.player.speed;
   public damage = 10;
   public pickupRadius = 100;
+  public critChance = 0; // 0 to 1
+  public critMultiplier = 2;
+  public lifesteal = 0; // 0 to 1
+  public isInvulnerable = false;
 
   // Movement
   private velocityX = 0;
@@ -89,6 +93,8 @@ export class Player extends Phaser.GameObjects.Container {
    * Take damage
    */
   takeDamage(amount: number): void {
+    if (this.isInvulnerable) return;
+
     this.health = Math.max(0, this.health - amount);
 
     // Flash effect
@@ -124,8 +130,7 @@ export class Player extends Phaser.GameObjects.Container {
    */
   private die(): void {
     console.log('Player died!');
-    this.scene.scene.pause();
-    // TODO: Emit death event to Angular
+    this.scene.events.emit('player-died');
   }
 
   /**

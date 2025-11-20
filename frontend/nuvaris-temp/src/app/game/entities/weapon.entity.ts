@@ -12,6 +12,8 @@ export interface WeaponConfig {
   range: number;
   projectileSpeed: number;
   level: number;
+  pierce?: number;
+  count?: number;
 }
 
 export class Weapon {
@@ -73,19 +75,44 @@ export class Weapon {
    * Fire projectile at target
    */
   protected fire(target: Enemy): void {
-    // Get projectile from pool
-    const projectile = this.getProjectileFromPool();
-    if (!projectile) return;
+    const count = this.config.count || 1;
+    const spread = 0.2; // Radians spread
 
-    // Fire towards target
-    projectile.fire(
-      this.player.x,
-      this.player.y,
-      target.x,
-      target.y,
-      this.config.damage,
-      this.config.projectileSpeed
-    );
+    for (let i = 0; i < count; i++) {
+      // Get projectile from pool
+      const projectile = this.getProjectileFromPool();
+      if (!projectile) return;
+
+      // Calculate angle offset
+      let angleOffset = 0;
+      if (count > 1) {
+        angleOffset = (i - (count - 1) / 2) * spread;
+      }
+
+      // Calculate target position with spread
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y) + angleOffset;
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, target.x, target.y);
+      const targetX = this.player.x + Math.cos(angle) * dist;
+      const targetY = this.player.y + Math.sin(angle) * dist;
+
+      // Calculate damage with crit
+      let damage = this.config.damage;
+      if (Math.random() < this.player.critChance) {
+        damage *= this.player.critMultiplier;
+        // TODO: Show crit text
+      }
+
+      // Fire towards target
+      projectile.fire(
+        this.player.x,
+        this.player.y,
+        targetX,
+        targetY,
+        damage,
+        this.config.projectileSpeed,
+        this.config.pierce || 0
+      );
+    }
   }
 
   /**
