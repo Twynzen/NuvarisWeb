@@ -50,6 +50,10 @@ export class Enemy extends Phaser.GameObjects.Container {
     });
     this.add(this.visual);
 
+    if ((GameConfig as any).debugAssetSizes) {
+      this.visual.setDebug(true);
+    }
+
     // Set depth
     this.setDepth(GameConfig.depths.enemy);
 
@@ -127,6 +131,18 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.setVisible(false);
     this.body.setVelocity(0, 0);
     this.visual.stopAnimation();
+    this.visual.clearTint(); // Reset tint
+
+    // Reset Mind Control state
+    this.isMindControlled = false;
+    if (this.mindControlTimer) {
+      this.mindControlTimer.remove();
+      this.mindControlTimer = undefined;
+    }
+    if (this.mindControlIcon) {
+      this.mindControlIcon.destroy();
+      this.mindControlIcon = undefined;
+    }
 
     if (this.healthBar) {
       this.healthBar.destroy();
@@ -198,14 +214,195 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.healthBar.fillRect(-barWidth / 2, -size / 1.5, barWidth * healthPercent, barHeight);
   }
 
+  public isMindControlled = false;
+  private mindControlTimer?: Phaser.Time.TimerEvent;
+  private mindControlIcon?: Phaser.GameObjects.Text;
+
+  // Knockback state
+  private isKnockedBack = false;
+  private knockbackTimer?: Phaser.Time.TimerEvent;
+
   /**
-   * Update loop - move towards player
+   * Mind Control this enemy
+   */
+  mindControl(): void {
+    if (this.isMindControlled) return;
+
+    this.isMindControlled = true;
+
+    // Visual change
+    this.visual.setTint(0x0000ff); // Blue tint for ally
+
+    // Add overhead icon (Simple Text "!" to avoid missing assets)
+    const iconText = this.scene.add.text(0, -50, '!', {
+      fontSize: '32px',
+      fontStyle: 'bold',
+      color: '#00ffff',
+      stroke: '#000000',
+      strokeThickness: 4
+    });
+    iconText.setOrigin(0.5);
+    this.add(iconText); // Add to container so it moves with enemy
+    this.mindControlIcon = iconText;
+
+    // Float animation for icon
+    this.scene.tweens.add({
+      targets: iconText,
+      y: -60,
+      duration: 1000,
+      yoyo: true,
+      repeat: -1
+    });
+
+    // Heal to 50% of max health (Minions are weaker)
+    this.health = this.config.maxHealth * 0.5;
+    this.updateHealthBar();
+  }
+
+  /**
+   * Trigger manual explosion
+   */
+  public manualExplode(): void {
+    if (this.isMindControlled) {
+      this.explode();
+    }
+  }
+
+  /**
+   * Flash effect for impacts (e.g. Chain Lightning)
+   */
+  flash(color: number = 0xffffff, duration: number = 100): void {
+    if (!this.active) return;
+
+    this.visual.setTintFill(color);
+    this.scene.time.delayedCall(duration, () => {
+      if (this.active) {
+        this.visual.clearTint();
+        if (this.isMindControlled) {
+          this.visual.setTint(0x0000ff); // Restore mind control tint
+        }
+      }
+    });
+  }
+
+  private explode(): void {
+    if (!this.isActive) return;
+
+    // Explosion visual
+    const explosion = this.scene.add.circle(this.x, this.y, 100, 0x0000ff, 0.5);
+    this.scene.tweens.add({
+      targets: explosion,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => explosion.destroy()
+    });
+
+    // Damage nearby enemies
+    const enemies = this.getActiveEnemies();
+    enemies.forEach(enemy => {
+      if (enemy === this || enemy.isMindControlled) return;
+
+      const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+      if (dist < 150) {
+        enemy.takeDamage(this.config.damage * 5); // Big damage
+      }
+    });
+
+    this.die();
+  }
+
+  /**
+   * Apply knockback force
+   */
+  public applyKnockback(velocityX: number, velocityY: number, duration: number = 200): void {
+    if (!this.body) return;
+
+    this.isKnockedBack = true;
+    this.body.setVelocity(velocityX, velocityY);
+
+    if (this.knockbackTimer) this.knockbackTimer.remove();
+    this.knockbackTimer = this.scene.time.delayedCall(duration, () => {
+      this.isKnockedBack = false;
+    });
+  }
+
+  private getActiveEnemies(): Enemy[] {
+    const enemyGroup = this.scene.data.get('enemyGroup') as Phaser.GameObjects.Group;
+    if (!enemyGroup) return [];
+    return enemyGroup.getChildren()
+      .filter(child => child instanceof Enemy && child.isActive) as Enemy[];
+  }
+
+  /**
+   * Update loop - move towards player OR enemies if controlled
    */
   override update(time: number, delta: number): void {
-    if (!this.isActive || !this.target) return;
+    if (!this.isActive) return;
+
+    // If knocked back, let physics handle movement (don't override velocity)
+    if (this.isKnockedBack) return;
+
+    let targetX = 0;
+    let targetY = 0;
+
+    if (this.isMindControlled) {
+      // Find nearest non-controlled enemy
+      const enemies = this.getActiveEnemies();
+      let closest: Enemy | null = null;
+      let closestDist = Infinity;
+
+      enemies.forEach(enemy => {
+        if (enemy === this || enemy.isMindControlled) return;
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = enemy;
+        }
+      });
+
+      if (closest) {
+        targetX = (closest as Enemy).x;
+        targetY = (closest as Enemy).y;
+
+        // Attack logic (simple collision damage handled in physics, but we can add visual attack)
+      } else {
+        // Follow player if no enemies
+        if (this.target) {
+          targetX = this.target.x;
+          targetY = this.target.y;
+        }
+      }
+    } else {
+      // Normal behavior: Chase player OR Mind Controlled Minions
+      let target = this.target; // Default to player
+
+      // Check for nearby mind-controlled enemies to attack
+      const enemies = this.getActiveEnemies();
+      let closestMinion: Enemy | null = null;
+      let closestMinionDist = 300; // Aggro range for minions
+
+      for (const enemy of enemies) {
+        if (enemy === this || !enemy.isMindControlled) continue;
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y);
+        if (dist < closestMinionDist) {
+          closestMinionDist = dist;
+          closestMinion = enemy;
+        }
+      }
+
+      if (closestMinion) {
+        targetX = closestMinion.x;
+        targetY = closestMinion.y;
+      } else if (this.target) {
+        targetX = this.target.x;
+        targetY = this.target.y;
+      }
+    }
 
     // Calculate direction to target
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
 
     // Move towards target
     const velocityX = Math.cos(angle) * this.config.speed;
@@ -213,16 +410,17 @@ export class Enemy extends Phaser.GameObjects.Container {
 
     this.body.setVelocity(velocityX, velocityY);
 
-    // Rotate visual to face player
-    // Assuming assets face RIGHT (0 rad) or DOWN (PI/2). 
-    // Worm/Spider assets usually face DOWN or RIGHT. 
-    // If they face DOWN by default, we subtract 90 deg (PI/2).
-    // Let's assume they face DOWN based on typical top-down assets.
+    // Rotate visual
     this.visual.setRotation(angle - (Math.PI / 2));
 
-    // Update health bar position (keep it horizontal)
+    // Update health bar position
     if (this.healthBar) {
-      this.healthBar.setRotation(-(angle - (Math.PI / 2))); // Counter-rotate
+      this.healthBar.setRotation(-(angle - (Math.PI / 2)));
+    }
+
+    // Update icon position
+    if (this.mindControlIcon) {
+      this.mindControlIcon.setPosition(this.x, this.y - 40);
     }
   }
 
@@ -230,6 +428,8 @@ export class Enemy extends Phaser.GameObjects.Container {
    * Cleanup
    */
   override destroy(fromScene?: boolean): void {
+    if (this.mindControlTimer) this.mindControlTimer.remove();
+    if (this.mindControlIcon) this.mindControlIcon.destroy();
     if (this.healthBar) {
       this.healthBar.destroy();
     }

@@ -62,6 +62,9 @@ export const GameConfig = {
     }
   },
 
+  // Debug
+  debugAssetSizes: true,
+
   // Animations
   animations: {
     // Arcadio
@@ -76,26 +79,30 @@ export const GameConfig = {
     'arcadio-walk-up-right': ['arcadio-walk-up-right-1', 'arcadio-walk-up-right-2'],
 
     // Lars
-    'lars-idle': ['lars-static-0', 'lars-static-1'],
-    'lars-walk-down': ['lars-walk-down-left-1', 'lars-walk-down-right-1'],
+    'lars-idle': Array.from({ length: 30 }, (_, i) => `lars-idle-${i + 1}`),
+    'lars-walk-down': Array.from({ length: 30 }, (_, i) => `lars-walk-down-${i + 1}`),
     'lars-walk-up': ['lars-walk-up-1', 'lars-walk-up-2'],
-    'lars-walk-left': ['lars-walk-left-1', 'lars-walk-left-2'],
-    'lars-walk-right': ['lars-walk-right-1', 'lars-walk-right-2'],
+    'lars-walk-left': Array.from({ length: 30 }, (_, i) => `lars-walk-right-${(i + 1).toString().padStart(3, '0')}`),
+    'lars-walk-right': Array.from({ length: 30 }, (_, i) => `lars-walk-right-${(i + 1).toString().padStart(3, '0')}`),
     'lars-walk-down-left': ['lars-walk-down-left-1', 'lars-walk-down-left-2'],
     'lars-walk-down-right': ['lars-walk-down-right-1', 'lars-walk-down-right-2'],
     'lars-walk-up-left': ['lars-walk-up-left-1', 'lars-walk-up-left-2'],
     'lars-walk-up-right': ['lars-walk-up-right-1', 'lars-walk-up-right-2'],
 
     // Yurany
-    'yurany-idle': ['yurany-static-1', 'yurany-static-2', 'yurany-static-3', 'yurany-static-4'],
-    'yurany-walk-down': ['yurany-walk-down-1', 'yurany-walk-down-2'],
-    'yurany-walk-up': ['yurany-walk-up-1', 'yurany-walk-up-2'],
-    'yurany-walk-left': ['yurany-walk-left-1', 'yurany-walk-left-2'],
-    'yurany-walk-right': ['yurany-walk-right-1', 'yurany-walk-right-2'],
+    'yurany-idle': Array.from({ length: 30 }, (_, i) => `yurany-idle-${i + 1}`),
+    'yurany-walk-down': Array.from({ length: 30 }, (_, i) => `yurany-walk-down-${i + 1}`),
+    'yurany-walk-up': Array.from({ length: 30 }, (_, i) => `yurany-walk-up-${i + 1}`),
+    'yurany-walk-left': Array.from({ length: 30 }, (_, i) => `yurany-walk-right-${i + 1}`),
+    'yurany-walk-right': Array.from({ length: 30 }, (_, i) => `yurany-walk-right-${i + 1}`),
     'yurany-walk-down-left': ['yurany-walk-down-left-2'],
     'yurany-walk-down-right': ['yurany-walk-down-right-1', 'yurany-walk-down-right-2'],
     'yurany-walk-up-left': ['yurany-walk-up-left-1', 'yurany-walk-up-left-2'],
     'yurany-walk-up-right': ['yurany-walk-up-right-1', 'yurany-walk-up-right-2'],
+    'yurany-shoot-right': Array.from({ length: 30 }, (_, i) => `yurany-shoot-right-${i + 1}`),
+    'yurany-shoot-down': Array.from({ length: 30 }, (_, i) => `yurany-shoot-down-${i + 1}`),
+    'yurany-shoot-up': Array.from({ length: 30 }, (_, i) => `yurany-shoot-up-${i + 1}`),
+    'yurany-projectile': Array.from({ length: 30 }, (_, i) => `yurany-projectile-${i + 1}`),
 
     // Enemies
     'worm-move': ['worm-move-1', 'worm-move-2'],

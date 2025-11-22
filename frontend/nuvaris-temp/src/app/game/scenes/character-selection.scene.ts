@@ -19,7 +19,7 @@ export class CharacterSelectionScene extends Phaser.Scene {
             id: 'lars',
             name: 'LARS',
             title: 'The Survivor',
-            description: 'Balanced stats. A veteran of the cosmic wars.',
+            description: 'Can Mind Control enemies to fight for him.',
             stats: { health: 4, speed: 3, damage: 3 },
             color: 0xcccccc
         },
@@ -27,15 +27,15 @@ export class CharacterSelectionScene extends Phaser.Scene {
             id: 'arcadio',
             name: 'ARCADIO',
             title: 'The Mystic',
-            description: 'High damage, low health. Wields forbidden arts.',
+            description: 'Tanky and knocks enemies back with great force.',
             stats: { health: 2, speed: 3, damage: 5 },
             color: 0x9945ff // Purple hint
         },
         {
             id: 'yurany',
-            name: 'YURANY',
+            name: 'PROYECTO Y',
             title: 'The Phantom',
-            description: 'Incredible speed. Strikes from the shadows.',
+            description: 'Attacks unleash Chain Lightning on nearby foes.',
             stats: { health: 3, speed: 5, damage: 2 },
             color: 0x00ffff // Cyan hint
         }
@@ -169,10 +169,16 @@ export class CharacterSelectionScene extends Phaser.Scene {
         titleText.setOrigin(0.5);
         container.add(titleText);
 
-        // Stats Bars
-        this.createStatBar(container, -width / 2 + 40, 150, 'VIT', char.stats.health);
-        this.createStatBar(container, -width / 2 + 40, 170, 'SPD', char.stats.speed);
-        this.createStatBar(container, -width / 2 + 40, 190, 'DMG', char.stats.damage);
+        // Description
+        const descText = this.add.text(0, 150, char.description, {
+            fontFamily: '"Roboto", sans-serif',
+            fontSize: '14px',
+            color: '#aaaaaa',
+            align: 'center',
+            wordWrap: { width: width - 40 }
+        });
+        descText.setOrigin(0.5);
+        container.add(descText);
 
         // Interactive
         bg.setInteractive({ useHandCursor: true });
@@ -183,22 +189,6 @@ export class CharacterSelectionScene extends Phaser.Scene {
                 this.selectCharacter(index);
             }
         });
-    }
-
-    private createStatBar(container: Phaser.GameObjects.Container, x: number, y: number, label: string, value: number): void {
-        const labelText = this.add.text(x, y, label, {
-            fontFamily: '"Press Start 2P", cursive',
-            fontSize: '10px',
-            color: '#666'
-        });
-        labelText.setOrigin(0, 0.5);
-        container.add(labelText);
-
-        // Bar dots
-        for (let i = 0; i < 5; i++) {
-            const dot = this.add.rectangle(x + 40 + (i * 25), y, 20, 8, i < value ? 0xffffff : 0x222222);
-            container.add(dot);
-        }
     }
 
     private selectCharacter(index: number): void {

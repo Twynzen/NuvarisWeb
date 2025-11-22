@@ -28,10 +28,14 @@ export class Projectile extends Phaser.GameObjects.Container {
     this.visual = new VisualComponent(scene, {
       type: 'sprite',
       texture: 'arcadio-hit', // Default, will be updated
-      width: 20,
-      height: 20
+      width: 50,
+      height: 50
     });
     this.add(this.visual);
+
+    if ((GameConfig as any).debugAssetSizes) {
+      this.visual.setDebug(true);
+    }
 
     // Set depth
     this.setDepth(GameConfig.depths.projectile);
@@ -76,12 +80,16 @@ export class Projectile extends Phaser.GameObjects.Container {
     }
 
     // Update visual to use character's hit sprite
-    this.visual.setConfig({
-      type: 'sprite',
-      texture: `${characterId}-hit`,
-      width: 30,
-      height: 30
-    });
+    if (characterId === 'yurany') {
+      this.visual.playAnimation('yurany-projectile', 30);
+    } else {
+      this.visual.setConfig({
+        type: 'sprite',
+        texture: `${characterId}-hit`,
+        width: 30,
+        height: 30
+      });
+    }
 
     // Ensure body exists
     if (!this.body) {
@@ -149,7 +157,9 @@ export class Projectile extends Phaser.GameObjects.Container {
    * Check if can hit target
    */
   canHit(target: any): boolean {
-    return !this.hitEnemies.includes(target);
+    if (this.hitEnemies.includes(target)) return false;
+    if (target.isMindControlled) return false; // Don't hit allies
+    return true;
   }
 
   /**

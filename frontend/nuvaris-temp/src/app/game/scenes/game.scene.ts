@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { Player } from '../entities/player.entity';
 import { Enemy } from '../entities/enemy.entity';
+import { GameConfig } from '../config/game.config';
 import { Boss } from '../entities/boss.entity';
 import { Projectile } from '../entities/projectile.entity';
 import {
@@ -17,6 +18,10 @@ import { ParticleManager } from '../systems/particle-manager.system';
 import { AudioManager } from '../systems/audio-manager.system';
 import { VirtualJoystick } from '../components/virtual-joystick.component';
 import { LabGenerator } from '../systems/lab-generator.system';
+import { CharacterAbility } from '../abilities/character-ability';
+import { ArcadioAbility } from '../abilities/arcadio.ability';
+import { YuranyAbility } from '../abilities/yurany.ability';
+import { LarsAbility } from '../abilities/lars.ability';
 
 export class GameScene extends Phaser.Scene {
   // Core entities
@@ -55,10 +60,17 @@ export class GameScene extends Phaser.Scene {
   private xpBar!: Phaser.GameObjects.Graphics;
   private controlsText!: Phaser.GameObjects.Text;
 
+  // Debug UI
+  private debugButton!: Phaser.GameObjects.Text;
+  private debugPanel!: Phaser.GameObjects.Container;
+  private debugSelectedVisual?: any;
+  private debugInfoText!: Phaser.GameObjects.Text;
+
   // Game state
   private gameStartTime = 0;
   private isPaused = false;
   private isGameOver = false;
+  private pauseText?: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -74,7 +86,7 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     this.gameStartTime = this.time.now;
 
-    // Ensure physics is active (in case we're restarting after game over)
+    // Ensure physics is active
     this.physics.resume();
 
     // Reset game over state
@@ -95,36 +107,46 @@ export class GameScene extends Phaser.Scene {
     const characterId = (data && data.character && data.character.id) ? data.character.id : 'arcadio';
     this.player = new Player(this, startPos.x, startPos.y, characterId);
 
-    // Apply character stats if available
-    if (data && data.character) {
-      const char = data.character;
-      console.log(`🎮 Playing as: ${char.name} (${char.id})`);
-
-      // Apply stats multipliers based on 1-5 scale (3 is baseline)
-      this.player.maxHealth *= (char.stats.health / 3);
-      this.player.health = this.player.maxHealth;
-      this.player.speed *= (char.stats.speed / 3);
-      this.player.damage *= (char.stats.damage / 3);
-    }
-
     // Create systems
     this.particleManager = new ParticleManager(this);
     if (!this.audioManager) {
       this.audioManager = new AudioManager(this);
     }
 
-    // Give player starting weapon
+    // Give player starting weapon (Default)
     const fireball = new FireballWeapon(this, this.player);
     this.player.addWeapon(fireball);
 
-    // Add more weapons over time (for testing)
-    /*
-    this.time.delayedCall(10000, () => {
-      const lightning = new LightningBoltWeapon(this, this.player);
-      this.player.addWeapon(lightning);
-      this.particleManager.createTextPopup(this.player.x, this.player.y - 50, 'Lightning Bolt!', '#ffff00');
-    });
-    */
+    // Apply character stats and ability
+    if (data && data.character) {
+      const char = data.character;
+      console.log(`🎮 Playing as: ${char.name} (${char.id})`);
+
+      // Apply stats multipliers
+      this.player.maxHealth *= (char.stats.health / 3);
+      this.player.health = this.player.maxHealth;
+      this.player.speed *= (char.stats.speed / 3);
+      this.player.damage *= (char.stats.damage / 3);
+
+      // Initialize Ability (This may remove the default weapon)
+      let ability: CharacterAbility | undefined;
+      switch (char.id) {
+        case 'arcadio':
+          ability = new ArcadioAbility();
+          break;
+        case 'yurany':
+          ability = new YuranyAbility();
+          break;
+        case 'lars':
+          ability = new LarsAbility();
+          break;
+      }
+
+      if (ability) {
+        this.player.setAbility(ability);
+        console.log(`✨ Ability initialized: ${ability.name}`);
+      }
+    }
 
     // Setup systems
     this.enemySpawner = new EnemySpawner(
@@ -138,7 +160,20 @@ export class GameScene extends Phaser.Scene {
     this.setupCollisions();
 
     // Setup input
-    this.setupInput();
+    this.cursors = this.input.keyboard!.createCursorKeys();
+    this.wasd = {
+      w: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      a: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      s: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      d: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+    };
+
+    // Ability Key (B)
+    this.input.keyboard!.on('keydown-B', () => {
+      if (this.player.ability && (this.player.ability as any).triggerExplosion) {
+        (this.player.ability as any).triggerExplosion();
+      }
+    });
 
     // Setup camera
     this.cameras.main.startFollow(this.player);
@@ -147,6 +182,7 @@ export class GameScene extends Phaser.Scene {
 
     // Setup UI
     this.setupUI();
+    this.setupDebugUI();
 
     // Setup world bounds
     this.physics.world.setBounds(0, 0, mapWidth, mapHeight);
@@ -171,6 +207,7 @@ export class GameScene extends Phaser.Scene {
     // Handle resize
     this.scale.on('resize', this.resize, this);
   }
+
   private setupCollisions(): void {
     // Enemy collision with player (damage player)
     this.physics.add.overlap(
@@ -181,9 +218,43 @@ export class GameScene extends Phaser.Scene {
       this
     );
 
+    // Enemy vs Enemy (for mind control)
+    this.physics.add.overlap(
+      this.enemySpawner.getEnemyPool(),
+      this.enemySpawner.getEnemyPool(),
+      this.onEnemyHitEnemy as any,
+      undefined,
+      this
+    );
+
     // Wall collisions
     this.physics.add.collider(this.player, this.labGenerator.getWalls());
     this.physics.add.collider(this.enemySpawner.getEnemyPool(), this.labGenerator.getWalls());
+  }
+
+  /**
+   * Handle enemy hitting enemy (Mind Control)
+   */
+  private onEnemyHitEnemy(enemy1: Enemy, enemy2: Enemy): void {
+    if (!enemy1.isActive || !enemy2.isActive) return;
+    if (enemy1 === enemy2) return;
+
+    // If one is mind controlled and the other is not
+    if (enemy1.isMindControlled && !enemy2.isMindControlled) {
+      enemy2.takeDamage(enemy1.config.damage);
+      // Push back
+      const angle = Phaser.Math.Angle.Between(enemy1.x, enemy1.y, enemy2.x, enemy2.y);
+      if (enemy2.applyKnockback) {
+        enemy2.applyKnockback(Math.cos(angle) * 100, Math.sin(angle) * 100, 100);
+      }
+    } else if (enemy2.isMindControlled && !enemy1.isMindControlled) {
+      enemy1.takeDamage(enemy2.config.damage);
+      // Push back
+      const angle = Phaser.Math.Angle.Between(enemy2.x, enemy2.y, enemy1.x, enemy1.y);
+      if (enemy1.applyKnockback) {
+        enemy1.applyKnockback(Math.cos(angle) * 100, Math.sin(angle) * 100, 100);
+      }
+    }
   }
 
   /**
@@ -195,6 +266,11 @@ export class GameScene extends Phaser.Scene {
 
     // Apply damage
     const died = enemy.takeDamage(projectile.damage);
+
+    // Trigger Ability
+    if (this.player.ability) {
+      this.player.ability.onProjectileHit(projectile, enemy, projectile.damage);
+    }
 
     // Hit effect - use character-specific color
     this.particleManager.createHitEffect(enemy.x, enemy.y, projectile.particleColor);
@@ -243,6 +319,9 @@ export class GameScene extends Phaser.Scene {
    */
   private onEnemyHitPlayer(player: Player, enemy: Enemy | Boss): void {
     if (!enemy.isActive) return;
+
+    // Friendly fire check (Mind Control)
+    if (enemy instanceof Enemy && enemy.isMindControlled) return;
 
     // Damage player
     player.takeDamage(enemy.config.damage);
@@ -548,6 +627,213 @@ export class GameScene extends Phaser.Scene {
     this.controlsText.setOrigin(0.5);
     this.controlsText.setScrollFactor(0);
     this.controlsText.setDepth(100);
+  }
+
+  /**
+   * Setup Debug UI
+   */
+  private setupDebugUI(): void {
+    const { width, height } = this.cameras.main;
+
+    // Toggle Button
+    this.debugButton = this.add.text(width - 80, height - 30, 'DEBUG', {
+      fontSize: '16px',
+      color: '#ffffff',
+      backgroundColor: '#333333',
+      padding: { x: 5, y: 5 }
+    })
+      .setScrollFactor(0)
+      .setDepth(2000)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.toggleDebug());
+
+    // Debug Panel (Hidden by default)
+    this.debugPanel = this.add.container(width - 220, 50);
+    this.debugPanel.setScrollFactor(0);
+    this.debugPanel.setDepth(2000);
+    this.debugPanel.setVisible(false);
+
+    // Panel Background
+    const bg = this.add.rectangle(0, 0, 200, 150, 0x000000, 0.8);
+    bg.setOrigin(0);
+    this.debugPanel.add(bg);
+
+    // Title
+    const title = this.add.text(10, 10, 'Asset Editor', { fontSize: '16px', color: '#ffff00' });
+    this.debugPanel.add(title);
+
+    // Info Text
+    this.debugInfoText = this.add.text(10, 35, 'Select an asset...', { fontSize: '12px', color: '#ffffff' });
+    this.debugPanel.add(this.debugInfoText);
+
+    // Controls
+    const createBtn = (x: number, y: number, label: string, callback: () => void) => {
+      const btnContainer = this.add.container(x, y);
+
+      const btnBg = this.add.rectangle(0, 0, 35, 20, 0x444444);
+      btnBg.setOrigin(0);
+      btnBg.setInteractive({ useHandCursor: true });
+
+      const btnText = this.add.text(5, 2, label, { fontSize: '12px', color: '#ffffff' });
+
+      btnContainer.add([btnBg, btnText]);
+
+      btnBg.on('pointerdown', () => {
+        btnBg.setFillStyle(0x666666);
+        console.log(`[DebugUI] Clicked ${label}`);
+        callback();
+      });
+
+      btnBg.on('pointerup', () => {
+        btnBg.setFillStyle(0x444444);
+      });
+
+      btnBg.on('pointerout', () => {
+        btnBg.setFillStyle(0x444444);
+      });
+
+      this.debugPanel.add(btnContainer);
+      return btnContainer;
+    };
+
+    createBtn(10, 60, 'W -', () => this.resizeSelected(-1, 0));
+    createBtn(50, 60, 'W +', () => this.resizeSelected(1, 0));
+    createBtn(10, 90, 'H -', () => this.resizeSelected(0, -1));
+    createBtn(50, 90, 'H +', () => this.resizeSelected(0, 1));
+
+    // Listen for selection
+    this.events.on('visual-selected', (visual: any) => {
+      this.debugSelectedVisual = visual;
+      this.debugPanel.setVisible(true);
+      this.updateDebugPanelInfo();
+    });
+
+    // Keyboard Shortcuts
+    if (this.input.keyboard) {
+      // Width
+      this.input.keyboard.on('keydown-U', () => {
+        const step = this.input.keyboard!.checkDown(this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT), 0) ? -10 : -1;
+        this.resizeSelected(step, 0);
+      });
+      this.input.keyboard.on('keydown-I', () => {
+        const step = this.input.keyboard!.checkDown(this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT), 0) ? 10 : 1;
+        this.resizeSelected(step, 0);
+      });
+
+      // Height
+      this.input.keyboard.on('keydown-J', () => {
+        const step = this.input.keyboard!.checkDown(this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT), 0) ? -10 : -1;
+        this.resizeSelected(0, step);
+      });
+      this.input.keyboard.on('keydown-K', () => {
+        const step = this.input.keyboard!.checkDown(this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT), 0) ? 10 : 1;
+        this.resizeSelected(0, step);
+      });
+
+      // Pause
+      this.input.keyboard.on('keydown-P', () => {
+        this.togglePause();
+      });
+    }
+  }
+
+  private toggleDebug(): void {
+    const config = (GameConfig as any);
+    config.debugAssetSizes = !config.debugAssetSizes;
+
+    this.debugButton.setColor(config.debugAssetSizes ? '#00ff00' : '#ffffff');
+    this.events.emit('debug-toggle', config.debugAssetSizes);
+
+    if (!config.debugAssetSizes) {
+      this.debugPanel.setVisible(false);
+      this.debugSelectedVisual = undefined;
+    }
+  }
+
+  private togglePause(): void {
+    if (this.isGameOver) return; // Don't pause if game is over
+
+    this.isPaused = !this.isPaused;
+
+    if (this.isPaused) {
+      // Pause physics
+      this.physics.pause();
+
+      // Pause tweens
+      this.tweens.pauseAll();
+
+      // Pause animations
+      this.anims.pauseAll();
+
+      // Stop enemy spawner
+      this.enemySpawner.stop();
+
+      // Show PAUSED text
+      if (!this.pauseText) {
+        const { width, height } = this.cameras.main;
+        this.pauseText = this.add.text(width / 2, height / 2, 'PAUSED', {
+          fontSize: '72px',
+          color: '#ffff00',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 10
+        });
+        this.pauseText.setOrigin(0.5);
+        this.pauseText.setScrollFactor(0);
+        this.pauseText.setDepth(3000);
+      }
+      this.pauseText.setVisible(true);
+    } else {
+      // Resume physics
+      this.physics.resume();
+
+      // Resume tweens
+      this.tweens.resumeAll();
+
+      // Resume animations
+      this.anims.resumeAll();
+
+      // Restart enemy spawner
+      (this.enemySpawner as any).isSpawning = true;
+
+      // Hide PAUSED text
+      if (this.pauseText) {
+        this.pauseText.setVisible(false);
+      }
+    }
+  }
+
+  private resizeSelected(dw: number, dh: number): void {
+    console.log(`[DebugUI] Resizing by ${dw}, ${dh}`);
+    if (!this.debugSelectedVisual) {
+      console.warn('[DebugUI] No visual selected');
+      return;
+    }
+
+    // Ensure we have the resize method
+    if (typeof this.debugSelectedVisual.resize !== 'function') {
+      console.error('[DebugUI] VisualComponent missing resize method!', this.debugSelectedVisual);
+      return;
+    }
+
+    const visual = this.debugSelectedVisual.mainVisual;
+    if (!visual) return;
+
+    const newW = visual.displayWidth + dw;
+    const newH = visual.displayHeight + dh;
+
+    console.log(`[DebugUI] New size: ${newW}x${newH}`);
+
+    if (newW > 0 && newH > 0) {
+      this.debugSelectedVisual.resize(newW, newH);
+      this.updateDebugPanelInfo();
+    }
+  }
+
+  private updateDebugPanelInfo(): void {
+    if (!this.debugSelectedVisual || !this.debugSelectedVisual.mainVisual) return;
+    const v = this.debugSelectedVisual.mainVisual;
+    this.debugInfoText.setText(`Size: ${Math.round(v.displayWidth)} x ${Math.round(v.displayHeight)}`);
   }
 
   /**

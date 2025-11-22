@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { GameConfig } from '../config/game.config';
 import { VisualComponent } from '../components/visual.component';
 import { Weapon } from './weapon.entity';
+import { CharacterAbility } from '../abilities/character-ability';
 
 export class Player extends Phaser.GameObjects.Container {
   public override body!: Phaser.Physics.Arcade.Body;
@@ -51,16 +52,30 @@ export class Player extends Phaser.GameObjects.Container {
     this.visual = new VisualComponent(scene, {
       type: 'sprite',
       texture: `${this.characterId}-static-1`,
-      width: GameConfig.sizes.player * 4.5,
-      height: GameConfig.sizes.player * 4.5
+      width: 100,
+      height: 150
     });
     this.add(this.visual);
 
+    // Debug
+    if ((GameConfig as any).debugAssetSizes) {
+      this.visual.setDebug(true);
+    }
+
     // Start idle animation
-    this.visual.playAnimation(`${this.characterId}-idle`, 1); // 1 fps for idle
+    const idleRate = (this.characterId === 'yurany') ? 8 : (this.characterId === 'lars' ? 15 : 1);
+    this.visual.playAnimation(`${this.characterId}-idle`, idleRate);
 
     // Depth
     this.setDepth(GameConfig.depths.player);
+  }
+
+  // Ability
+  public ability?: CharacterAbility;
+
+  setAbility(ability: CharacterAbility): void {
+    this.ability = ability;
+    this.ability.initialize(this.scene, this);
   }
 
   override update(time: number, delta: number): void {
@@ -69,13 +84,24 @@ export class Player extends Phaser.GameObjects.Container {
       this.updateMoveAnimation();
     } else {
       if (!this.isShooting) {
-        this.visual.playAnimation(`${this.characterId}-idle`, 1);
+        const idleRate = (this.characterId === 'yurany') ? 8 : (this.characterId === 'lars' ? 15 : 1);
+        this.visual.playAnimation(`${this.characterId}-idle`, idleRate);
         this.visual.setRotation(0); // Reset rotation when idle
+
+        // Reset flip for Lars and Yurany when idle
+        if (this.characterId === 'lars' || this.characterId === 'yurany') {
+          this.visual.setFlip(false, false);
+        }
       }
     }
 
     // Update weapons
     this.weapons.forEach(w => w.update(time, delta));
+
+    // Update ability
+    if (this.ability) {
+      this.ability.update(time, delta);
+    }
   }
 
   /**
@@ -100,24 +126,39 @@ export class Player extends Phaser.GameObjects.Container {
     const velocity = this.body.velocity;
     let direction = '';
 
-    if (velocity.y < -10) direction += 'up';
-    if (velocity.y > 10) direction += 'down';
-    if (velocity.x < -10) direction += 'left';
-    if (velocity.x > 10) direction += 'right';
+    // Determine dominant direction to avoid diagonals
+    if (Math.abs(velocity.x) > Math.abs(velocity.y)) {
+      if (velocity.x < -10) direction = 'left';
+      if (velocity.x > 10) direction = 'right';
+    } else {
+      if (velocity.y < -10) direction = 'up';
+      if (velocity.y > 10) direction = 'down';
+    }
 
-    // Normalize direction string (e.g., 'upleft' -> 'up-left')
-    if (direction.length > 5) { // diagonal
-      if (direction.includes('up') && direction.includes('left')) direction = 'up-left';
-      else if (direction.includes('up') && direction.includes('right')) direction = 'up-right';
-      else if (direction.includes('down') && direction.includes('left')) direction = 'down-left';
-      else if (direction.includes('down') && direction.includes('right')) direction = 'down-right';
+    // Handle flipping for Lars and Yurany (reusing right animation for left)
+    if (this.characterId === 'lars' || this.characterId === 'yurany') {
+      if (velocity.x < 0) {
+        this.visual.setFlip(true, false);
+      } else if (velocity.x > 0) {
+        this.visual.setFlip(false, false);
+      }
     }
 
     if (direction !== '') {
       this.lastDirection = direction;
       // Check if animation exists in config before playing, fallback to simple direction if needed
       // But for now we assume all 8 directions exist for all chars
-      this.visual.playAnimation(`${this.characterId}-walk-${direction}`, 8);
+      const animKey = `${this.characterId}-walk-${direction}`;
+
+      // Adjust frame rate for walk animations
+      let frameRate = 15; // Default
+      if (this.characterId === 'lars' && (direction.includes('left') || direction.includes('right') || direction.includes('down'))) {
+        frameRate = 30;
+      } else if (this.characterId === 'yurany' && (direction.includes('left') || direction.includes('right') || direction.includes('up') || direction.includes('down'))) {
+        frameRate = 30;
+      }
+
+      this.visual.playAnimation(animKey, frameRate);
       this.visual.setRotation(0); // Ensure upright
     }
   }
@@ -125,16 +166,39 @@ export class Player extends Phaser.GameObjects.Container {
   public onShoot(targetX: number, targetY: number): void {
     // Trigger shooting visual
     this.isShooting = true;
-    this.visual.stopAnimation();
-    this.visual.setSprite(`${this.characterId}-shoot`);
 
     // Calculate angle to target
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    // Phaser 0 is Right, 90 is Down.
-    // Sprites usually point DOWN or RIGHT.
-    // Assuming shoot sprite points DOWN (based on typical RPG assets).
-    // If sprite points DOWN (90 deg), rotation = angle - 90 deg.
-    this.visual.setRotation(angle - (Math.PI / 2));
+    const deg = Phaser.Math.RadToDeg(angle);
+
+    if (this.characterId === 'yurany') {
+      let animKey = '';
+      let flipX = false;
+
+      if (deg >= -45 && deg <= 45) {
+        animKey = 'right';
+      } else if (deg > 45 && deg < 135) {
+        animKey = 'down';
+      } else if (deg >= 135 || deg <= -135) {
+        animKey = 'right'; // Use right for left
+        flipX = true;
+      } else {
+        animKey = 'up';
+      }
+
+      this.visual.playAnimation(`${this.characterId}-shoot-${animKey}`, 30);
+      this.visual.setFlip(flipX, false);
+      this.visual.setRotation(0); // Don't rotate sprite, animation has direction
+    } else {
+      // Fallback for other characters
+      this.visual.stopAnimation();
+      this.visual.setSprite(`${this.characterId}-shoot`);
+      // Phaser 0 is Right, 90 is Down.
+      // Sprites usually point DOWN or RIGHT.
+      // Assuming shoot sprite points DOWN (based on typical RPG assets).
+      // If sprite points DOWN (90 deg), rotation = angle - 90 deg.
+      this.visual.setRotation(angle - (Math.PI / 2));
+    }
 
     // Reset after short delay
     if (this.shootTimer) this.shootTimer.remove();
@@ -170,6 +234,13 @@ export class Player extends Phaser.GameObjects.Container {
 
     return died;
   }
+
+  onEnemyHit(enemy: any): void {
+    if (this.ability) {
+      this.ability.onEnemyHitPlayer(enemy, this);
+    }
+  }
+
 
   heal(amount: number): void {
     this.health = Math.min(this.maxHealth, this.health + amount);

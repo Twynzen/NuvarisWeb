@@ -54,13 +54,32 @@ export class PreloadScene extends Phaser.Scene {
         this.load.image('lars-static-0', 'lars-static-0.png');
         this.load.image('lars-static-1', 'lars-static-1.png');
 
-        // Walk
-        this.load.image('lars-walk-up-1', 'lars-walk-up-1.png');
-        this.load.image('lars-walk-up-2', 'lars-walk-up-2.png');
+        // Idle Animation
+        this.load.path = 'assets/lars/idle/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-idle-${i}`, `lars-idle-one-${num}.png`);
+        }
+        this.load.path = 'assets/lars/';
+
         this.load.image('lars-walk-left-1', 'lars-walk-left-1.png');
         this.load.image('lars-walk-left-2', 'lars-walk-left-2.png');
-        this.load.image('lars-walk-right-1', 'lars-walk-right-1.png'); // Note: one file was huge?
-        this.load.image('lars-walk-right-2', 'lars-walk-right-2.png');
+
+        // Walk Right (Sequence)
+        this.load.path = 'assets/lars/right/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-walk-right-${num}`, `lars-walk-right-${num}.png`);
+        }
+        this.load.path = 'assets/lars/'; // Reset path
+
+        // Walk Down (Sequence)
+        this.load.path = 'assets/lars/down/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-walk-down-${i}`, `lars-walk-down-${num}.png`);
+        }
+        this.load.path = 'assets/lars/';
 
         // Diagonals
         this.load.image('lars-walk-down-left-1', 'lars-walk-down-left-1.png');
@@ -76,25 +95,74 @@ export class PreloadScene extends Phaser.Scene {
         // --- Yurany (Proyecto Y) Assets ---
         this.load.path = 'assets/proyecto-y/';
         this.load.image('yurany-concept', 'yurany-conept.png'); // Typo in file name
-        this.load.image('yurany-shoot', 'yurany-shoot.png');
         this.load.image('yurany-dead', 'yurany-dead.png');
         this.load.image('yurany-hit', 'hit-yurany.png');
 
-        // Static
-        this.load.image('yurany-static-1', 'yurany-static-1.png');
-        this.load.image('yurany-static-2', 'yurany-static-2.png');
-        this.load.image('yurany-static-3', 'yurany-static-3.png');
-        this.load.image('yurany-static-4', 'yurany-static-4.png');
+        // Shoot Animations
+        // Right
+        this.load.path = 'assets/proyecto-y/shoot/right/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-shoot-right-${i}`, `y-shoot-right-${num}.png`);
+        }
+        // Down
+        this.load.path = 'assets/proyecto-y/shoot/down/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-shoot-down-${i}`, `y-shoot-down-${num}.png`); // Assuming filename format
+        }
+        // Up
+        this.load.path = 'assets/proyecto-y/shoot/up/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-shoot-up-${i}`, `y-shoot-up-${num}.png`);
+        }
+
+        // Projectile
+        this.load.path = 'assets/proyecto-y/shoot/shoot/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-projectile-${i}`, `y-shoot-${num}.png`);
+        }
+
+        this.load.path = 'assets/proyecto-y/';
+
+        // Static (Idle)
+        this.load.path = 'assets/proyecto-y/idle/';
+        // Stage 1 (1-30)
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-idle-${i}`, `y-idle-one-${num}.png`);
+        }
+        this.load.path = 'assets/proyecto-y/';
 
         // Walk
-        this.load.image('yurany-walk-down-1', 'yurany-walk-down-1.png');
-        this.load.image('yurany-walk-down-2', 'yurany-walk-down-2.png');
-        this.load.image('yurany-walk-up-1', 'yurany-walk-up-1.png');
-        this.load.image('yurany-walk-up-2', 'yurany-walk-up-2.png');
+        this.load.path = 'assets/proyecto-y/';
         this.load.image('yurany-walk-left-1', 'yurany-walk-left-1.png');
         this.load.image('yurany-walk-left-2', 'yurany-walk-left-2.png');
-        this.load.image('yurany-walk-right-1', 'yurany-walk-right-1.png');
-        this.load.image('yurany-walk-right-2', 'yurany-walk-right-2.png');
+
+        // Walk Right (Sequence)
+        this.load.path = 'assets/proyecto-y/right/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-walk-right-${i}`, `y-walk-right-${num}.png`);
+        }
+
+        // Walk Down (Sequence)
+        this.load.path = 'assets/proyecto-y/down/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-walk-down-${i}`, `y-walk-down-${num}.png`);
+        }
+
+        // Walk Up (Sequence)
+        this.load.path = 'assets/proyecto-y/up/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-walk-up-${i}`, `y-walk-up-${num}.png`);
+        }
+
+        this.load.path = 'assets/proyecto-y/';
 
         // Diagonals
         this.load.image('yurany-walk-down-left-2', 'yurany-walk-down-left-2.png');

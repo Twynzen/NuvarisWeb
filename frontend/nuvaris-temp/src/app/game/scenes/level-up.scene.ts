@@ -1,13 +1,5 @@
 import * as Phaser from 'phaser';
-
-export interface AbilityOption {
-  id: string;
-  name: string;
-  description: string;
-  rarity: 'basica' | 'epica' | 'legendaria';
-  icon?: string;
-  effect: () => void;
-}
+import { AbilityOption } from '../abilities/ability-option';
 
 export class LevelUpScene extends Phaser.Scene {
   private selectedOption?: AbilityOption;
@@ -240,8 +232,16 @@ export class LevelUpScene extends Phaser.Scene {
    */
   private getAllPossibleOptions(): AbilityOption[] {
     const gameScene = this.scene.get('GameScene') as any;
+    let options: AbilityOption[] = [];
 
-    return [
+    // Get Character Specific Upgrades
+    if (gameScene.player && gameScene.player.ability && gameScene.player.ability.getUpgrades) {
+      const charUpgrades = gameScene.player.ability.getUpgrades();
+      options = options.concat(charUpgrades);
+    }
+
+    // Generic Options
+    const genericOptions: AbilityOption[] = [
       // BASIC ABILITIES
       {
         id: 'health_boost',
@@ -375,6 +375,8 @@ export class LevelUpScene extends Phaser.Scene {
         }
       }
     ];
+
+    return options.concat(genericOptions);
   }
 
   /**
@@ -385,27 +387,56 @@ export class LevelUpScene extends Phaser.Scene {
 
     this.selectedOption = option;
 
-    // Apply effect
-    option.effect();
+    // Apply effect (pass GameScene context)
+    const gameScene = this.scene.get('GameScene');
+    option.effect(gameScene);
 
     console.log(`Selected: ${option.name} (${option.rarity})`);
 
-    // Flash final selection
-    const index = this.options.indexOf(option);
-    if (index !== -1 && this.cardContainers[index]) {
-      const container = this.cardContainers[index];
-      this.tweens.add({
-        targets: container,
-        scaleX: 1.2,
-        scaleY: 1.2,
-        duration: 200,
-        yoyo: true,
-        repeat: 2
-      });
-    }
+    // Winner Animation
+    this.cardContainers.forEach((container, i) => {
+      const isSelected = this.options[i] === option;
+
+      if (isSelected) {
+        // Highlight winner
+        this.tweens.add({
+          targets: container,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          y: this.cameras.main.height / 2 - 50,
+          duration: 500,
+          ease: 'Back.easeOut'
+        });
+
+        // Add "CHOSEN" text
+        const chosenText = this.add.text(0, -200, 'CHOSEN', {
+          fontSize: '48px',
+          color: '#ffff00',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 6
+        });
+        chosenText.setOrigin(0.5);
+        container.add(chosenText);
+
+        // Glow effect (tween border color or add glow sprite)
+        const bg = container.getAt(0) as Phaser.GameObjects.Rectangle;
+        bg.setStrokeStyle(6, 0xffffff);
+
+      } else {
+        // Fade out others
+        this.tweens.add({
+          targets: container,
+          alpha: 0,
+          scaleX: 0.5,
+          scaleY: 0.5,
+          duration: 300
+        });
+      }
+    });
 
     // Close scene after delay
-    this.time.delayedCall(1500, () => {
+    this.time.delayedCall(2000, () => {
       this.scene.stop();
       this.scene.resume('GameScene');
     });

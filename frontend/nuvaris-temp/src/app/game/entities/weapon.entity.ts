@@ -154,7 +154,7 @@ export class Weapon {
     if (!enemyGroup) return [];
 
     return enemyGroup.getChildren()
-      .filter(child => child instanceof Enemy && child.isActive) as Enemy[];
+      .filter(child => child instanceof Enemy && child.isActive && !child.isMindControlled) as Enemy[];
   }
 
   /**
