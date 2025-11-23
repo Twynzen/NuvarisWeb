@@ -104,7 +104,8 @@ export class EnemySpawner {
             speed: 100,
             damage: 8,
             xpValue: 10,
-            color: 0x44ff44
+            color: 0x44ff44,
+            size: 44
           }
         }
       ],
@@ -137,7 +138,8 @@ export class EnemySpawner {
             speed: 120,
             damage: 10,
             xpValue: 12,
-            color: 0x44ff44
+            color: 0x44ff44,
+            size: 44
           }
         },
         {
@@ -182,7 +184,8 @@ export class EnemySpawner {
             speed: 140,
             damage: 12,
             xpValue: 15,
-            color: 0x44ff44
+            color: 0x44ff44,
+            size: 44
           }
         },
         {
@@ -227,7 +230,8 @@ export class EnemySpawner {
             speed: 160,
             damage: 15,
             xpValue: 18,
-            color: 0x44ff44
+            color: 0x44ff44,
+            size: 44
           }
         },
         {

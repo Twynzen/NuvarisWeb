@@ -177,17 +177,23 @@ export class PreloadScene extends Phaser.Scene {
         // --- Enemies ---
 
         // Intestine Worm
-        this.load.path = 'assets/Enemys/intestine-worm/';
-        this.load.image('worm-move-1', 'intestine-worm-1.png');
-        this.load.image('worm-move-2', 'intestine-worm-2.png');
+        this.load.path = 'assets/Enemys/intestine-worm/walk/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`worm-move-${i}`, `intestine-worm-walk-${num}.png`);
+        }
+
+        this.load.path = 'assets/Enemys/intestine-worm/idle/';
         this.load.image('worm-dead', 'intestine-worm-dead.png');
 
         // Spider
+        this.load.path = 'assets/Enemys/spider/walk/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`spider-move-${i}`, `spider-walk-${num}.png`);
+        }
+
         this.load.path = 'assets/Enemys/spider/';
-        this.load.image('spider-move-1', 'spider-1.png');
-        this.load.image('spider-move-2', 'spider-2.png');
-        this.load.image('spider-move-3', 'spider-3.png');
-        this.load.image('spider-move-4', 'spider-4.png');
         // Note: spider-shoot.png exists but not loaded since spiders don't shoot
         this.load.image('spider-hit', 'hit-spider.png');
 

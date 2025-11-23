@@ -105,8 +105,8 @@ export const GameConfig = {
     'yurany-projectile': Array.from({ length: 30 }, (_, i) => `yurany-projectile-${i + 1}`),
 
     // Enemies
-    'worm-move': ['worm-move-1', 'worm-move-2'],
-    'spider-move': ['spider-move-1', 'spider-move-2', 'spider-move-3'],
+    'worm-move': Array.from({ length: 30 }, (_, i) => `worm-move-${i + 1}`),
+    'spider-move': Array.from({ length: 30 }, (_, i) => `spider-move-${i + 1}`),
     'boss-move': ['boss-walk-1', 'boss-walk-2', 'boss-walk-3', 'boss-walk-4']
   }
 };
