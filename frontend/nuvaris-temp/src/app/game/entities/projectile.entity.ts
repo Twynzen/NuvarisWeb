@@ -79,9 +79,13 @@ export class Projectile extends Phaser.GameObjects.Container {
         this.particleColor = 0xffff00; // Default yellow
     }
 
-    // Update visual to use character's hit sprite
+    // Update visual to use character's projectile animation
     if (characterId === 'yurany') {
       this.visual.playAnimation('yurany-projectile', 30);
+    } else if (characterId === 'lars') {
+      this.visual.playAnimation('lars-projectile', 30);
+    } else if (characterId === 'arcadio') {
+      this.visual.playAnimation('arcadio-projectile', 30);
     } else {
       this.visual.setConfig({
         type: 'sprite',

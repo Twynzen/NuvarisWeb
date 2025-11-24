@@ -57,6 +57,7 @@ export class GameScene extends Phaser.Scene {
   private bossHealthBar?: Phaser.GameObjects.Graphics;
   private bossNameText?: Phaser.GameObjects.Text;
   private healthBar!: Phaser.GameObjects.Graphics;
+  private healthText!: Phaser.GameObjects.Text;
   private xpBar!: Phaser.GameObjects.Graphics;
   private controlsText!: Phaser.GameObjects.Text;
 
@@ -71,6 +72,8 @@ export class GameScene extends Phaser.Scene {
   private isPaused = false;
   private isGameOver = false;
   private pauseText?: Phaser.GameObjects.Text;
+  private killCount = 0;
+  private killCountText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -92,6 +95,8 @@ export class GameScene extends Phaser.Scene {
     // Reset game over state
     this.isGameOver = false;
     this.isPaused = false;
+    this.killCount = 0;
+    if (this.killCountText) this.killCountText.setText('AMENAZAS NEUTRALIZADAS: 0');
 
     // Detect mobile
     this.isMobile = this.sys.game.device.os.android || this.sys.game.device.os.iOS;
@@ -122,8 +127,8 @@ export class GameScene extends Phaser.Scene {
       const char = data.character;
       console.log(`🎮 Playing as: ${char.name} (${char.id})`);
 
-      // Apply stats multipliers
-      this.player.maxHealth *= (char.stats.health / 3);
+      // Apply stats multipliers (keeping health at 100 for all)
+      // this.player.maxHealth *= (char.stats.health / 3); // REMOVED - all chars have 100 HP
       this.player.health = this.player.maxHealth;
       this.player.speed *= (char.stats.speed / 3);
       this.player.damage *= (char.stats.damage / 3);
@@ -591,6 +596,7 @@ export class GameScene extends Phaser.Scene {
     this.xpText.setDepth(100);
 
     // Enemy count
+    // Enemy count
     this.enemyCountText = this.add.text(20, 145, 'Enemies: 0', {
       fontSize: '16px',
       color: '#ff4444',
@@ -600,10 +606,36 @@ export class GameScene extends Phaser.Scene {
     this.enemyCountText.setScrollFactor(0);
     this.enemyCountText.setDepth(100);
 
+    // Kill Count (Top Right)
+    this.killCountText = this.add.text(width - 20, 20, 'AMENAZAS NEUTRALIZADAS: 0', {
+      fontFamily: '"Rubik Glitch", cursive',
+      fontSize: '20px',
+      color: '#ff0000',
+      stroke: '#000000',
+      strokeThickness: 4,
+      align: 'right'
+    });
+    this.killCountText.setOrigin(1, 0);
+    this.killCountText.setScrollFactor(0);
+    this.killCountText.setDepth(100);
+    this.enemyCountText.setScrollFactor(0);
+    this.enemyCountText.setDepth(100);
+
     // Health bar
     this.healthBar = this.add.graphics();
     this.healthBar.setScrollFactor(0);
     this.healthBar.setDepth(100);
+
+    // Health text
+    this.healthText = this.add.text(20, this.cameras.main.height - 60, '', {
+      fontSize: '14px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    this.healthText.setScrollFactor(0);
+    this.healthText.setDepth(101);
+
     this.updateHealthBar();
 
     // XP bar
@@ -874,14 +906,17 @@ export class GameScene extends Phaser.Scene {
     this.healthBar.fillStyle(0x000000, 0.7);
     this.healthBar.fillRect(x, y, barWidth, barHeight);
 
-    // Health (green to red gradient)
-    const color = healthPercent > 0.5 ? 0x00ff00 : healthPercent > 0.25 ? 0xffff00 : 0xff0000;
-    this.healthBar.fillStyle(color);
+    // Health (always RED)
+    this.healthBar.fillStyle(0xff0000);
     this.healthBar.fillRect(x + 2, y + 2, (barWidth - 4) * healthPercent, barHeight - 4);
 
     // Border
     this.healthBar.lineStyle(2, 0xffffff);
     this.healthBar.strokeRect(x, y, barWidth, barHeight);
+
+    // Update health text with numbers
+    this.healthText.setText(`${Math.ceil(this.player.health)} / ${this.player.maxHealth}`);
+    this.healthText.setPosition(x + barWidth / 2 - this.healthText.width / 2, y + 2);
   }
 
   /**
@@ -1053,74 +1088,66 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) return;
     this.isGameOver = true;
 
-    // Show "YOU DIED" text
+    console.log('💀 Player died!');
+
+    // Play death animation
+    if (this.player && this.player.visual) {
+      this.player.visual.playAnimation(`${this.player.characterId}-dead`, 15, false, false);
+    }
+
+    // Stop physics
+    this.physics.pause();
+
+    // Show Game Over screen
     const { width, height } = this.cameras.main;
-    const text = this.add.text(width / 2, height / 2 - 150, 'YOU DIED', {
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
+    bg.setScrollFactor(0);
+    bg.setDepth(1000);
+
+    const text = this.add.text(width / 2, height / 2 - 50, 'SUJETO ELIMINADO', {
       fontFamily: '"Rubik Glitch", cursive',
-      fontSize: '96px',
-      color: '#ff0000',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 10
+      fontSize: '64px',
+      color: '#ff0000'
     });
     text.setOrigin(0.5);
     text.setScrollFactor(0);
-    text.setDepth(2000);
+    text.setDepth(1001);
 
-    // Show dead character sprite
-    const deadSprite = this.add.sprite(
-      width / 2,
-      height / 2,
-      `${this.player.characterId}-dead`
-    );
-    deadSprite.setDisplaySize(200, 200); // Fixed size for death screen
-    deadSprite.setScrollFactor(0);
-    deadSprite.setDepth(2000);
-    deadSprite.setAlpha(0);
-
-    // Fade in the dead sprite
-    this.tweens.add({
-      targets: deadSprite,
-      alpha: 1,
-      duration: 1000,
-      ease: 'Power2'
-    });
-
-    // Restart Button
-    const btnWidth = 240;
-    const btnHeight = 60;
-    const btnX = width / 2;
-    const btnY = height / 2 + 150;
-
-    const btnContainer = this.add.container(btnX, btnY);
-    btnContainer.setScrollFactor(0);
-    btnContainer.setDepth(2001); // Ensure it's above everything
-
-    const btnBg = this.add.rectangle(0, 0, btnWidth, btnHeight, 0x333333);
-    btnBg.setStrokeStyle(2, 0xffffff);
-    btnContainer.add(btnBg);
-
-    const btnText = this.add.text(0, 0, 'MAIN MENU', {
-      fontFamily: '"Press Start 2P", cursive',
-      fontSize: '20px',
+    // Show Score
+    const scoreText = this.add.text(width / 2, height / 2 + 30, `AMENAZAS NEUTRALIZADAS: ${this.killCount}`, {
+      fontFamily: '"Roboto", sans-serif',
+      fontSize: '32px',
       color: '#ffffff'
     });
-    btnText.setOrigin(0.5);
-    btnContainer.add(btnText);
+    scoreText.setOrigin(0.5);
+    scoreText.setScrollFactor(0);
+    scoreText.setDepth(1001);
 
-    // Interaction on the container
-    btnContainer.setSize(btnWidth, btnHeight);
-    btnContainer.setInteractive({ useHandCursor: true })
-      .on('pointerover', () => btnBg.setFillStyle(0x555555))
-      .on('pointerout', () => btnBg.setFillStyle(0x333333))
-      .on('pointerdown', () => {
-        this.scene.stop();
-        this.scene.start('MenuScene');
-      });
+    // Show High Score
+    const charId = this.player.characterId;
+    const highScore = localStorage.getItem(`qdt_highscore_${charId}`) || '0';
+    const highText = this.add.text(width / 2, height / 2 + 80, `RÉCORD PERSONAL: ${highScore}`, {
+      fontFamily: '"Roboto", sans-serif',
+      fontSize: '24px',
+      color: '#ffff00'
+    });
+    highText.setOrigin(0.5);
+    highText.setScrollFactor(0);
+    highText.setDepth(1001);
 
-    // Stop game
-    this.physics.pause();
-    this.enemySpawner.stop();
+    const restartText = this.add.text(width / 2, height / 2 + 150, 'Click to Restart', {
+      fontSize: '24px',
+      color: '#ffffff'
+    });
+    restartText.setOrigin(0.5);
+    restartText.setScrollFactor(0);
+    restartText.setDepth(1001);
+
+    // Restart on click
+    this.input.once('pointerdown', () => {
+      this.scene.start('CharacterSelectionScene');
+    });
   }
 
   /**

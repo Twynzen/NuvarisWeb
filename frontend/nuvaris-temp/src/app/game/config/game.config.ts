@@ -63,33 +63,38 @@ export const GameConfig = {
   },
 
   // Debug
-  debugAssetSizes: true,
+  debugAssetSizes: false,
 
   // Animations
   animations: {
     // Arcadio
-    'arcadio-idle': ['arcadio-static-1', 'arcadio-static-2', 'arcadio-static-3'],
-    'arcadio-walk-down': ['arcadio-walk-down-1', 'arcadio-walk-down-2'],
-    'arcadio-walk-up': ['arcadio-walk-up-1', 'arcadio-walk-up-2'],
-    'arcadio-walk-left': ['arcadio-walk-left-1', 'arcadio-walk-left-2', 'arcadio-walk-left-3'],
-    'arcadio-walk-right': ['arcadio-walk-right-1', 'arcadio-walk-right-2', 'arcadio-walk-right-3'],
-    'arcadio-walk-down-left': ['arcadio-walk-down-left-1', 'arcadio-walk-down-left-2'],
-    'arcadio-walk-down-right': ['arcadio-walk-down-right-1', 'arcadio-walk-down-right-2'],
-    'arcadio-walk-up-left': ['arcadio-walk-up-left-1', 'arcadio-walk-up-left-2'],
-    'arcadio-walk-up-right': ['arcadio-walk-up-right-1', 'arcadio-walk-up-right-2'],
+    'arcadio-concept': Array.from({ length: 30 }, (_, i) => `arcadio-concept-${i + 1}`),
+    'arcadio-idle': Array.from({ length: 30 }, (_, i) => `arcadio-idle-${i + 1}`),
+    'arcadio-walk-down': Array.from({ length: 30 }, (_, i) => `arcadio-walk-down-${i + 1}`),
+    'arcadio-walk-up': Array.from({ length: 30 }, (_, i) => `arcadio-walk-up-${i + 1}`),
+    'arcadio-walk-left': Array.from({ length: 30 }, (_, i) => `arcadio-walk-right-${i + 1}`), // Reuse right, will flip
+    'arcadio-walk-right': Array.from({ length: 30 }, (_, i) => `arcadio-walk-right-${i + 1}`),
+    'arcadio-shoot-right': Array.from({ length: 30 }, (_, i) => `arcadio-shoot-right-${i + 1}`),
+    'arcadio-shoot-down': Array.from({ length: 30 }, (_, i) => `arcadio-shoot-down-${i + 1}`),
+    'arcadio-shoot-up': Array.from({ length: 30 }, (_, i) => `arcadio-shoot-up-${i + 1}`),
+    'arcadio-projectile': Array.from({ length: 30 }, (_, i) => `arcadio-projectile-${i + 1}`),
+    'arcadio-dead': Array.from({ length: 30 }, (_, i) => `arcadio-dead-${i + 1}`),
 
     // Lars
+    'lars-concept': Array.from({ length: 30 }, (_, i) => `lars-concept-${i + 1}`),
     'lars-idle': Array.from({ length: 30 }, (_, i) => `lars-idle-${i + 1}`),
     'lars-walk-down': Array.from({ length: 30 }, (_, i) => `lars-walk-down-${i + 1}`),
-    'lars-walk-up': ['lars-walk-up-1', 'lars-walk-up-2'],
-    'lars-walk-left': Array.from({ length: 30 }, (_, i) => `lars-walk-right-${(i + 1).toString().padStart(3, '0')}`),
-    'lars-walk-right': Array.from({ length: 30 }, (_, i) => `lars-walk-right-${(i + 1).toString().padStart(3, '0')}`),
-    'lars-walk-down-left': ['lars-walk-down-left-1', 'lars-walk-down-left-2'],
-    'lars-walk-down-right': ['lars-walk-down-right-1', 'lars-walk-down-right-2'],
-    'lars-walk-up-left': ['lars-walk-up-left-1', 'lars-walk-up-left-2'],
-    'lars-walk-up-right': ['lars-walk-up-right-1', 'lars-walk-up-right-2'],
+    'lars-walk-up': Array.from({ length: 30 }, (_, i) => `lars-walk-up-${i + 1}`),
+    'lars-walk-left': Array.from({ length: 30 }, (_, i) => `lars-walk-right-${i + 1}`), // Reuse right, will flip
+    'lars-walk-right': Array.from({ length: 30 }, (_, i) => `lars-walk-right-${i + 1}`),
+    'lars-shoot-right': Array.from({ length: 30 }, (_, i) => `lars-shoot-right-${i + 1}`),
+    'lars-shoot-down': Array.from({ length: 30 }, (_, i) => `lars-shoot-down-${i + 1}`),
+    'lars-shoot-up': Array.from({ length: 30 }, (_, i) => `lars-shoot-up-${i + 1}`),
+    'lars-projectile': Array.from({ length: 30 }, (_, i) => `lars-projectile-${i + 1}`),
+    'lars-dead': Array.from({ length: 30 }, (_, i) => `lars-dead-${i + 1}`),
 
     // Yurany
+    'yurany-concept': Array.from({ length: 30 }, (_, i) => `yurany-concept-${i + 1}`),
     'yurany-idle': Array.from({ length: 30 }, (_, i) => `yurany-idle-${i + 1}`),
     'yurany-walk-down': Array.from({ length: 30 }, (_, i) => `yurany-walk-down-${i + 1}`),
     'yurany-walk-up': Array.from({ length: 30 }, (_, i) => `yurany-walk-up-${i + 1}`),
@@ -103,6 +108,7 @@ export const GameConfig = {
     'yurany-shoot-down': Array.from({ length: 30 }, (_, i) => `yurany-shoot-down-${i + 1}`),
     'yurany-shoot-up': Array.from({ length: 30 }, (_, i) => `yurany-shoot-up-${i + 1}`),
     'yurany-projectile': Array.from({ length: 30 }, (_, i) => `yurany-projectile-${i + 1}`),
+    'yurany-dead': Array.from({ length: 30 }, (_, i) => `yurany-dead-${i + 1}`),
 
     // Enemies
     'worm-move': Array.from({ length: 30 }, (_, i) => `worm-move-${i + 1}`),

@@ -190,7 +190,7 @@ export class VisualComponent extends Phaser.GameObjects.Container {
     /**
      * Play manual animation based on GameConfig keys
      */
-    public playAnimation(key: string, frameRate: number = 8, ignoreIfPlaying: boolean = true): void {
+    public playAnimation(key: string, frameRate: number = 8, ignoreIfPlaying: boolean = true, loop: boolean = true): void {
         if (ignoreIfPlaying && this.currentAnimKey === key) return;
 
         // Stop previous animation
@@ -217,7 +217,20 @@ export class VisualComponent extends Phaser.GameObjects.Container {
             this.animationTimer = this.scene.time.addEvent({
                 delay: delay,
                 callback: () => {
-                    this.currentFrameIndex = (this.currentFrameIndex + 1) % frames.length;
+                    const nextIndex = this.currentFrameIndex + 1;
+                    if (nextIndex >= frames.length) {
+                        if (!loop) {
+                            // Stop animation on last frame
+                            if (this.animationTimer) {
+                                this.animationTimer.remove();
+                                this.animationTimer = undefined;
+                            }
+                            return;
+                        }
+                        this.currentFrameIndex = 0;
+                    } else {
+                        this.currentFrameIndex = nextIndex;
+                    }
                     this.setSprite(frames[this.currentFrameIndex]);
                 },
                 loop: true

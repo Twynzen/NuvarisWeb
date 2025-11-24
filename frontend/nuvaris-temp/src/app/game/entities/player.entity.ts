@@ -52,8 +52,8 @@ export class Player extends Phaser.GameObjects.Container {
     this.visual = new VisualComponent(scene, {
       type: 'sprite',
       texture: `${this.characterId}-static-1`,
-      width: 100,
-      height: 150
+      width: 200,
+      height: 275
     });
     this.add(this.visual);
 
@@ -84,12 +84,12 @@ export class Player extends Phaser.GameObjects.Container {
       this.updateMoveAnimation();
     } else {
       if (!this.isShooting) {
-        const idleRate = (this.characterId === 'yurany') ? 8 : (this.characterId === 'lars' ? 15 : 1);
+        const idleRate = (this.characterId === 'yurany') ? 8 : (this.characterId === 'lars' ? 15 : (this.characterId === 'arcadio' ? 15 : 1));
         this.visual.playAnimation(`${this.characterId}-idle`, idleRate);
         this.visual.setRotation(0); // Reset rotation when idle
 
-        // Reset flip for Lars and Yurany when idle
-        if (this.characterId === 'lars' || this.characterId === 'yurany') {
+        // Reset flip for all characters when idle
+        if (this.characterId === 'lars' || this.characterId === 'yurany' || this.characterId === 'arcadio') {
           this.visual.setFlip(false, false);
         }
       }
@@ -135,11 +135,16 @@ export class Player extends Phaser.GameObjects.Container {
       if (velocity.y > 10) direction = 'down';
     }
 
-    // Handle flipping for Lars and Yurany (reusing right animation for left)
-    if (this.characterId === 'lars' || this.characterId === 'yurany') {
-      if (velocity.x < 0) {
+    // Handle flipping for characters using right animation for left
+    if (this.characterId === 'lars' || this.characterId === 'yurany' || this.characterId === 'arcadio') {
+      if (velocity.x < -10) {
+        // Moving left - flip the sprite
         this.visual.setFlip(true, false);
-      } else if (velocity.x > 0) {
+      } else if (velocity.x > 10) {
+        // Moving right - no flip
+        this.visual.setFlip(false, false);
+      } else if (direction === 'up' || direction === 'down') {
+        // Moving vertically - reset flip to avoid issues
         this.visual.setFlip(false, false);
       }
     }
@@ -152,10 +157,12 @@ export class Player extends Phaser.GameObjects.Container {
 
       // Adjust frame rate for walk animations
       let frameRate = 15; // Default
-      if (this.characterId === 'lars' && (direction.includes('left') || direction.includes('right') || direction.includes('down'))) {
-        frameRate = 30;
+      if (this.characterId === 'lars' && (direction.includes('left') || direction.includes('right') || direction.includes('down') || direction.includes('up'))) {
+        frameRate = 15; // All directions at same speed
       } else if (this.characterId === 'yurany' && (direction.includes('left') || direction.includes('right') || direction.includes('up') || direction.includes('down'))) {
-        frameRate = 30;
+        frameRate = 15;
+      } else if (this.characterId === 'arcadio' && (direction.includes('left') || direction.includes('right') || direction.includes('up') || direction.includes('down'))) {
+        frameRate = 15;
       }
 
       this.visual.playAnimation(animKey, frameRate);
@@ -171,7 +178,7 @@ export class Player extends Phaser.GameObjects.Container {
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
     const deg = Phaser.Math.RadToDeg(angle);
 
-    if (this.characterId === 'yurany') {
+    if (this.characterId === 'yurany' || this.characterId === 'lars' || this.characterId === 'arcadio') {
       let animKey = '';
       let flipX = false;
 
@@ -200,9 +207,9 @@ export class Player extends Phaser.GameObjects.Container {
       this.visual.setRotation(angle - (Math.PI / 2));
     }
 
-    // Reset after short delay
+    // Reset after animation completes (30 frames at 30 fps = 1 second)
     if (this.shootTimer) this.shootTimer.remove();
-    this.shootTimer = this.scene.time.delayedCall(400, () => {
+    this.shootTimer = this.scene.time.delayedCall(1000, () => {
       this.isShooting = false;
       this.visual.setRotation(0);
       // Animation will resume in update()

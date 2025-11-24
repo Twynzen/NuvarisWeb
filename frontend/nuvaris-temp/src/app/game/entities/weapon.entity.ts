@@ -78,45 +78,54 @@ export class Weapon {
     const count = this.config.count || 1;
     const spread = 0.2; // Radians spread
 
-    for (let i = 0; i < count; i++) {
-      // Get projectile from pool
-      const projectile = this.getProjectileFromPool();
-      if (!projectile) return;
-
-      // Calculate angle offset
-      let angleOffset = 0;
-      if (count > 1) {
-        angleOffset = (i - (count - 1) / 2) * spread;
-      }
-
-      // Calculate target position with spread
-      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y) + angleOffset;
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, target.x, target.y);
-      const targetX = this.player.x + Math.cos(angle) * dist;
-      const targetY = this.player.y + Math.sin(angle) * dist;
-
-      // Calculate damage with crit
-      let damage = this.config.damage;
-      if (Math.random() < this.player.critChance) {
-        damage *= this.player.critMultiplier;
-        // TODO: Show crit text
-      }
-
-      // Fire towards target
-      projectile.fire(
-        this.player.x,
-        this.player.y,
-        targetX,
-        targetY,
-        damage,
-        this.config.projectileSpeed,
-        this.config.pierce || 0,
-        this.player.characterId
-      );
-    }
-
-    // Trigger player shooting animation
+    // Trigger player shooting animation FIRST
     this.player.onShoot(target.x, target.y);
+
+    // For all characters with directional animations, delay the projectile spawn to sync with animation
+    const shootDelay = (this.player.characterId === 'yurany' || this.player.characterId === 'lars' || this.player.characterId === 'arcadio') ? 800 : 0;
+
+    this.scene.time.delayedCall(shootDelay, () => {
+      for (let i = 0; i < count; i++) {
+        // Get projectile from pool
+        const projectile = this.getProjectileFromPool();
+        if (!projectile) return;
+
+        // Calculate angle offset
+        let angleOffset = 0;
+        if (count > 1) {
+          angleOffset = (i - (count - 1) / 2) * spread;
+        }
+
+        // Calculate spawn offset based on direction (so projectile starts from weapon/edge, not center)
+        const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y) + angleOffset;
+        const spawnOffset = 50; // Distance from center to edge of sprite
+        const spawnX = this.player.x + Math.cos(angle) * spawnOffset;
+        const spawnY = this.player.y + Math.sin(angle) * spawnOffset;
+
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, target.x, target.y);
+        const targetX = this.player.x + Math.cos(angle) * dist;
+        const targetY = this.player.y + Math.sin(angle) * dist;
+
+        // Calculate damage with crit
+        let damage = this.config.damage;
+        if (Math.random() < this.player.critChance) {
+          damage *= this.player.critMultiplier;
+          // TODO: Show crit text
+        }
+
+        // Fire towards target
+        projectile.fire(
+          spawnX,
+          spawnY,
+          targetX,
+          targetY,
+          damage,
+          this.config.projectileSpeed,
+          this.config.pierce || 0,
+          this.player.characterId
+        );
+      }
+    });
   }
 
   /**

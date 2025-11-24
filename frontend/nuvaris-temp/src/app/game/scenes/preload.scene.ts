@@ -8,47 +8,109 @@ export class PreloadScene extends Phaser.Scene {
     preload(): void {
         this.createLoadingBar();
 
+        // Environment
+        this.load.image('wall-1', 'assets/environment/wall_1.jpg');
+        this.load.image('wall-2', 'assets/environment/wall_2.jpg');
+        this.load.image('wall-3', 'assets/environment/wall_3.jpg');
+        this.load.image('wall-4', 'assets/environment/wall_4.jpg');
+        this.load.image('wall-5', 'assets/environment/wall_5.jpg');
+
         // --- Arcadio Assets ---
         this.load.path = 'assets/arcadio/';
-        this.load.image('arcadio-concept', 'arcadio-concept.png');
         this.load.image('arcadio-shoot', 'arcadio-shoot.png');
         this.load.image('arcadio-dead', 'arcadio-dead.png');
         this.load.image('arcadio-hit', 'hit-arcadio.png');
 
-        // Static (Idle)
+        // Concept Animation (30 frames)
+        this.load.path = 'assets/arcadio/concept/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-concept-${i}`, `arcadio-concept-${num}.png`);
+        }
+        this.load.path = 'assets/arcadio/';
+
+        // Static (for backwards compatibility)
         this.load.image('arcadio-static-1', 'arcadio-static-1.png');
         this.load.image('arcadio-static-2', 'arcadio-static-2.png');
         this.load.image('arcadio-static-3', 'arcadio-static-3.png');
 
-        // Walk
-        this.load.image('arcadio-walk-down-1', 'arcadio-walk-down-1.png');
-        this.load.image('arcadio-walk-down-2', 'arcadio-walk-down-2.png');
-        this.load.image('arcadio-walk-up-1', 'arcadio-walk-up-1.png');
-        this.load.image('arcadio-walk-up-2', 'arcadio-walk-up-2.png');
-        this.load.image('arcadio-walk-left-1', 'arcadio-walk-left-1.png');
-        this.load.image('arcadio-walk-left-2', 'arcadio-walk-left-2.png');
-        this.load.image('arcadio-walk-left-3', 'arcadio-walk-left-3.png');
-        this.load.image('arcadio-walk-right-1', 'arcadio-walk-right-1.png');
-        this.load.image('arcadio-walk-right-2', 'arcadio-walk-right-2.png');
-        this.load.image('arcadio-walk-right-3', 'arcadio-walk-right-3.png');
+        // Idle Animation (30 frames)
+        this.load.path = 'assets/arcadio/idle/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-idle-${i}`, `arcadio-idle-${num}.png`);
+        }
 
-        // Diagonals
-        this.load.image('arcadio-walk-down-left-1', 'arcadio-walk-down-left-1.png');
-        this.load.image('arcadio-walk-down-left-2', 'arcadio-walk-down-left-2.png');
-        this.load.image('arcadio-walk-down-right-1', 'arcadio-walk-down-right-1.png');
-        this.load.image('arcadio-walk-down-right-2', 'arcadio-walk-down-right-2.png');
-        this.load.image('arcadio-walk-up-left-1', 'arcadio-walk-up-left-1.png');
-        this.load.image('arcadio-walk-up-left-2', 'arcadio-walk-up-left-2.png');
-        this.load.image('arcadio-walk-up-right-1', 'arcadio-walk-up-right-1.png');
-        this.load.image('arcadio-walk-up-right-2', 'arcadio-walk-up-right-2.png');
+        // Walk Right (30 frames)
+        this.load.path = 'assets/arcadio/right/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-walk-right-${i}`, `arcadio-walk-right-${num}.png`);
+        }
+
+        // Walk Down (30 frames)
+        this.load.path = 'assets/arcadio/down/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-walk-down-${i}`, `arcadio-walk-down-${num}.png`);
+        }
+
+        // Walk Up (30 frames)
+        this.load.path = 'assets/arcadio/up/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-walk-up-${i}`, `arcadio-walk-up-${num}.png`);
+        }
+
+        // Shoot Animations
+        // Right
+        this.load.path = 'assets/arcadio/shoot/right/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-shoot-right-${i}`, `arcadio-shoot-right-${num}.png`);
+        }
+        // Down
+        this.load.path = 'assets/arcadio/shoot/down/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-shoot-down-${i}`, `arcadio-shoot-down-${num}.png`);
+        }
+        // Up
+        this.load.path = 'assets/arcadio/shoot/up/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-shoot-up-${i}`, `arcadio-shoot-up-${num}.png`);
+        }
+        // Projectile (shoot/shoot folder)
+        this.load.path = 'assets/arcadio/shoot/shoot/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-projectile-${i}`, `arcadio-shoot-${num}.png`);
+        }
+
+        // Dead Animation (30 frames)
+        this.load.path = 'assets/arcadio/dead/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`arcadio-dead-${i}`, `arcadio-dead-${num}.png`);
+        }
+
+        this.load.path = 'assets/arcadio/';
 
         // --- Lars Assets ---
         this.load.path = 'assets/lars/';
-        this.load.image('lars-concept', 'lars-concept.png');
         this.load.image('lars-shoot', 'lars-shoot.png');
         this.load.image('lars-dead', 'lars-dead.png');
         this.load.image('lars-hit', 'hit-lars.png');
         this.load.image('lars-grab', 'lars-grab.png');
+
+        // Concept Animation (30 frames)
+        this.load.path = 'assets/lars/concept/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-concept-${i}`, `lars-concept-${num}.png`);
+        }
+        this.load.path = 'assets/lars/';
 
         // Static
         this.load.image('lars-static-0', 'lars-static-0.png');
@@ -62,16 +124,12 @@ export class PreloadScene extends Phaser.Scene {
         }
         this.load.path = 'assets/lars/';
 
-        this.load.image('lars-walk-left-1', 'lars-walk-left-1.png');
-        this.load.image('lars-walk-left-2', 'lars-walk-left-2.png');
-
         // Walk Right (Sequence)
         this.load.path = 'assets/lars/right/';
         for (let i = 1; i <= 30; i++) {
             const num = i.toString().padStart(3, '0');
-            this.load.image(`lars-walk-right-${num}`, `lars-walk-right-${num}.png`);
+            this.load.image(`lars-walk-right-${i}`, `lars-walk-right-${num}.png`);
         }
-        this.load.path = 'assets/lars/'; // Reset path
 
         // Walk Down (Sequence)
         this.load.path = 'assets/lars/down/';
@@ -79,24 +137,62 @@ export class PreloadScene extends Phaser.Scene {
             const num = i.toString().padStart(3, '0');
             this.load.image(`lars-walk-down-${i}`, `lars-walk-down-${num}.png`);
         }
-        this.load.path = 'assets/lars/';
 
-        // Diagonals
-        this.load.image('lars-walk-down-left-1', 'lars-walk-down-left-1.png');
-        this.load.image('lars-walk-down-left-2', 'lars-walk-down-left-2.png');
-        this.load.image('lars-walk-down-right-1', 'lars-walk-down-right-1.png');
-        this.load.image('lars-walk-down-right-2', 'lars-walk-down-right-2.png');
-        this.load.image('lars-walk-up-left-1', 'lars-walk-up-left-1.png');
-        this.load.image('lars-walk-up-left-2', 'lars-walk-up-left-2.png');
-        this.load.image('lars-walk-up-right-1', 'lars-walk-up-right-1.png');
-        this.load.image('lars-walk-up-right-2', 'lars-walk-up-right-2.png');
+        // Walk Up (Sequence)
+        this.load.path = 'assets/lars/up/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-walk-up-${i}`, `lars-walk-up-${num}.png`);
+        }
+
+        // Shoot Animations
+        // Right
+        this.load.path = 'assets/lars/shoot/right/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-shoot-right-${i}`, `lars-shoot-right-${num}.png`);
+        }
+        // Down
+        this.load.path = 'assets/lars/shoot/down/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-shoot-down-${i}`, `lars-shoot-down-${num}.png`);
+        }
+        // Up
+        this.load.path = 'assets/lars/shoot/up/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-shoot-up-${i}`, `lars-shoot-up-${num}.png`);
+        }
+        // Projectile (shoot/shoot folder)
+        this.load.path = 'assets/lars/shoot/shoot/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-projectile-${i}`, `lars-shoot-${num}.png`);
+        }
+
+        // Dead Animation (30 frames)
+        this.load.path = 'assets/lars/dead/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`lars-dead-${i}`, `lars-dead-${num}.png`);
+        }
+
+        this.load.path = 'assets/lars/';
 
 
         // --- Yurany (Proyecto Y) Assets ---
         this.load.path = 'assets/proyecto-y/';
-        this.load.image('yurany-concept', 'yurany-conept.png'); // Typo in file name
         this.load.image('yurany-dead', 'yurany-dead.png');
         this.load.image('yurany-hit', 'hit-yurany.png');
+
+        // Concept Animation (30 frames)
+        this.load.path = 'assets/proyecto-y/concept/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-concept-${i}`, `y-concept-${num}.png`);
+        }
+        this.load.path = 'assets/proyecto-y/';
 
         // Shoot Animations
         // Right
@@ -123,6 +219,13 @@ export class PreloadScene extends Phaser.Scene {
         for (let i = 1; i <= 30; i++) {
             const num = i.toString().padStart(3, '0');
             this.load.image(`yurany-projectile-${i}`, `y-shoot-${num}.png`);
+        }
+
+        // Dead Animation (30 frames)
+        this.load.path = 'assets/proyecto-y/dead/';
+        for (let i = 1; i <= 30; i++) {
+            const num = i.toString().padStart(3, '0');
+            this.load.image(`yurany-dead-${i}`, `y-dead-${num}.png`);
         }
 
         this.load.path = 'assets/proyecto-y/';
