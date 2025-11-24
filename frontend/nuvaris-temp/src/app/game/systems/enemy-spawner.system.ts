@@ -90,7 +90,7 @@ export class EnemySpawner {
             type: 'zombie',
             maxHealth: 30,
             speed: 60,
-            damage: 12,
+            damage: 10, // Capped at 10
             xpValue: 7,
             color: 0xff4444
           }
@@ -124,7 +124,7 @@ export class EnemySpawner {
             type: 'zombie',
             maxHealth: 40,
             speed: 70,
-            damage: 15,
+            damage: 10, // Capped at 10
             xpValue: 10,
             color: 0xff4444
           }
@@ -149,7 +149,7 @@ export class EnemySpawner {
             type: 'tank',
             maxHealth: 100,
             speed: 30,
-            damage: 25,
+            damage: 10, // Capped at 10
             xpValue: 30,
             color: 0x4444ff
           }
@@ -170,7 +170,7 @@ export class EnemySpawner {
             type: 'zombie',
             maxHealth: 50,
             speed: 80,
-            damage: 18,
+            damage: 10, // Capped at 10
             xpValue: 12,
             color: 0xff4444
           }
@@ -182,7 +182,7 @@ export class EnemySpawner {
             type: 'runner',
             maxHealth: 25,
             speed: 140,
-            damage: 12,
+            damage: 10, // Capped at 10
             xpValue: 15,
             color: 0x44ff44,
             size: 44
@@ -195,7 +195,7 @@ export class EnemySpawner {
             type: 'tank',
             maxHealth: 150,
             speed: 35,
-            damage: 30,
+            damage: 10, // Capped at 10
             xpValue: 40,
             color: 0x4444ff
           }
@@ -216,7 +216,7 @@ export class EnemySpawner {
             type: 'zombie',
             maxHealth: 60,
             speed: 90,
-            damage: 20,
+            damage: 10, // Capped at 10
             xpValue: 15,
             color: 0xff4444
           }
@@ -228,7 +228,7 @@ export class EnemySpawner {
             type: 'runner',
             maxHealth: 30,
             speed: 160,
-            damage: 15,
+            damage: 10, // Capped at 10
             xpValue: 18,
             color: 0x44ff44,
             size: 44
@@ -241,7 +241,7 @@ export class EnemySpawner {
             type: 'tank',
             maxHealth: 200,
             speed: 40,
-            damage: 35,
+            damage: 10, // Capped at 10
             xpValue: 50,
             color: 0x4444ff
           }

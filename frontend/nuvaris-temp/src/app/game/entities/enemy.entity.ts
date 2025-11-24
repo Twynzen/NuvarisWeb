@@ -335,6 +335,33 @@ export class Enemy extends Phaser.GameObjects.Container {
       .filter(child => child instanceof Enemy && child.isActive) as Enemy[];
   }
 
+  // Dash state
+  private dashCooldown = 0;
+  private isDashing = false;
+  private dashDuration = 0;
+
+  /**
+   * Start a dash towards target
+   */
+  private startDash(targetX: number, targetY: number): void {
+    this.isDashing = true;
+    this.dashCooldown = 2000; // 2 seconds cooldown
+    this.dashDuration = 300; // 300ms dash
+
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+    const dashSpeed = this.config.speed * 3;
+
+    this.body.setVelocity(Math.cos(angle) * dashSpeed, Math.sin(angle) * dashSpeed);
+
+    // Visual feedback
+    this.visual.setTint(0xffffff); // Flash white
+    this.scene.time.delayedCall(100, () => {
+      if (this.isActive && !this.isMindControlled) {
+        this.visual.clearTint();
+      }
+    });
+  }
+
   /**
    * Update loop - move towards player OR enemies if controlled
    */
@@ -343,6 +370,23 @@ export class Enemy extends Phaser.GameObjects.Container {
 
     // If knocked back, let physics handle movement (don't override velocity)
     if (this.isKnockedBack) return;
+
+    // Handle Dash State
+    if (this.isDashing) {
+      this.dashDuration -= delta;
+      if (this.dashDuration <= 0) {
+        this.isDashing = false;
+        // Resume normal behavior next frame
+      } else {
+        // While dashing, maintain velocity (don't update direction)
+        return;
+      }
+    }
+
+    // Cooldown tick
+    if (this.dashCooldown > 0) {
+      this.dashCooldown -= delta;
+    }
 
     let targetX = 0;
     let targetY = 0;
@@ -402,7 +446,16 @@ export class Enemy extends Phaser.GameObjects.Container {
     }
 
     // Calculate direction to target
+    const distToTarget = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+
+    // Check for Dash (Runners/Spiders only)
+    if ((this.config.type === 'runner' || this.config.type === 'spider') && !this.isMindControlled) {
+      if (this.dashCooldown <= 0 && distToTarget < 150 && distToTarget > 50) {
+        this.startDash(targetX, targetY);
+        return; // Start dashing immediately
+      }
+    }
 
     // Move towards target
     const velocityX = Math.cos(angle) * this.config.speed;

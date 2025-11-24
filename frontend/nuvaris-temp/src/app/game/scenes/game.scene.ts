@@ -350,7 +350,11 @@ export class GameScene extends Phaser.Scene {
    * Handle enemy died
    */
   private onEnemyDied(data: { x: number; y: number; xpValue: number }): void {
-    // Already handled by enemy entity, XP gem spawned by XPManager
+    // Increment kill count
+    this.killCount++;
+    if (this.killCountText) {
+      this.killCountText.setText(`AMENAZAS NEUTRALIZADAS: ${this.killCount}`);
+    }
   }
 
   /**
