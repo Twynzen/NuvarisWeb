@@ -13,6 +13,7 @@ export interface VisualConfig {
     radius?: number;
     texture?: string;
     frame?: string | number;
+    origin?: { x: number, y: number };
 }
 
 export class VisualComponent extends Phaser.GameObjects.Container {
@@ -78,8 +79,13 @@ export class VisualComponent extends Phaser.GameObjects.Container {
             }
         }
 
-        if (this.mainVisual instanceof Phaser.GameObjects.Sprite) {
-            this.mainVisual.setFlip(this.flipX, this.flipY);
+        if (this.mainVisual instanceof Phaser.GameObjects.Sprite || this.mainVisual instanceof Phaser.GameObjects.Image) {
+            if (this.currentConfig.origin) {
+                this.mainVisual.setOrigin(this.currentConfig.origin.x, this.currentConfig.origin.y);
+            }
+            if (this.mainVisual instanceof Phaser.GameObjects.Sprite) {
+                this.mainVisual.setFlip(this.flipX, this.flipY);
+            }
         }
 
         if (this.currentTint !== undefined) {

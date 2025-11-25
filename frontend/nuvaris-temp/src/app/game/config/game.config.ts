@@ -64,6 +64,9 @@ export const GameConfig = {
 
   // Debug
   debugAssetSizes: false,
+  debugCollisions: true,  // Show collision boundaries
+  debugPhysicsBodies: true,  // Show physics bodies
+  debugTileGrid: true,  // Show tile grid
 
   // Animations
   animations: {

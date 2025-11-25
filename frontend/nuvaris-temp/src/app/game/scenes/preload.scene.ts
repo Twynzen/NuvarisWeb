@@ -9,11 +9,13 @@ export class PreloadScene extends Phaser.Scene {
         this.createLoadingBar();
 
         // Environment
-        this.load.image('wall-1', 'assets/environment/wall_1.jpg');
-        this.load.image('wall-2', 'assets/environment/wall_2.jpg');
-        this.load.image('wall-3', 'assets/environment/wall_3.jpg');
-        this.load.image('wall-4', 'assets/environment/wall_4.jpg');
-        this.load.image('wall-5', 'assets/environment/wall_5.jpg');
+        // Load wall textures
+        this.load.path = 'assets/environment/';
+        this.load.image('wall_1', 'wall_1.png');
+        this.load.image('wall_2', 'wall_2.png');
+        this.load.image('wall_3', 'wall_3.png');
+        this.load.image('wall_4', 'wall_4.png');
+        this.load.path = ''; // Reset path
 
         // --- Arcadio Assets ---
         this.load.path = 'assets/arcadio/';
@@ -312,7 +314,88 @@ export class PreloadScene extends Phaser.Scene {
     }
 
     create(): void {
+        this.generateIsometricAssets();
         this.scene.start('MenuScene');
+    }
+
+    private generateIsometricAssets(): void {
+        // Create a graphics object
+        const graphics = this.make.graphics({ x: 0, y: 0 });
+
+        // --- Floor Tile (Diamond) ---
+        // 64x32 isometric tile
+        // Top: (32, 0), Right: (64, 16), Bottom: (32, 32), Left: (0, 16)
+
+        // IMPROVED: Dark gray instead of pure black for better contrast
+        graphics.fillStyle(0x1a1a1a); // Very dark gray
+        graphics.beginPath();
+        graphics.moveTo(32, 0);
+        graphics.lineTo(64, 16);
+        graphics.lineTo(32, 32);
+        graphics.lineTo(0, 16);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Add subtle border for tile definition
+        graphics.lineStyle(1, 0x2a2a2a, 0.6);
+        graphics.strokePath();
+
+        graphics.generateTexture('iso-floor', 64, 32);
+        graphics.clear();
+
+        // --- Wall Tile (Tall Cube) ---
+        // 64x96 (Base 64x32, Height 64)
+
+        // Top Face (Diamond at y=0) - IMPROVED: Lighter for better visibility
+        graphics.fillStyle(0xaaaaaa); // Light grey top
+        graphics.beginPath();
+        graphics.moveTo(32, 0);
+        graphics.lineTo(64, 16);
+        graphics.lineTo(32, 32);
+        graphics.lineTo(0, 16);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Left Face - IMPROVED: Medium grey
+        graphics.fillStyle(0x777777); // Medium grey left
+        graphics.beginPath();
+        graphics.moveTo(0, 16);
+        graphics.lineTo(32, 32);
+        graphics.lineTo(32, 96); // Extended down
+        graphics.lineTo(0, 80);  // Extended down
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Right Face - IMPROVED: Darker for depth
+        graphics.fillStyle(0x666666); // Darker grey right
+        graphics.beginPath();
+        graphics.moveTo(32, 32);
+        graphics.lineTo(64, 16);
+        graphics.lineTo(64, 80); // Extended down
+        graphics.lineTo(32, 96); // Extended down
+        graphics.closePath();
+        graphics.fillPath();
+
+        // IMPROVED: Highlight edges for better definition
+        graphics.lineStyle(2, 0x999999, 0.8);
+        graphics.beginPath();
+        // Top edges
+        graphics.moveTo(0, 16);
+        graphics.lineTo(32, 0);
+        graphics.lineTo(64, 16);
+        graphics.strokePath();
+
+        // Vertical corner
+        graphics.lineStyle(1, 0x555555, 0.6);
+        graphics.beginPath();
+        graphics.moveTo(32, 32);
+        graphics.lineTo(32, 96);
+        graphics.strokePath();
+
+        graphics.generateTexture('iso-wall', 64, 96);
+        graphics.destroy();
+
+        console.log('✨ Isometric assets generated: iso-floor (improved), iso-wall (improved)');
     }
 
     private createLoadingBar(): void {

@@ -18,6 +18,7 @@ export class Player extends Phaser.GameObjects.Container {
   public lifesteal: number = 0;
   public pickupRadius: number = 100;
   public isInvulnerable: boolean = false;
+  public isMoving: boolean = false;
 
   // State
   private weapons: Weapon[] = [];
@@ -53,7 +54,8 @@ export class Player extends Phaser.GameObjects.Container {
       type: 'sprite',
       texture: `${this.characterId}-static-1`,
       width: 200,
-      height: 275
+      height: 275,
+      origin: { x: 0.5, y: 1 }
     });
     this.add(this.visual);
 

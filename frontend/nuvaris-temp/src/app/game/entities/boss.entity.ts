@@ -49,7 +49,8 @@ export class Boss extends Phaser.GameObjects.Container {
       type: 'sprite',
       texture: 'boss-face-1',
       width: this.config.size * 4.5,
-      height: this.config.size * 4.5
+      height: this.config.size * 4.5,
+      origin: { x: 0.5, y: 1 }
     });
     this.add(this.visual);
 

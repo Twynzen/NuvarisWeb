@@ -46,7 +46,8 @@ export class Enemy extends Phaser.GameObjects.Container {
       type: 'sprite',
       texture: 'worm-move-1',
       width: (this.config.size || 30) * 4.5,
-      height: (this.config.size || 30) * 4.5
+      height: (this.config.size || 30) * 4.5,
+      origin: { x: 0.5, y: 1 }
     });
     this.add(this.visual);
 

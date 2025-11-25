@@ -96,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = false;
     this.isPaused = false;
     this.killCount = 0;
-    if (this.killCountText) this.killCountText.setText('AMENAZAS NEUTRALIZADAS: 0');
+    // Note: killCountText is created later in setupUI(), so we don't reset it here
 
     // Detect mobile
     this.isMobile = this.sys.game.device.os.android || this.sys.game.device.os.iOS;
