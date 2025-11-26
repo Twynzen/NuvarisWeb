@@ -69,17 +69,20 @@ export class DebugVisualizer {
         return new THREE.Line(geometry, material);
     }
 
-    // Create a rectangle for sprite bounds (vertical plane)
+    // Create a rectangle for sprite footprint (horizontal plane XZ)
+    // This shows the actual collision/sprite area as seen from top-down
     createSpriteBounds(width: number, height: number, color: number): THREE.Line {
         const geometry = new THREE.BufferGeometry();
         const halfW = width / 2;
+        const halfH = height / 2;
 
+        // Horizontal rectangle in XZ plane (at ground level)
         const points = [
-            new THREE.Vector3(-halfW, 0, 0),
-            new THREE.Vector3(halfW, 0, 0),
-            new THREE.Vector3(halfW, height, 0),
-            new THREE.Vector3(-halfW, height, 0),
-            new THREE.Vector3(-halfW, 0, 0)
+            new THREE.Vector3(-halfW, 0.15, -halfH),
+            new THREE.Vector3(halfW, 0.15, -halfH),
+            new THREE.Vector3(halfW, 0.15, halfH),
+            new THREE.Vector3(-halfW, 0.15, halfH),
+            new THREE.Vector3(-halfW, 0.15, -halfH)
         ];
 
         geometry.setFromPoints(points);

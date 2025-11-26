@@ -174,5 +174,12 @@
         color: #888;
         font-size: 10px;
         font-style: italic;
+        margin-top: 3px;
+
+        &:first-of-type {
+            margin-top: 8px;
+            color: #ffaa00;
+            font-style: normal;
+        }
     }
 }

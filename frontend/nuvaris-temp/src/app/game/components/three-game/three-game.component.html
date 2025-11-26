@@ -34,11 +34,12 @@
         <div class="debug-indicator" *ngIf="gameState.debugMode">
             <span>DEBUG MODE</span>
             <div class="debug-legend">
-                <div class="legend-item"><span class="color-dot green"></span> Player Collision</div>
-                <div class="legend-item"><span class="color-dot red"></span> Enemy Collision</div>
-                <div class="legend-item"><span class="color-dot yellow"></span> Sprite Bounds</div>
+                <div class="legend-item"><span class="color-dot green"></span> Player Collision (r=1.5)</div>
+                <div class="legend-item"><span class="color-dot red"></span> Enemy Collision (r=1.5)</div>
+                <div class="legend-item"><span class="color-dot yellow"></span> Sprite Footprint</div>
                 <div class="legend-item"><span class="color-dot cyan"></span> Map Boundary</div>
             </div>
+            <span class="hint">Collision: dist &lt; 3.0</span>
             <span class="hint">Ctrl+D to toggle</span>
         </div>
     </div>

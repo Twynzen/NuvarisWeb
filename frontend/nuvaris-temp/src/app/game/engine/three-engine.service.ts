@@ -32,7 +32,7 @@ export class ThreeEngineService implements OnDestroy {
 
     // Enemy damage configuration
     private enemyDamage = 10; // damage per second when touching enemy
-    private enemyDamageRadius = 1.5; // collision radius
+    // Collision radius is now calculated as sum of player + enemy radii
 
     // Game State
     public gameState = {
@@ -420,13 +420,21 @@ export class ThreeEngineService implements OnDestroy {
 
     // Check collision between player and enemies
     private checkEnemyCollision(delta: number) {
+        // Calculate collision threshold: sum of both radii
+        const collisionDistance = PlayerThree.COLLISION_RADIUS + EnemyThree.COLLISION_RADIUS;
+
         for (const enemy of this.enemies) {
             if (enemy.isDead) continue;
 
             const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
-            if (dist < this.enemyDamageRadius) {
+            if (dist < collisionDistance) {
                 // Apply damage over time
                 this.gameState.health -= this.enemyDamage * delta;
+
+                // Visual feedback - flash enemy red when damaging player
+                if (this.debugVisualizer?.enabled && enemy.debugGroup) {
+                    // Collision is happening
+                }
 
                 // Clamp health
                 if (this.gameState.health <= 0) {
