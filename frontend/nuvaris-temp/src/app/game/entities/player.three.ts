@@ -16,6 +16,9 @@ export class PlayerThree {
 
     private characterId: string;
 
+    // Debug mode - set to true to see flip/animation logs
+    private DEBUG_FLIP = true;
+
     constructor(scene: THREE.Scene, characterId: string = 'arcadio') {
         this.characterId = characterId;
         this.mesh = new THREE.Group();
@@ -177,33 +180,60 @@ export class PlayerThree {
 
         this.isMoving = moveX !== 0 || moveZ !== 0;
 
+        // Track previous state for logging
+        const prevFacingRight = this.facingRight;
+
         if (this.isMoving) {
             const moveDir = new THREE.Vector3(moveX, 0, moveZ).normalize();
             this.mesh.position.add(moveDir.multiplyScalar(this.speed * delta));
             this.lastMoveDir.copy(moveDir);
 
-            // Face direction
+            // Face direction - only update on horizontal movement
             if (moveX > 0) this.facingRight = true;
             else if (moveX < 0) this.facingRight = false;
         }
 
-        // Flip sprite
+        // Apply flip via negative scale.x
         const scaleX = Math.abs(this.sprite.scale.x);
-        this.sprite.scale.x = this.facingRight ? scaleX : -scaleX;
+        const newScaleX = this.facingRight ? scaleX : -scaleX;
+        this.sprite.scale.x = newScaleX;
+
+        // Debug log when facing direction changes
+        if (this.DEBUG_FLIP && prevFacingRight !== this.facingRight) {
+            console.log(`[FLIP] Direction changed: facingRight=${this.facingRight}, scale.x=${newScaleX}`);
+        }
 
         // Animation State Machine
+        // Priority: Shooting > Horizontal Movement > Vertical Movement > Idle
+        let animationPlayed = '';
+
         if (this.isShooting) {
             // Shooting animation is handled in shoot()
+            animationPlayed = 'shooting';
         } else if (this.isMoving) {
-            if (moveZ < 0) {
-                this.animator.play('up', true, 30);
-            } else if (moveZ > 0) {
-                this.animator.play('down', true, 30);
-            } else {
+            // FIXED: Prioritize horizontal movement for run animation
+            // This ensures LEFT movement uses flipped 'run' animation
+            if (moveX !== 0) {
+                // Horizontal movement (including diagonals) - use run animation
                 this.animator.play('run', true, 30);
+                animationPlayed = 'run';
+            } else if (moveZ < 0) {
+                // Pure vertical up movement
+                this.animator.play('up', true, 30);
+                animationPlayed = 'up';
+            } else if (moveZ > 0) {
+                // Pure vertical down movement
+                this.animator.play('down', true, 30);
+                animationPlayed = 'down';
             }
         } else {
             this.animator.play('idle', true, 30);
+            animationPlayed = 'idle';
+        }
+
+        // Debug log for animation state (throttled - only when moving)
+        if (this.DEBUG_FLIP && this.isMoving) {
+            console.log(`[ANIM] moveX=${moveX}, moveZ=${moveZ}, anim=${animationPlayed}, facingRight=${this.facingRight}, scale.x=${this.sprite.scale.x.toFixed(2)}`);
         }
 
         this.animator.update(delta);
