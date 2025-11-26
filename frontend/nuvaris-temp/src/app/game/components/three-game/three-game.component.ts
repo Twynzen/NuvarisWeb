@@ -3,13 +3,14 @@ import { ThreeEngineService } from '../../engine/three-engine.service';
 import { CommonModule } from '@angular/common';
 import { LevelUpComponent } from '../../ui/level-up/level-up.component';
 import { PauseMenuComponent } from '../../ui/pause-menu/pause-menu.component';
+import { GameOverComponent } from '../../ui/game-over/game-over.component';
 
 @Component({
     selector: 'app-three-game',
     templateUrl: './three-game.component.html',
     styleUrls: ['./three-game.component.scss'],
     standalone: true,
-    imports: [CommonModule, LevelUpComponent, PauseMenuComponent]
+    imports: [CommonModule, LevelUpComponent, PauseMenuComponent, GameOverComponent]
 })
 export class ThreeGameComponent implements AfterViewInit {
     @ViewChild('rendererCanvas', { static: true })
@@ -39,6 +40,11 @@ export class ThreeGameComponent implements AfterViewInit {
     }
 
     onQuit() {
+        this.quitGame.emit();
+    }
+
+    onReturnToMenu() {
+        this.engServ.resetGame();
         this.quitGame.emit();
     }
 }

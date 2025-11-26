@@ -29,6 +29,10 @@ export class ThreeEngineService implements OnDestroy {
     private autoShootInterval = 0.5; // seconds between shots
     private autoShootRange = 20; // max range to detect enemies
 
+    // Enemy damage configuration
+    private enemyDamage = 10; // damage per second when touching enemy
+    private enemyDamageRadius = 1.5; // collision radius
+
     // Game State
     public gameState = {
         health: 100,
@@ -39,7 +43,8 @@ export class ThreeEngineService implements OnDestroy {
         wave: 1,
         score: 0,
         isLevelingUp: false,
-        isPaused: false
+        isPaused: false,
+        isGameOver: false
     };
 
     // Input
@@ -195,15 +200,24 @@ export class ThreeEngineService implements OnDestroy {
             this.render();
         });
 
-        if (this.gameState.isLevelingUp || this.gameState.isPaused) return;
+        if (this.gameState.isLevelingUp || this.gameState.isPaused || this.gameState.isGameOver) return;
 
         const delta = this.clock.getDelta();
 
         if (this.player) {
             this.player.update(delta, this.keys);
 
+            // Skip game logic if player is dead
+            if (this.player.isDead) {
+                this.renderer.render(this.scene, this.camera);
+                return;
+            }
+
             // Auto-shoot at nearest enemy
             this.autoShoot();
+
+            // Enemy collision with player (damage)
+            this.checkEnemyCollision(delta);
 
             // Spawn enemies
             if (this.clock.getElapsedTime() - this.lastSpawnTime > 2) {
@@ -312,5 +326,87 @@ export class ThreeEngineService implements OnDestroy {
 
         const enemy = new EnemyThree(this.scene, x, z);
         this.enemies.push(enemy);
+    }
+
+    // Check collision between player and enemies
+    private checkEnemyCollision(delta: number) {
+        for (const enemy of this.enemies) {
+            if (enemy.isDead) continue;
+
+            const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
+            if (dist < this.enemyDamageRadius) {
+                // Apply damage over time
+                this.gameState.health -= this.enemyDamage * delta;
+
+                // Clamp health
+                if (this.gameState.health <= 0) {
+                    this.gameState.health = 0;
+                    this.handlePlayerDeath();
+                    return;
+                }
+            }
+        }
+    }
+
+    // Handle player death
+    private handlePlayerDeath() {
+        this.player.die();
+
+        // Show game over after death animation (2 seconds)
+        setTimeout(() => {
+            this.gameState.isGameOver = true;
+        }, 2000);
+    }
+
+    // Reset game state for returning to main menu
+    public resetGame() {
+        // Stop animation loop
+        if (this.frameId != null) {
+            cancelAnimationFrame(this.frameId);
+            this.frameId = null;
+        }
+
+        // Clear all entities from scene
+        this.enemies.forEach(enemy => {
+            this.scene.remove(enemy.mesh);
+        });
+        this.enemies = [];
+
+        this.projectiles.forEach(proj => {
+            this.scene.remove(proj.mesh);
+        });
+        this.projectiles = [];
+
+        this.xpOrbs.forEach(orb => {
+            this.scene.remove(orb.mesh);
+        });
+        this.xpOrbs = [];
+
+        if (this.player) {
+            this.scene.remove(this.player.mesh);
+        }
+
+        // Reset game state
+        this.gameState = {
+            health: 100,
+            maxHealth: 100,
+            xp: 0,
+            xpToLevel: 100,
+            level: 1,
+            wave: 1,
+            score: 0,
+            isLevelingUp: false,
+            isPaused: false,
+            isGameOver: false
+        };
+
+        // Reset timers
+        this.lastSpawnTime = 0;
+        this.lastShootTime = 0;
+
+        // Dispose renderer
+        if (this.renderer) {
+            this.renderer.dispose();
+        }
     }
 }

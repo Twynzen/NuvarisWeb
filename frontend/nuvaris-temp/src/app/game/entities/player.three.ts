@@ -13,6 +13,7 @@ export class PlayerThree {
     private isShooting = false;
     private facingRight = true;
     private lastMoveDir = new THREE.Vector3(1, 0, 0);
+    public isDead = false;
 
     private characterId: string;
 
@@ -200,6 +201,12 @@ export class PlayerThree {
     }
 
     update(delta: number, keys: { [key: string]: boolean }) {
+        // Don't update if dead
+        if (this.isDead) {
+            this.animator.update(delta);
+            return;
+        }
+
         const moveX = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
         const moveZ = (keys['s'] ? 1 : 0) - (keys['w'] ? 1 : 0);
 
@@ -330,5 +337,17 @@ export class PlayerThree {
 
         // Create Projectile
         return new ProjectileThree(scene, this.mesh.position.x, this.mesh.position.z, direction, this.characterId);
+    }
+
+    // Called when player dies
+    die(): void {
+        if (this.isDead) return;
+
+        this.isDead = true;
+        this.isMoving = false;
+        this.isShooting = false;
+
+        // Play death animation once
+        this.animator.play('dead', false, 15); // Slower for dramatic effect
     }
 }
