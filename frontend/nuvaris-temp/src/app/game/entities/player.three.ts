@@ -98,9 +98,20 @@ export class PlayerThree {
 
         // Run (Right)
         this.animator.loadAnimation({
-            name: 'run',
+            name: 'run-right',
             texturePath: `assets/${folder}/right`,
             prefix: `${prefix}walk-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // Run (Left) - Pre-flipped frames
+        this.animator.loadAnimation({
+            name: 'run-left',
+            texturePath: `assets/${folder}/left`,
+            prefix: `${prefix}walk-left-`,
             suffix: '.png',
             frameCount: 30,
             frameRate: 30,
@@ -112,6 +123,17 @@ export class PlayerThree {
             name: 'shoot-right',
             texturePath: `assets/${folder}/shoot/right`,
             prefix: `${prefix}shoot-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        // Shoot (Left) - Pre-flipped frames
+        this.animator.loadAnimation({
+            name: 'shoot-left',
+            texturePath: `assets/${folder}/shoot/left`,
+            prefix: `${prefix}shoot-left-`,
             suffix: '.png',
             frameCount: 30,
             frameRate: 30,
@@ -193,30 +215,29 @@ export class PlayerThree {
             else if (moveX < 0) this.facingRight = false;
         }
 
-        // Apply flip via negative scale.x
-        const scaleX = Math.abs(this.sprite.scale.x);
-        const newScaleX = this.facingRight ? scaleX : -scaleX;
-        this.sprite.scale.x = newScaleX;
-
         // Debug log when facing direction changes
         if (this.DEBUG_FLIP && prevFacingRight !== this.facingRight) {
-            console.log(`[FLIP] Direction changed: facingRight=${this.facingRight}, scale.x=${newScaleX}`);
+            console.log(`[DIRECTION] Changed: facingRight=${this.facingRight}`);
         }
 
         // Animation State Machine
         // Priority: Shooting > Horizontal Movement > Vertical Movement > Idle
+        // Uses separate left/right animations instead of scale flip
         let animationPlayed = '';
 
         if (this.isShooting) {
             // Shooting animation is handled in shoot()
             animationPlayed = 'shooting';
         } else if (this.isMoving) {
-            // FIXED: Prioritize horizontal movement for run animation
-            // This ensures LEFT movement uses flipped 'run' animation
-            if (moveX !== 0) {
-                // Horizontal movement (including diagonals) - use run animation
-                this.animator.play('run', true, 30);
-                animationPlayed = 'run';
+            // Prioritize horizontal movement for run animation
+            if (moveX > 0) {
+                // Moving right
+                this.animator.play('run-right', true, 30);
+                animationPlayed = 'run-right';
+            } else if (moveX < 0) {
+                // Moving left - use pre-flipped left animation
+                this.animator.play('run-left', true, 30);
+                animationPlayed = 'run-left';
             } else if (moveZ < 0) {
                 // Pure vertical up movement
                 this.animator.play('up', true, 30);
@@ -233,7 +254,7 @@ export class PlayerThree {
 
         // Debug log for animation state (throttled - only when moving)
         if (this.DEBUG_FLIP && this.isMoving) {
-            console.log(`[ANIM] moveX=${moveX}, moveZ=${moveZ}, anim=${animationPlayed}, facingRight=${this.facingRight}, scale.x=${this.sprite.scale.x.toFixed(2)}`);
+            console.log(`[ANIM] moveX=${moveX}, moveZ=${moveZ}, anim=${animationPlayed}, facingRight=${this.facingRight}`);
         }
 
         this.animator.update(delta);
@@ -249,14 +270,21 @@ export class PlayerThree {
         let direction = new THREE.Vector3(1, 0, 0);
 
         if (this.lastMoveDir.z < -0.5) {
+            // Shooting up
             shootAnim = 'shoot-up';
             direction.set(0, 0, -1);
         } else if (this.lastMoveDir.z > 0.5) {
+            // Shooting down
             shootAnim = 'shoot-down';
             direction.set(0, 0, 1);
         } else {
-            shootAnim = 'shoot-right';
+            // Shooting horizontal - use correct left/right animation
+            shootAnim = this.facingRight ? 'shoot-right' : 'shoot-left';
             direction.set(this.facingRight ? 1 : -1, 0, 0);
+        }
+
+        if (this.DEBUG_FLIP) {
+            console.log(`[SHOOT] anim=${shootAnim}, direction=(${direction.x}, ${direction.z}), facingRight=${this.facingRight}`);
         }
 
         this.animator.play(shootAnim, false, 30);
