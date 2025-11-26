@@ -1,0 +1,66 @@
+.pause-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 10, 26, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    font-family: 'Courier New', Courier, monospace;
+    pointer-events: auto;
+}
+
+.menu-container {
+    text-align: center;
+    border: 2px solid #00f5ff;
+    padding: 50px;
+    background: rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 30px rgba(0, 245, 255, 0.2);
+}
+
+.title {
+    color: #fff;
+    font-size: 3em;
+    margin-bottom: 40px;
+    text-shadow: 0 0 10px #fff;
+    letter-spacing: 5px;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+button {
+    background: transparent;
+    border: 1px solid #00f5ff;
+    color: #00f5ff;
+    padding: 15px 30px;
+    font-size: 1.2em;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+
+    &:hover {
+        background: rgba(0, 245, 255, 0.1);
+        box-shadow: 0 0 20px rgba(0, 245, 255, 0.4);
+        transform: scale(1.05);
+    }
+
+    &.quit {
+        border-color: #ff0044;
+        color: #ff0044;
+
+        &:hover {
+            background: rgba(255, 0, 68, 0.1);
+            box-shadow: 0 0 20px rgba(255, 0, 68, 0.4);
+        }
+    }
+}

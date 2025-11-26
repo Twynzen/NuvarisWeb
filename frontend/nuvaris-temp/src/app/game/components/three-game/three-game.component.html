@@ -1,0 +1,65 @@
+<div id="game-container">
+    <canvas #rendererCanvas id="renderCanvas"></canvas>
+
+    <div id="hud">
+        <div class="hud-top-left">
+            <div class="stat-box">
+                <span class="label">LEVEL</span>
+                <span class="value">{{gameState.level}}</span>
+            </div>
+            <div class="stat-box">
+                <span class="label">SCORE</span>
+                <span class="value">{{gameState.score}}</span>
+            </div>
+        </div>
+
+        <div class="hud-top-center">
+            <div class="health-bar-container">
+                <div class="health-bar" [style.width.%]="(gameState.health / gameState.maxHealth) * 100"></div>
+                <span class="health-text">{{gameState.health}} / {{gameState.maxHealth}}</span>
+            </div>
+            <div class="xp-bar-container">
+                <div class="xp-bar" [style.width.%]="(gameState.xp / gameState.xpToLevel) * 100"></div>
+            </div>
+        </div>
+
+        <div class="hud-top-right">
+            <div class="stat-box">
+                <div id="game-container">
+                    <canvas #rendererCanvas id="renderCanvas"></canvas>
+
+                    <div id="hud">
+                        <div class="hud-top-left">
+                            <div class="stat-box">
+                                <span class="label">LEVEL</span>
+                                <span class="value">{{gameState.level}}</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="label">SCORE</span>
+                                <span class="value">{{gameState.score}}</span>
+                            </div>
+                        </div>
+
+                        <div class="hud-top-center">
+                            <div class="health-bar-container">
+                                <div class="health-bar"
+                                    [style.width.%]="(gameState.health / gameState.maxHealth) * 100"></div>
+                                <span class="health-text">{{gameState.health}} / {{gameState.maxHealth}}</span>
+                            </div>
+                            <div class="xp-bar-container">
+                                <div class="xp-bar" [style.width.%]="(gameState.xp / gameState.xpToLevel) * 100"></div>
+                            </div>
+                        </div>
+
+                        <div class="hud-top-right">
+                            <div class="stat-box">
+                                <span class="label">WAVE</span>
+                                <span class="value">{{gameState.wave}}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <app-level-up *ngIf="gameState.isLevelingUp"
+                        (upgradeSelected)="onUpgradeSelected($event)"></app-level-up>
+                    <app-pause-menu *ngIf="gameState.isPaused" (resume)="onResume()" (quit)="onQuit()"></app-pause-menu>
+                </div>

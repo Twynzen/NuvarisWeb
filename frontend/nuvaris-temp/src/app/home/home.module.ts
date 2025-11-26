@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { FormsModule } from '@angular/forms';
 import { HomePage } from './home.page';
-import { PhaserGameComponent } from '../game/components/phaser-game/phaser-game.component';
+import { ThreeGameComponent } from '../game/components/three-game/three-game.component';
 
 import { HomePageRoutingModule } from './home-routing.module';
 
@@ -14,8 +14,9 @@ import { HomePageRoutingModule } from './home-routing.module';
     FormsModule,
     IonicModule,
     HomePageRoutingModule,
-    PhaserGameComponent
+    ThreeGameComponent,
+    HomePage
   ],
-  declarations: [HomePage]
+  declarations: []
 })
-export class HomePageModule {}
+export class HomePageModule { }
