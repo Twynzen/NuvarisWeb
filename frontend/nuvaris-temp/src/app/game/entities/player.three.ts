@@ -17,7 +17,10 @@ export class PlayerThree {
     private characterId: string;
 
     // Debug mode - set to true to see flip/animation logs
-    private DEBUG_FLIP = true;
+    private DEBUG_FLIP = false;
+
+    // Map bounds for wall collision
+    private mapBounds = 98;
 
     constructor(scene: THREE.Scene, characterId: string = 'arcadio') {
         this.characterId = characterId;
@@ -215,6 +218,10 @@ export class PlayerThree {
             else if (moveX < 0) this.facingRight = false;
         }
 
+        // Clamp position to map bounds (wall collision)
+        this.mesh.position.x = Math.max(-this.mapBounds, Math.min(this.mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-this.mapBounds, Math.min(this.mapBounds, this.mesh.position.z));
+
         // Debug log when facing direction changes
         if (this.DEBUG_FLIP && prevFacingRight !== this.facingRight) {
             console.log(`[DIRECTION] Changed: facingRight=${this.facingRight}`);
@@ -260,7 +267,7 @@ export class PlayerThree {
         this.animator.update(delta);
     }
 
-    shoot(scene: THREE.Scene): ProjectileThree | null {
+    shoot(scene: THREE.Scene, targetPosition?: THREE.Vector3): ProjectileThree | null {
         if (this.isShooting) return null;
 
         this.isShooting = true;
@@ -269,22 +276,49 @@ export class PlayerThree {
         let shootAnim = 'shoot-right';
         let direction = new THREE.Vector3(1, 0, 0);
 
-        if (this.lastMoveDir.z < -0.5) {
-            // Shooting up
-            shootAnim = 'shoot-up';
-            direction.set(0, 0, -1);
-        } else if (this.lastMoveDir.z > 0.5) {
-            // Shooting down
-            shootAnim = 'shoot-down';
-            direction.set(0, 0, 1);
+        if (targetPosition) {
+            // Auto-aim: Calculate direction to target
+            direction = new THREE.Vector3()
+                .subVectors(targetPosition, this.mesh.position)
+                .normalize();
+
+            // Determine animation based on direction to target
+            const absX = Math.abs(direction.x);
+            const absZ = Math.abs(direction.z);
+
+            if (absZ > absX) {
+                // Vertical direction is dominant
+                if (direction.z < 0) {
+                    shootAnim = 'shoot-up';
+                } else {
+                    shootAnim = 'shoot-down';
+                }
+            } else {
+                // Horizontal direction is dominant
+                if (direction.x < 0) {
+                    shootAnim = 'shoot-left';
+                    this.facingRight = false;
+                } else {
+                    shootAnim = 'shoot-right';
+                    this.facingRight = true;
+                }
+            }
         } else {
-            // Shooting horizontal - use correct left/right animation
-            shootAnim = this.facingRight ? 'shoot-right' : 'shoot-left';
-            direction.set(this.facingRight ? 1 : -1, 0, 0);
+            // Manual aim: Use last move direction
+            if (this.lastMoveDir.z < -0.5) {
+                shootAnim = 'shoot-up';
+                direction.set(0, 0, -1);
+            } else if (this.lastMoveDir.z > 0.5) {
+                shootAnim = 'shoot-down';
+                direction.set(0, 0, 1);
+            } else {
+                shootAnim = this.facingRight ? 'shoot-right' : 'shoot-left';
+                direction.set(this.facingRight ? 1 : -1, 0, 0);
+            }
         }
 
         if (this.DEBUG_FLIP) {
-            console.log(`[SHOOT] anim=${shootAnim}, direction=(${direction.x}, ${direction.z}), facingRight=${this.facingRight}`);
+            console.log(`[SHOOT] anim=${shootAnim}, direction=(${direction.x.toFixed(2)}, ${direction.z.toFixed(2)}), facingRight=${this.facingRight}`);
         }
 
         this.animator.play(shootAnim, false, 30);

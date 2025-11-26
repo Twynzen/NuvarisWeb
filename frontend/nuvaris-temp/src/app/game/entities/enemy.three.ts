@@ -46,7 +46,7 @@ export class EnemyThree {
         });
     }
 
-    update(delta: number, player: PlayerThree) {
+    update(delta: number, player: PlayerThree, mapBounds: number = 98) {
         if (this.isDead) return;
 
         const direction = new THREE.Vector3()
@@ -55,12 +55,9 @@ export class EnemyThree {
 
         this.mesh.position.add(direction.multiplyScalar(this.speed * delta));
 
-        // Flip sprite
-        if (direction.x > 0) {
-            if (this.sprite.scale.x > 0) this.sprite.scale.x *= -1;
-        } else {
-            if (this.sprite.scale.x < 0) this.sprite.scale.x *= -1;
-        }
+        // Clamp position to map bounds (wall collision)
+        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
 
         this.animator.update(delta);
     }

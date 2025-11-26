@@ -23,6 +23,11 @@ export class ThreeEngineService implements OnDestroy {
     private xpOrbs: XPOrb[] = [];
     private projectiles: ProjectileThree[] = [];
     private lastSpawnTime = 0;
+    private lastShootTime = 0;
+
+    // Auto-shoot configuration
+    private autoShootInterval = 0.5; // seconds between shots
+    private autoShootRange = 20; // max range to detect enemies
 
     // Game State
     public gameState = {
@@ -60,15 +65,40 @@ export class ThreeEngineService implements OnDestroy {
             }
         });
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
-        window.addEventListener('mousedown', () => this.onMouseDown());
     }
 
-    private onMouseDown() {
-        if (this.player) {
-            const projectile = this.player.shoot(this.scene);
-            if (projectile) {
-                this.projectiles.push(projectile);
+    // Find the nearest enemy within range
+    private findNearestEnemy(): EnemyThree | null {
+        if (this.enemies.length === 0) return null;
+
+        let nearest: EnemyThree | null = null;
+        let nearestDist = this.autoShootRange;
+
+        for (const enemy of this.enemies) {
+            if (enemy.isDead) continue;
+
+            const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = enemy;
             }
+        }
+
+        return nearest;
+    }
+
+    // Auto-shoot at nearest enemy
+    private autoShoot() {
+        const currentTime = this.clock.getElapsedTime();
+        if (currentTime - this.lastShootTime < this.autoShootInterval) return;
+
+        const nearestEnemy = this.findNearestEnemy();
+        if (!nearestEnemy) return;
+
+        const projectile = this.player.shoot(this.scene, nearestEnemy.mesh.position);
+        if (projectile) {
+            this.projectiles.push(projectile);
+            this.lastShootTime = currentTime;
         }
     }
 
@@ -172,14 +202,17 @@ export class ThreeEngineService implements OnDestroy {
         if (this.player) {
             this.player.update(delta, this.keys);
 
+            // Auto-shoot at nearest enemy
+            this.autoShoot();
+
             // Spawn enemies
             if (this.clock.getElapsedTime() - this.lastSpawnTime > 2) {
                 this.spawnEnemy();
                 this.lastSpawnTime = this.clock.getElapsedTime();
             }
 
-            // Update enemies
-            this.enemies.forEach(enemy => enemy.update(delta, this.player));
+            // Update enemies (with wall collision)
+            this.enemies.forEach(enemy => enemy.update(delta, this.player, 98));
 
             // Update Projectiles & Collision
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
