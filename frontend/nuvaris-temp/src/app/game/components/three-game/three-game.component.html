@@ -29,6 +29,18 @@
                 <span class="value">{{gameState.wave}}</span>
             </div>
         </div>
+
+        <!-- Debug Mode Indicator -->
+        <div class="debug-indicator" *ngIf="gameState.debugMode">
+            <span>DEBUG MODE</span>
+            <div class="debug-legend">
+                <div class="legend-item"><span class="color-dot green"></span> Player Collision</div>
+                <div class="legend-item"><span class="color-dot red"></span> Enemy Collision</div>
+                <div class="legend-item"><span class="color-dot yellow"></span> Sprite Bounds</div>
+                <div class="legend-item"><span class="color-dot cyan"></span> Map Boundary</div>
+            </div>
+            <span class="hint">Ctrl+D to toggle</span>
+        </div>
     </div>
 
     <!-- Level Up Screen -->

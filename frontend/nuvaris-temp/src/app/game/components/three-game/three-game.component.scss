@@ -100,3 +100,79 @@
     font-size: 20px;
     font-weight: bold;
 }
+
+// Debug Mode Indicator
+.debug-indicator {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #ff8800;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    box-shadow: 0 0 20px rgba(255, 136, 0, 0.3);
+
+    > span:first-child {
+        display: block;
+        font-size: 14px;
+        font-weight: bold;
+        color: #ff8800;
+        margin-bottom: 10px;
+        text-shadow: 0 0 10px #ff8800;
+    }
+
+    .debug-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #ccc;
+        font-size: 11px;
+    }
+
+    .color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+
+        &.green {
+            background: #00ff00;
+            box-shadow: 0 0 8px #00ff00;
+        }
+
+        &.red {
+            background: #ff0000;
+            box-shadow: 0 0 8px #ff0000;
+        }
+
+        &.yellow {
+            background: #ffff00;
+            box-shadow: 0 0 8px #ffff00;
+        }
+
+        &.blue {
+            background: #0088ff;
+            box-shadow: 0 0 8px #0088ff;
+        }
+
+        &.cyan {
+            background: #00ffff;
+            box-shadow: 0 0 8px #00ffff;
+        }
+    }
+
+    .hint {
+        display: block;
+        color: #888;
+        font-size: 10px;
+        font-style: italic;
+    }
+}

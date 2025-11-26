@@ -23,6 +23,14 @@ export class PlayerThree {
     // Map bounds for wall collision
     private mapBounds = 98;
 
+    // Collision and sprite dimensions (for debug visualization)
+    public static readonly COLLISION_RADIUS = 1.5;
+    public static readonly SPRITE_WIDTH = 3;
+    public static readonly SPRITE_HEIGHT = 3;
+
+    // Debug visualization group
+    public debugGroup: THREE.Group | null = null;
+
     constructor(scene: THREE.Scene, characterId: string = 'arcadio') {
         this.characterId = characterId;
         this.mesh = new THREE.Group();

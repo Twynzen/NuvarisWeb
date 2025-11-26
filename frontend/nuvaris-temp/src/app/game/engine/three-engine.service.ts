@@ -5,6 +5,7 @@ import { MapGenerator } from '../world/map-generator';
 import { EnemyThree } from '../entities/enemy.three';
 import { XPOrb } from '../entities/xp-orb.three';
 import { ProjectileThree } from '../entities/projectile.three';
+import { DebugVisualizer } from './debug-visualizer';
 
 @Injectable({
     providedIn: 'root'
@@ -44,11 +45,15 @@ export class ThreeEngineService implements OnDestroy {
         score: 0,
         isLevelingUp: false,
         isPaused: false,
-        isGameOver: false
+        isGameOver: false,
+        debugMode: false
     };
 
     // Input
     private keys: { [key: string]: boolean } = {};
+
+    // Debug Visualizer
+    private debugVisualizer!: DebugVisualizer;
 
     public get currentScene(): THREE.Scene {
         return this.scene;
@@ -65,11 +70,80 @@ export class ThreeEngineService implements OnDestroy {
     private setupInput() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.key.toLowerCase()] = true;
-            if (e.key.toLowerCase() === 'p') {
+
+            // P - Toggle Pause
+            if (e.key.toLowerCase() === 'p' && !e.ctrlKey) {
                 this.togglePause();
+            }
+
+            // Ctrl+D - Toggle Debug Mode
+            if (e.key.toLowerCase() === 'd' && e.ctrlKey) {
+                e.preventDefault();
+                this.toggleDebugMode();
             }
         });
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
+    }
+
+    // Toggle debug visualization mode
+    public toggleDebugMode() {
+        if (!this.debugVisualizer) return;
+
+        this.gameState.debugMode = this.debugVisualizer.toggle();
+
+        if (this.gameState.debugMode) {
+            // Create initial debug visuals
+            this.createDebugVisualsForAll();
+        }
+    }
+
+    // Create debug visuals for all existing entities
+    private createDebugVisualsForAll() {
+        if (!this.debugVisualizer?.enabled) return;
+
+        // Create map boundary visualization
+        this.debugVisualizer.createMapBoundary(200, 8);
+
+        // Update player debug
+        if (this.player) {
+            this.player.debugGroup = this.debugVisualizer.updatePlayerDebug(
+                this.player.mesh.position,
+                PlayerThree.COLLISION_RADIUS,
+                PlayerThree.SPRITE_WIDTH,
+                PlayerThree.SPRITE_HEIGHT,
+                this.player.debugGroup || undefined
+            );
+        }
+
+        // Update enemy debug
+        this.enemies.forEach(enemy => {
+            if (!enemy.isDead) {
+                enemy.debugGroup = this.debugVisualizer.updateEnemyDebug(
+                    enemy.mesh.position,
+                    EnemyThree.COLLISION_RADIUS,
+                    EnemyThree.SPRITE_WIDTH,
+                    EnemyThree.SPRITE_HEIGHT,
+                    enemy.debugGroup || undefined
+                );
+            }
+        });
+    }
+
+    // Update debug visuals positions (called each frame)
+    private updateDebugVisuals() {
+        if (!this.debugVisualizer?.enabled) return;
+
+        // Update player debug position
+        if (this.player?.debugGroup) {
+            this.player.debugGroup.position.copy(this.player.mesh.position);
+        }
+
+        // Update enemy debug positions
+        this.enemies.forEach(enemy => {
+            if (enemy.debugGroup && !enemy.isDead) {
+                enemy.debugGroup.position.copy(enemy.mesh.position);
+            }
+        });
     }
 
     // Find the nearest enemy within range
@@ -158,6 +232,9 @@ export class ThreeEngineService implements OnDestroy {
 
         // Player
         this.player = new PlayerThree(this.scene, characterId);
+
+        // Initialize Debug Visualizer
+        this.debugVisualizer = new DebugVisualizer(this.scene);
 
         this.animate();
 
@@ -273,6 +350,9 @@ export class ThreeEngineService implements OnDestroy {
             this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
             this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
             this.camera.lookAt(this.player.mesh.position.x, 0, this.player.mesh.position.z);
+
+            // Update debug visuals
+            this.updateDebugVisuals();
         }
 
         this.renderer.render(this.scene, this.camera);
@@ -326,6 +406,16 @@ export class ThreeEngineService implements OnDestroy {
 
         const enemy = new EnemyThree(this.scene, x, z);
         this.enemies.push(enemy);
+
+        // Create debug visualization for new enemy if debug mode is enabled
+        if (this.debugVisualizer?.enabled) {
+            enemy.debugGroup = this.debugVisualizer.updateEnemyDebug(
+                enemy.mesh.position,
+                EnemyThree.COLLISION_RADIUS,
+                EnemyThree.SPRITE_WIDTH,
+                EnemyThree.SPRITE_HEIGHT
+            );
+        }
     }
 
     // Check collision between player and enemies
@@ -366,9 +456,17 @@ export class ThreeEngineService implements OnDestroy {
             this.frameId = null;
         }
 
+        // Clear debug visualizations
+        if (this.debugVisualizer) {
+            this.debugVisualizer.clearAllDebugMeshes();
+        }
+
         // Clear all entities from scene
         this.enemies.forEach(enemy => {
             this.scene.remove(enemy.mesh);
+            if (enemy.debugGroup) {
+                this.scene.remove(enemy.debugGroup);
+            }
         });
         this.enemies = [];
 
@@ -384,6 +482,9 @@ export class ThreeEngineService implements OnDestroy {
 
         if (this.player) {
             this.scene.remove(this.player.mesh);
+            if (this.player.debugGroup) {
+                this.scene.remove(this.player.debugGroup);
+            }
         }
 
         // Reset game state
@@ -397,7 +498,8 @@ export class ThreeEngineService implements OnDestroy {
             score: 0,
             isLevelingUp: false,
             isPaused: false,
-            isGameOver: false
+            isGameOver: false,
+            debugMode: false
         };
 
         // Reset timers

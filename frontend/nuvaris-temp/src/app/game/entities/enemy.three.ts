@@ -11,6 +11,14 @@ export class EnemyThree {
     public health = 50;
     public isDead = false;
 
+    // Collision and sprite dimensions (for debug visualization)
+    public static readonly COLLISION_RADIUS = 1.5;
+    public static readonly SPRITE_WIDTH = 2;
+    public static readonly SPRITE_HEIGHT = 2;
+
+    // Debug visualization group
+    public debugGroup: THREE.Group | null = null;
+
     constructor(scene: THREE.Scene, x: number, z: number) {
         this.mesh = new THREE.Group();
         this.mesh.position.set(x, 0, z);
