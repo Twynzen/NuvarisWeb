@@ -29,6 +29,28 @@ export class EnemyThree {
     private attackStartTime = 0;
     private originalColor = 0xffaaaa;
 
+    // Dash attack system
+    private isDashing = false;
+    private dashCooldown = 0; // Current cooldown timer
+    private dashMaxCooldown = 2.0; // 2 seconds between dashes
+    private dashDuration = 0; // Current dash timer
+    private dashMaxDuration = 0.3; // 300ms dash
+    private dashSpeed = this.speed * 3; // 3x normal speed
+
+    // Telegraph (preparation phase)
+    private isTelegraphing = false;
+    private telegraphDuration = 0;
+    private telegraphMaxDuration = 0.25; // 250ms preparation
+    private telegraphFlashInterval = 0.05; // Flash every 50ms
+    private telegraphFlashTimer = 0;
+
+    // Dash trigger range (in Three.js units)
+    private dashTriggerMin = 8; // Minimum distance to dash
+    private dashTriggerMax = 20; // Maximum distance to dash
+
+    // Dash direction (stored when dash starts)
+    private dashDirection = new THREE.Vector3();
+
     constructor(scene: THREE.Scene, x: number, z: number) {
         this.mesh = new THREE.Group();
         this.mesh.position.set(x, 0, z);
@@ -72,6 +94,73 @@ export class EnemyThree {
             .subVectors(player.mesh.position, this.mesh.position)
             .normalize();
 
+        // Dash system
+        if (this.isDashing) {
+            // Dashing: Move at high speed in stored direction
+            this.mesh.position.add(this.dashDirection.clone().multiplyScalar(this.dashSpeed * delta));
+
+            this.dashDuration -= delta;
+            if (this.dashDuration <= 0) {
+                this.isDashing = false;
+                // Restore color after dash
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+            }
+
+            // Skip normal movement and attack logic
+            this.animator.update(delta);
+            // Clamp position to map bounds even during dash
+            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            return;
+        }
+
+        // Telegraph system
+        if (this.isTelegraphing) {
+            this.telegraphDuration -= delta;
+
+            // Flash effect during telegraph
+            this.telegraphFlashTimer += delta;
+            if (this.telegraphFlashTimer >= this.telegraphFlashInterval) {
+                this.telegraphFlashTimer = 0;
+                // Toggle between white and original color
+                const currentColor = (this.sprite.material as THREE.SpriteMaterial).color.getHex();
+                if (currentColor === 0xffffff) {
+                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+                } else {
+                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffffff);
+                }
+            }
+
+            if (this.telegraphDuration <= 0) {
+                this.isTelegraphing = false;
+                this.startDash(player.mesh.position);
+            }
+
+            // Slow movement during telegraph
+            const moveSpeed = this.speed * 0.2;
+            this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
+            this.animator.update(delta);
+            // Clamp position to map bounds
+            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            return;
+        }
+
+        // Dash cooldown
+        if (this.dashCooldown > 0) {
+            this.dashCooldown -= delta;
+        }
+
+        // Dash trigger check (before normal attack check)
+        if (this.dashCooldown <= 0 && !this.isAttacking && distToPlayer >= this.dashTriggerMin && distToPlayer <= this.dashTriggerMax) {
+            this.startTelegraph(player.mesh.position);
+            this.animator.update(delta);
+            // Clamp position to map bounds
+            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            return;
+        }
+
         // Check if should attack
         if (distToPlayer < this.attackRange && (currentTime - this.lastAttackTime) > this.attackCooldown) {
             this.startAttack(currentTime);
@@ -114,10 +203,10 @@ export class EnemyThree {
     }
 
     /**
-     * Retorna true si el enemigo está atacando en este momento
+     * Retorna true si el enemigo está atacando en este momento (incluyendo dash)
      */
     public isCurrentlyAttacking(): boolean {
-        return this.isAttacking;
+        return this.isAttacking || this.isDashing; // Dash cuenta como ataque
     }
 
     /**
@@ -125,6 +214,41 @@ export class EnemyThree {
      */
     public getAttackDamage(): number {
         return this.attackDamage;
+    }
+
+    /**
+     * Inicia la fase de telegraph (preparación del dash)
+     */
+    private startTelegraph(targetPosition: THREE.Vector3): void {
+        this.isTelegraphing = true;
+        this.telegraphDuration = this.telegraphMaxDuration;
+        this.telegraphFlashTimer = 0;
+
+        // Store direction for upcoming dash
+        this.dashDirection.subVectors(targetPosition, this.mesh.position).normalize();
+
+        // Start with white flash
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffffff);
+    }
+
+    /**
+     * Inicia el dash después del telegraph
+     */
+    private startDash(targetPosition: THREE.Vector3): void {
+        this.isDashing = true;
+        this.dashDuration = this.dashMaxDuration;
+        this.dashCooldown = this.dashMaxCooldown;
+
+        // Direction already stored in dashDirection during telegraph
+        // Keep white color during dash
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffffff);
+    }
+
+    /**
+     * Retorna true si enemigo está haciendo dash (para colisiones)
+     */
+    public isCurrentlyDashing(): boolean {
+        return this.isDashing;
     }
 
     takeDamage(amount: number, scene: THREE.Scene): XPOrb | null {

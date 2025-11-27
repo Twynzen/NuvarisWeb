@@ -23,6 +23,7 @@ export class ThreeEngineService implements OnDestroy {
     private enemies: EnemyThree[] = [];
     private xpOrbs: XPOrb[] = [];
     private projectiles: ProjectileThree[] = [];
+    private damageNumbers: DamageNumber[] = [];
     private lastSpawnTime = 0;
     private lastShootTime = 0;
 
@@ -379,6 +380,16 @@ export class ThreeEngineService implements OnDestroy {
                 }
             }
 
+            // Update damage numbers
+            for (let i = this.damageNumbers.length - 1; i >= 0; i--) {
+                const num = this.damageNumbers[i];
+                const shouldRemove = num.update(delta);
+                if (shouldRemove) {
+                    num.destroy(this.scene);
+                    this.damageNumbers.splice(i, 1);
+                }
+            }
+
             // Camera follow
             const targetX = this.player.mesh.position.x;
             const targetZ = this.player.mesh.position.z + 20;
@@ -497,6 +508,15 @@ export class ThreeEngineService implements OnDestroy {
                         }, 100);
                     }
 
+                    // Show damage number
+                    const damageNum = new DamageNumber(
+                        this.scene,
+                        this.player.mesh.position.x,
+                        this.player.mesh.position.z,
+                        damageAmount
+                    );
+                    this.damageNumbers.push(damageNum);
+
                     // Console log for debugging
                     if (this.gameState.debugMode) {
                         console.log(`[HIT] Enemy attack! Damage: ${damageAmount}, Health: ${this.gameState.health}`);
@@ -560,6 +580,11 @@ export class ThreeEngineService implements OnDestroy {
         });
         this.xpOrbs = [];
 
+        this.damageNumbers.forEach(num => {
+            num.destroy(this.scene);
+        });
+        this.damageNumbers = [];
+
         if (this.player) {
             this.scene.remove(this.player.mesh);
             if (this.player.debugGroup) {
@@ -590,5 +615,62 @@ export class ThreeEngineService implements OnDestroy {
         if (this.renderer) {
             this.renderer.dispose();
         }
+    }
+}
+
+/**
+ * Simple floating damage number
+ */
+class DamageNumber {
+    public mesh: THREE.Sprite;
+    private lifetime = 1.0; // 1 second
+    private age = 0;
+
+    constructor(scene: THREE.Scene, x: number, z: number, damage: number) {
+        // Create canvas for text
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 64;
+        const context = canvas.getContext('2d')!;
+
+        // Draw damage text
+        context.fillStyle = '#ff3333'; // Red
+        context.font = 'bold 48px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(`-${damage}`, 64, 32);
+
+        // Create sprite
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true
+        });
+
+        this.mesh = new THREE.Sprite(material);
+        this.mesh.scale.set(2, 1, 1);
+        this.mesh.position.set(x, 2, z); // Start at y=2 (above player)
+
+        scene.add(this.mesh);
+    }
+
+    update(delta: number): boolean {
+        this.age += delta;
+
+        // Move up
+        this.mesh.position.y += delta * 2; // Rise at 2 units/sec
+
+        // Fade out
+        const alpha = 1.0 - (this.age / this.lifetime);
+        (this.mesh.material as THREE.SpriteMaterial).opacity = alpha;
+
+        // Return true if should be removed
+        return this.age >= this.lifetime;
+    }
+
+    destroy(scene: THREE.Scene): void {
+        scene.remove(this.mesh);
+        (this.mesh.material as THREE.SpriteMaterial).map?.dispose();
+        (this.mesh.material as THREE.SpriteMaterial).dispose();
     }
 }
