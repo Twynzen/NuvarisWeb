@@ -100,7 +100,7 @@ export class ThreeEngineService implements OnDestroy {
                 this.toggleDebugMode();
             }
 
-            // Speed control (only in debug mode) - Q, W, E keys
+            // Speed control (only in debug mode) - Q, W, E, R keys
             if (this.gameState.debugMode && !e.ctrlKey && !e.shiftKey && !e.altKey) {
                 if (e.key.toLowerCase() === 'q') {
                     this.timeScale = 0.25; // Very slow
@@ -113,6 +113,10 @@ export class ThreeEngineService implements OnDestroy {
                 } else if (e.key.toLowerCase() === 'e') {
                     this.timeScale = 1.0; // Normal
                     console.log(`[DEBUG] Time Scale: 1.0x (Normal) - Press E`);
+                    e.preventDefault();
+                } else if (e.key.toLowerCase() === 'r') {
+                    this.timeScale = 0.1; // Ultra slow
+                    console.log(`[DEBUG] Time Scale: 0.1x (Ultra Slow) - Press R`);
                     e.preventDefault();
                 }
             }

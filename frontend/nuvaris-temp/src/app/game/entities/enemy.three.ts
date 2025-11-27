@@ -96,8 +96,8 @@ export class EnemyThree {
         if (this.enemyType === 'worm') {
             this.animator.loadAnimation({
                 name: 'walk',
-                texturePath: 'assets/Enemys/worm/walk',
-                prefix: 'worm-walk-',
+                texturePath: 'assets/Enemys/intestine-worm/walk',
+                prefix: 'intestine-worm-walk-',
                 suffix: '.png',
                 frameCount: 30,
                 frameRate: 30,
