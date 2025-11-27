@@ -273,4 +273,57 @@ export class DebugVisualizer {
         // This is called from the engine to batch update enemy debug visuals
         // Individual enemy debug groups are managed separately
     }
+
+    // Visualize collision distance/range (for debugging)
+    visualizeCollisionRange(
+        position: THREE.Vector3,
+        maxDistance: number,
+        collideDistance: number,
+        isColliding: boolean = false
+    ): void {
+        if (!this.isEnabled) return;
+
+        // Outer range circle (culling distance - cyan)
+        const rangeCircle = this.createCollisionCircle(
+            maxDistance,
+            isColliding ? 0xff6600 : 0x00ccff, // Orange if colliding, cyan otherwise
+            24
+        );
+        rangeCircle.position.copy(position);
+        rangeCircle.position.y = 0.2;
+        this.scene.add(rangeCircle);
+        this.debugMeshes.push(rangeCircle);
+
+        // Inner collision circle (red if active)
+        if (isColliding) {
+            const collideCircle = this.createCollisionCircle(
+                collideDistance,
+                0xff0000,
+                32
+            );
+            collideCircle.position.copy(position);
+            collideCircle.position.y = 0.25;
+            this.scene.add(collideCircle);
+            this.debugMeshes.push(collideCircle);
+        }
+    }
+
+    // Draw line between two points (for distance debugging)
+    visualizeDistanceLine(from: THREE.Vector3, to: THREE.Vector3, distance: number): void {
+        if (!this.isEnabled) return;
+
+        const geometry = new THREE.BufferGeometry().setFromPoints([from, to]);
+        const material = new THREE.LineBasicMaterial({
+            color: distance > 5 ? 0xffff00 : 0xff0000,
+            linewidth: 2
+        });
+        const line = new THREE.Line(geometry, material);
+        this.scene.add(line);
+        this.debugMeshes.push(line);
+    }
+
+    // Get current number of debug meshes
+    getDebugMeshCount(): number {
+        return this.debugMeshes.length;
+    }
 }

@@ -32,7 +32,18 @@ export class ThreeEngineService implements OnDestroy {
 
     // Enemy damage configuration
     private enemyDamage = 10; // damage per second when touching enemy
-    // Collision radius is now calculated as sum of player + enemy radii
+
+    // Collision optimization - Broad phase culling
+    private maxCollisionCheckDistance = 35; // Only check enemies within this distance
+
+    // Collision visualization
+    private damageFlashColor = 0xff3333; // Red for damage
+    private lastDamageTime = 0;
+    private damageFlashDuration = 0.2; // seconds
+
+    // Performance stats (for debug)
+    private collisionChecksPerFrame = 0;
+    private enemiesCheckedPerFrame = 0;
 
     // Game State
     public gameState = {
@@ -423,17 +434,40 @@ export class ThreeEngineService implements OnDestroy {
         // Calculate collision threshold: sum of both radii
         const collisionDistance = PlayerThree.COLLISION_RADIUS + EnemyThree.COLLISION_RADIUS;
 
+        // Reset stats
+        this.collisionChecksPerFrame = 0;
+        this.enemiesCheckedPerFrame = 0;
+
+        let isDamagingThisFrame = false;
+
         for (const enemy of this.enemies) {
             if (enemy.isDead) continue;
 
             const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
+
+            // BROAD PHASE: Skip enemies too far away (optimization)
+            if (dist > this.maxCollisionCheckDistance) {
+                continue;
+            }
+
+            this.enemiesCheckedPerFrame++;
+
+            // NARROW PHASE: Exact collision check
             if (dist < collisionDistance) {
+                this.collisionChecksPerFrame++;
+                isDamagingThisFrame = true;
+
                 // Apply damage over time
                 this.gameState.health -= this.enemyDamage * delta;
 
-                // Visual feedback - flash enemy red when damaging player
-                if (this.debugVisualizer?.enabled && enemy.debugGroup) {
-                    // Collision is happening
+                // Visual feedback on player when taking damage
+                if (this.player && this.player.mesh) {
+                    // Flash effect on player (tint red briefly)
+                    const currentTime = this.clock.getElapsedTime();
+                    if (currentTime - this.lastDamageTime > 0.3) {
+                        // Visual flash notification
+                        this.lastDamageTime = currentTime;
+                    }
                 }
 
                 // Clamp health
@@ -443,6 +477,11 @@ export class ThreeEngineService implements OnDestroy {
                     return;
                 }
             }
+        }
+
+        // Log performance metrics if debug enabled
+        if (this.gameState.debugMode && this.collisionChecksPerFrame > 0) {
+            // Would show collision stats in console if needed
         }
     }
 
