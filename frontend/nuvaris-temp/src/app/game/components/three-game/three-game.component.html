@@ -55,6 +55,7 @@
         *ngIf="gameState.isGameOver"
         [score]="gameState.score"
         [level]="gameState.level"
-        (returnToMenu)="onReturnToMenu()">
+        (returnToMenu)="onReturnToMenu()"
+        (playAgain)="onPlayAgain()">
     </app-game-over>
 </div>

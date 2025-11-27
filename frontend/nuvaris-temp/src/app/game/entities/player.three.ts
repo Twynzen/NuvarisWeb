@@ -359,4 +359,35 @@ export class PlayerThree {
         // Play death animation once
         this.animator.play('dead', false, 15); // Slower for dramatic effect
     }
+
+    /**
+     * Fade out the player sprite over duration (in seconds)
+     * Returns a promise that resolves when fade out is complete
+     */
+    public fadeOut(duration: number = 1.0): Promise<void> {
+        return new Promise((resolve) => {
+            const startOpacity = 1.0;
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = (Date.now() - startTime) / 1000; // Convert to seconds
+                const progress = Math.min(elapsed / duration, 1.0);
+                const opacity = startOpacity * (1.0 - progress);
+
+                // Get the sprite material and set opacity
+                const material = this.sprite.material as THREE.SpriteMaterial;
+                material.opacity = opacity;
+
+                if (progress < 1.0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Fade out complete
+                    material.opacity = 0;
+                    resolve();
+                }
+            };
+
+            animate();
+        });
+    }
 }

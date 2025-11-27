@@ -12,8 +12,13 @@ export class GameOverComponent {
     @Input() score: number = 0;
     @Input() level: number = 1;
     @Output() returnToMenu = new EventEmitter<void>();
+    @Output() playAgain = new EventEmitter<void>();
 
     onReturnToMenu() {
         this.returnToMenu.emit();
+    }
+
+    onPlayAgain() {
+        this.playAgain.emit();
     }
 }

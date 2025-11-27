@@ -17,6 +17,7 @@ export class ThreeEngineService implements OnDestroy {
     private scene!: THREE.Scene;
     private frameId: number | null = null;
     private clock = new THREE.Clock();
+    private currentCharacterId: string = 'arcadio'; // Store character ID for restart
 
     // Game Entities
     private player!: PlayerThree;
@@ -224,6 +225,7 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     createScene(canvas: ElementRef<HTMLCanvasElement>, characterId: string = 'arcadio'): void {
+        this.currentCharacterId = characterId; // Save for restart
         this.canvas = canvas.nativeElement;
 
         this.renderer = new THREE.WebGLRenderer({
@@ -543,10 +545,48 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     // Handle player death
-    private handlePlayerDeath() {
+    private async handlePlayerDeath() {
         this.player.die();
 
-        // Set game over immediately to stop all game logic and input
+        // STEP 1: Zoom camera in on player for dramatic effect
+        const deathCameraZoom = async () => {
+            return new Promise<void>((resolve) => {
+                const startPos = new THREE.Vector3(this.camera.position.x, this.camera.position.y, this.camera.position.z);
+                const targetPos = new THREE.Vector3(this.player.mesh.position.x, 15, this.player.mesh.position.z + 8);
+                const duration = 0.8; // 800ms zoom
+                const startTime = Date.now();
+
+                const animateZoom = () => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const progress = Math.min(elapsed / duration, 1.0);
+                    // Easing: ease-in-out
+                    const easeProgress = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+                    this.camera.position.x = startPos.x + (targetPos.x - startPos.x) * easeProgress;
+                    this.camera.position.y = startPos.y + (targetPos.y - startPos.y) * easeProgress;
+                    this.camera.position.z = startPos.z + (targetPos.z - startPos.z) * easeProgress;
+                    this.camera.lookAt(this.player.mesh.position.x, 0, this.player.mesh.position.z);
+
+                    if (progress < 1.0) {
+                        requestAnimationFrame(animateZoom);
+                    } else {
+                        resolve();
+                    }
+                };
+                animateZoom();
+            });
+        };
+
+        // STEP 2: Wait for death animation to complete (30 frames @ 15 FPS = 2 seconds)
+        await deathCameraZoom();
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // STEP 3: Fade out the player sprite over 1 second
+        if (this.player) {
+            await this.player.fadeOut(1.0);
+        }
+
+        // STEP 4: Show game over screen
         this.gameState.isGameOver = true;
     }
 
@@ -617,6 +657,72 @@ export class ThreeEngineService implements OnDestroy {
         if (this.renderer) {
             this.renderer.dispose();
         }
+    }
+
+    /**
+     * Restart the game without going to menu (same as resetGame but continues playing)
+     */
+    public restartGame(): void {
+        // Clear all entities from scene
+        this.enemies.forEach(enemy => {
+            this.scene.remove(enemy.mesh);
+            if (enemy.debugGroup) {
+                this.scene.remove(enemy.debugGroup);
+            }
+        });
+        this.enemies = [];
+
+        this.projectiles.forEach(proj => {
+            this.scene.remove(proj.mesh);
+        });
+        this.projectiles = [];
+
+        this.xpOrbs.forEach(orb => {
+            this.scene.remove(orb.mesh);
+        });
+        this.xpOrbs = [];
+
+        this.damageNumbers.forEach(num => {
+            num.destroy(this.scene);
+        });
+        this.damageNumbers = [];
+
+        if (this.player) {
+            this.scene.remove(this.player.mesh);
+            if (this.player.debugGroup) {
+                this.scene.remove(this.player.debugGroup);
+            }
+        }
+
+        // Reset game state to initial values
+        this.gameState = {
+            health: 100,
+            maxHealth: 100,
+            xp: 0,
+            xpToLevel: 100,
+            level: 1,
+            wave: 1,
+            score: 0,
+            isLevelingUp: false,
+            isPaused: false,
+            isGameOver: false,
+            debugMode: false
+        };
+
+        // Reset camera position
+        this.camera.position.set(0, 25, 20);
+        this.camera.lookAt(0, 0, 0);
+
+        // Create new player
+        this.player = new PlayerThree(this.scene, this.currentCharacterId);
+
+        // Reset timers
+        this.lastSpawnTime = 0;
+        this.lastShootTime = 0;
+        this.clock.start(); // Restart the clock
+
+        // Resume game rendering
+        this.render();
     }
 }
 

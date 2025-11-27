@@ -47,4 +47,9 @@ export class ThreeGameComponent implements AfterViewInit {
         this.engServ.resetGame();
         this.quitGame.emit();
     }
+
+    onPlayAgain() {
+        // Restart the game without going back to menu
+        this.engServ.restartGame();
+    }
 }
