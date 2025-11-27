@@ -558,19 +558,31 @@ export class ThreeEngineService implements OnDestroy {
     private async handlePlayerDeath() {
         this.player.die();
 
-        // STEP 1: Zoom camera in on player for dramatic effect
+        // Create glass break effect
+        const glassEffect = new GlassBreakEffect(this.scene, this.renderer);
+
+        // STEP 1: Scale up player sprite and zoom camera in on player for dramatic effect
         const deathCameraZoom = async () => {
             return new Promise<void>((resolve) => {
                 const startPos = new THREE.Vector3(this.camera.position.x, this.camera.position.y, this.camera.position.z);
                 const targetPos = new THREE.Vector3(this.player.mesh.position.x, 15, this.player.mesh.position.z + 8);
                 const duration = 0.8; // 800ms zoom
                 const startTime = Date.now();
+                const startScale = 3.0;
+                const targetScale = 5.0; // Increase to 5x size
 
                 const animateZoom = () => {
                     const elapsed = (Date.now() - startTime) / 1000;
                     const progress = Math.min(elapsed / duration, 1.0);
                     // Easing: ease-in-out
                     const easeProgress = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+
+                    // Scale up player sprite
+                    const currentScale = startScale + (targetScale - startScale) * easeProgress;
+                    const sprite = this.player.mesh.children[0] as THREE.Sprite;
+                    if (sprite) {
+                        sprite.scale.set(currentScale, currentScale, 1);
+                    }
 
                     this.camera.position.x = startPos.x + (targetPos.x - startPos.x) * easeProgress;
                     this.camera.position.y = startPos.y + (targetPos.y - startPos.y) * easeProgress;
@@ -587,16 +599,22 @@ export class ThreeEngineService implements OnDestroy {
             });
         };
 
-        // STEP 2: Wait for death animation to complete (30 frames @ 15 FPS = 2 seconds)
+        // STEP 2: Zoom camera and scale up player simultaneously
         await deathCameraZoom();
+
+        // STEP 3: Show glass break effect
+        glassEffect.animate();
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // STEP 3: Fade out the player sprite over 1 second
+        // STEP 4: Fade out the player sprite over 1 second
         if (this.player) {
             await this.player.fadeOut(1.0);
         }
 
-        // STEP 4: Show game over screen
+        // STEP 5: Clean up glass effect
+        glassEffect.destroy();
+
+        // STEP 6: Show game over screen
         this.gameState.isGameOver = true;
     }
 
@@ -792,4 +810,148 @@ class DamageNumber {
         (this.mesh.material as THREE.SpriteMaterial).map?.dispose();
         (this.mesh.material as THREE.SpriteMaterial).dispose();
     }
+}
+
+/**
+ * Glass break effect - renders a cracked glass pattern on screen during death
+ */
+class GlassBreakEffect {
+    private mesh: THREE.Sprite;
+    private canvas!: HTMLCanvasElement;
+    private context!: CanvasRenderingContext2D;
+    private cracks: Crack[] = [];
+    private isAnimating = false;
+
+    constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
+        // Create canvas for glass effect
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.context = this.canvas.getContext('2d')!;
+
+        // Generate random crack pattern
+        this.generateCracks();
+
+        // Create sprite from canvas
+        const texture = new THREE.CanvasTexture(this.canvas);
+        const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true
+        });
+
+        this.mesh = new THREE.Sprite(material);
+        this.mesh.scale.set(window.innerWidth / 100, window.innerHeight / 100, 1);
+        this.mesh.position.z = 100; // Far forward to cover everything
+
+        scene.add(this.mesh);
+    }
+
+    private generateCracks(): void {
+        const numCracks = 8 + Math.floor(Math.random() * 4);
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+
+        for (let i = 0; i < numCracks; i++) {
+            const angle = (Math.PI * 2 * i) / numCracks + (Math.random() - 0.5) * 0.5;
+            const distance = 200 + Math.random() * 300;
+
+            this.cracks.push({
+                x: centerX + Math.cos(angle) * distance,
+                y: centerY + Math.sin(angle) * distance,
+                angle: angle,
+                branches: []
+            });
+        }
+
+        // Generate branches from each crack
+        this.cracks.forEach(crack => {
+            const numBranches = 3 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < numBranches; i++) {
+                const branchAngle = crack.angle + (Math.random() - 0.5) * Math.PI * 0.5;
+                const branchLength = 100 + Math.random() * 200;
+                crack.branches.push({
+                    angle: branchAngle,
+                    length: branchLength,
+                    progress: 0
+                });
+            }
+        });
+    }
+
+    animate(): void {
+        this.isAnimating = true;
+        const startTime = Date.now();
+        const duration = 1.5; // 1.5 seconds for crack animation
+
+        const animateCracks = () => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const progress = Math.min(elapsed / duration, 1.0);
+
+            // Clear canvas
+            this.context.fillStyle = 'rgba(0, 0, 0, 0)';
+            this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Draw main cracks
+            this.context.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            this.context.lineWidth = 2;
+            this.context.lineCap = 'round';
+
+            const centerX = this.canvas.width / 2;
+            const centerY = this.canvas.height / 2;
+
+            this.cracks.forEach((crack, index) => {
+                // Main crack line
+                const crackProgress = Math.min(progress * 1.2, 1.0);
+                const startX = centerX;
+                const startY = centerY;
+                const endX = centerX + Math.cos(crack.angle) * 250 * crackProgress;
+                const endY = centerY + Math.sin(crack.angle) * 250 * crackProgress;
+
+                this.context.beginPath();
+                this.context.moveTo(startX, startY);
+                this.context.lineTo(endX, endY);
+                this.context.stroke();
+
+                // Draw branches
+                crack.branches.forEach(branch => {
+                    const branchProgress = Math.max(0, Math.min(progress * 1.5 - index * 0.1, 1.0));
+                    const branchStartX = centerX + Math.cos(crack.angle) * 150 * (progress * 0.8);
+                    const branchStartY = centerY + Math.sin(crack.angle) * 150 * (progress * 0.8);
+                    const branchEndX = branchStartX + Math.cos(branch.angle) * branch.length * branchProgress;
+                    const branchEndY = branchStartY + Math.sin(branch.angle) * branch.length * branchProgress;
+
+                    this.context.beginPath();
+                    this.context.moveTo(branchStartX, branchStartY);
+                    this.context.lineTo(branchEndX, branchEndY);
+                    this.context.stroke();
+                });
+            });
+
+            // Update texture
+            (this.mesh.material as THREE.SpriteMaterial).map!.needsUpdate = true;
+
+            if (progress < 1.0 && this.isAnimating) {
+                requestAnimationFrame(animateCracks);
+            }
+        };
+
+        animateCracks();
+    }
+
+    destroy(): void {
+        this.isAnimating = false;
+        (this.mesh.material as THREE.SpriteMaterial).map?.dispose();
+        (this.mesh.material as THREE.SpriteMaterial).dispose();
+    }
+}
+
+interface Crack {
+    x: number;
+    y: number;
+    angle: number;
+    branches: {
+        angle: number;
+        length: number;
+        progress: number;
+    }[];
 }
