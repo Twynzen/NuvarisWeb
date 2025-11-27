@@ -27,6 +27,7 @@ export class EnemyThree {
     private isAttacking = false;
     private attackDuration = 0.3; // Duración visual del ataque
     private attackStartTime = 0;
+    private hasDealtDamageThisAttack = false; // Prevent multiple damage hits per attack
     private originalColor = 0xffaaaa;
 
     // Dash attack system
@@ -171,6 +172,7 @@ export class EnemyThree {
             const attackElapsed = currentTime - this.attackStartTime;
             if (attackElapsed > this.attackDuration) {
                 this.isAttacking = false;
+                this.hasDealtDamageThisAttack = false; // Reset for next attack
                 // Restore original color
                 (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
             }
@@ -195,6 +197,7 @@ export class EnemyThree {
         this.isAttacking = true;
         this.lastAttackTime = currentTime;
         this.attackStartTime = currentTime;
+        this.hasDealtDamageThisAttack = false; // Reset damage flag for new attack
 
         // Visual feedback: Flash rojo intenso
         (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xff0000);
@@ -214,6 +217,20 @@ export class EnemyThree {
      */
     public getAttackDamage(): number {
         return this.attackDamage;
+    }
+
+    /**
+     * Marca que el daño ya fue aplicado en este ataque
+     */
+    public markDamageDealt(): void {
+        this.hasDealtDamageThisAttack = true;
+    }
+
+    /**
+     * Retorna si el daño ya fue aplicado en este ataque
+     */
+    public hasDealtDamage(): boolean {
+        return this.hasDealtDamageThisAttack;
     }
 
     /**

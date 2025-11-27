@@ -490,44 +490,48 @@ export class ThreeEngineService implements OnDestroy {
             if (dist < collisionDistance && enemy.isCurrentlyAttacking()) {
                 this.collisionChecksPerFrame++;
 
-                // Apply damage from attack
-                const damageAmount = enemy.getAttackDamage();
-                this.gameState.health -= damageAmount;
+                // Only apply damage ONCE per attack (not every frame)
+                if (!enemy.hasDealtDamage()) {
+                    // Apply damage from attack
+                    const damageAmount = enemy.getAttackDamage();
+                    this.gameState.health -= damageAmount;
+                    enemy.markDamageDealt(); // Mark that damage was dealt
 
-                // Visual feedback on player when taking damage
-                if (this.player && this.player.mesh) {
-                    // Flash effect on player (tint red briefly)
-                    const sprite = (this.player.mesh.children[0] as THREE.Sprite);
-                    if (sprite && sprite.material) {
-                        const material = sprite.material as THREE.SpriteMaterial;
-                        const originalColor = material.color.getHex();
-                        material.color.setHex(0xff3333); // Red flash
+                    // Visual feedback on player when taking damage
+                    if (this.player && this.player.mesh) {
+                        // Flash effect on player (tint red briefly)
+                        const sprite = (this.player.mesh.children[0] as THREE.Sprite);
+                        if (sprite && sprite.material) {
+                            const material = sprite.material as THREE.SpriteMaterial;
+                            const originalColor = material.color.getHex();
+                            material.color.setHex(0xff3333); // Red flash
 
-                        setTimeout(() => {
-                            material.color.setHex(originalColor);
-                        }, 100);
+                            setTimeout(() => {
+                                material.color.setHex(originalColor);
+                            }, 100);
+                        }
+
+                        // Show damage number
+                        const damageNum = new DamageNumber(
+                            this.scene,
+                            this.player.mesh.position.x,
+                            this.player.mesh.position.z,
+                            damageAmount
+                        );
+                        this.damageNumbers.push(damageNum);
+
+                        // Console log for debugging
+                        if (this.gameState.debugMode) {
+                            console.log(`[HIT] Enemy attack! Damage: ${damageAmount}, Health: ${this.gameState.health}`);
+                        }
                     }
 
-                    // Show damage number
-                    const damageNum = new DamageNumber(
-                        this.scene,
-                        this.player.mesh.position.x,
-                        this.player.mesh.position.z,
-                        damageAmount
-                    );
-                    this.damageNumbers.push(damageNum);
-
-                    // Console log for debugging
-                    if (this.gameState.debugMode) {
-                        console.log(`[HIT] Enemy attack! Damage: ${damageAmount}, Health: ${this.gameState.health}`);
+                    // Clamp health
+                    if (this.gameState.health <= 0) {
+                        this.gameState.health = 0;
+                        this.handlePlayerDeath();
+                        return;
                     }
-                }
-
-                // Clamp health
-                if (this.gameState.health <= 0) {
-                    this.gameState.health = 0;
-                    this.handlePlayerDeath();
-                    return;
                 }
             }
         }
@@ -542,10 +546,8 @@ export class ThreeEngineService implements OnDestroy {
     private handlePlayerDeath() {
         this.player.die();
 
-        // Show game over after death animation (2 seconds)
-        setTimeout(() => {
-            this.gameState.isGameOver = true;
-        }, 2000);
+        // Set game over immediately to stop all game logic and input
+        this.gameState.isGameOver = true;
     }
 
     // Reset game state for returning to main menu
