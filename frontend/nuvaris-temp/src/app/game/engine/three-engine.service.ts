@@ -602,11 +602,15 @@ export class ThreeEngineService implements OnDestroy {
         // STEP 2: Zoom camera and scale up player simultaneously
         await deathCameraZoom();
 
-        // STEP 3: Show glass break effect
+        // STEP 3: Show glass break effect and wait for death animation
+        // Death animation lasts 2 seconds total
+        // Fade out begins 1 second before the end (at 1 second mark)
         glassEffect.animate();
-        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // STEP 4: Fade out the player sprite over 1 second
+        // Wait 1 second before starting fade out
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // STEP 4: Fade out the player sprite over 1 second (starts at 1s, ends at 2s)
         if (this.player) {
             await this.player.fadeOut(1.0);
         }
@@ -614,7 +618,7 @@ export class ThreeEngineService implements OnDestroy {
         // STEP 5: Clean up glass effect
         glassEffect.destroy();
 
-        // STEP 6: Show game over screen
+        // STEP 6: Show game over screen immediately after fade out completes
         this.gameState.isGameOver = true;
     }
 
