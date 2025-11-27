@@ -338,10 +338,11 @@ export class PlayerThree {
 
         this.animator.play(shootAnim, false, 30);
 
-        // Reset shooting state after animation (approx)
+        // Reset shooting state after animation completes
+        // 30 frames @ 30 FPS = 1000ms
         setTimeout(() => {
             this.isShooting = false;
-        }, 200);
+        }, 1000);
 
         // Create Projectile
         return new ProjectileThree(scene, this.mesh.position.x, this.mesh.position.z, direction, this.characterId);

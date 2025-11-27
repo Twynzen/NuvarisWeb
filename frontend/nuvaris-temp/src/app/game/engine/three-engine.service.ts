@@ -27,7 +27,7 @@ export class ThreeEngineService implements OnDestroy {
     private lastShootTime = 0;
 
     // Auto-shoot configuration
-    private autoShootInterval = 0.5; // seconds between shots
+    private autoShootInterval = 1.1; // seconds between shots (30 frames @ 30 FPS = 1.0s + 0.1s buffer)
     private autoShootRange = 20; // max range to detect enemies
 
     // Enemy damage configuration
@@ -96,17 +96,20 @@ export class ThreeEngineService implements OnDestroy {
                 this.toggleDebugMode();
             }
 
-            // Speed control (only in debug mode)
-            if (this.gameState.debugMode && e.ctrlKey && !e.shiftKey && !e.altKey) {
-                if (e.key === '1') {
+            // Speed control (only in debug mode) - Q, W, E keys
+            if (this.gameState.debugMode && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                if (e.key.toLowerCase() === 'q') {
                     this.timeScale = 0.25; // Very slow
-                    console.log(`[DEBUG] Time Scale: 0.25x (Very Slow)`);
-                } else if (e.key === '2') {
+                    console.log(`[DEBUG] Time Scale: 0.25x (Very Slow) - Press Q`);
+                    e.preventDefault();
+                } else if (e.key.toLowerCase() === 'w') {
                     this.timeScale = 0.5; // Slow
-                    console.log(`[DEBUG] Time Scale: 0.5x (Slow)`);
-                } else if (e.key === '3') {
+                    console.log(`[DEBUG] Time Scale: 0.5x (Slow) - Press W`);
+                    e.preventDefault();
+                } else if (e.key.toLowerCase() === 'e') {
                     this.timeScale = 1.0; // Normal
-                    console.log(`[DEBUG] Time Scale: 1.0x (Normal)`);
+                    console.log(`[DEBUG] Time Scale: 1.0x (Normal) - Press E`);
+                    e.preventDefault();
                 }
             }
         });
