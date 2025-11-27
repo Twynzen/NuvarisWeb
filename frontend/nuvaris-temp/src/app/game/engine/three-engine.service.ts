@@ -45,6 +45,9 @@ export class ThreeEngineService implements OnDestroy {
     private collisionChecksPerFrame = 0;
     private enemiesCheckedPerFrame = 0;
 
+    // Debug time scale (only in debug mode) - Ctrl+1, Ctrl+2, Ctrl+3
+    private timeScale = 1.0; // 1.0 = normal, 0.5 = slow, 0.25 = very slow
+
     // Game State
     public gameState = {
         health: 100,
@@ -91,6 +94,20 @@ export class ThreeEngineService implements OnDestroy {
             if (e.key.toLowerCase() === 'd' && e.ctrlKey) {
                 e.preventDefault();
                 this.toggleDebugMode();
+            }
+
+            // Speed control (only in debug mode)
+            if (this.gameState.debugMode && e.ctrlKey && !e.shiftKey && !e.altKey) {
+                if (e.key === '1') {
+                    this.timeScale = 0.25; // Very slow
+                    console.log(`[DEBUG] Time Scale: 0.25x (Very Slow)`);
+                } else if (e.key === '2') {
+                    this.timeScale = 0.5; // Slow
+                    console.log(`[DEBUG] Time Scale: 0.5x (Slow)`);
+                } else if (e.key === '3') {
+                    this.timeScale = 1.0; // Normal
+                    console.log(`[DEBUG] Time Scale: 1.0x (Normal)`);
+                }
             }
         });
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
@@ -290,7 +307,12 @@ export class ThreeEngineService implements OnDestroy {
 
         if (this.gameState.isLevelingUp || this.gameState.isPaused || this.gameState.isGameOver) return;
 
-        const delta = this.clock.getDelta();
+        let delta = this.clock.getDelta();
+
+        // Apply time scale (debug speed control)
+        delta *= this.timeScale;
+
+        const currentTime = this.clock.getElapsedTime();
 
         if (this.player) {
             this.player.update(delta, this.keys);
@@ -304,17 +326,17 @@ export class ThreeEngineService implements OnDestroy {
             // Auto-shoot at nearest enemy
             this.autoShoot();
 
-            // Enemy collision with player (damage)
-            this.checkEnemyCollision(delta);
+            // Enemy collision with player (ONLY from enemy attacks)
+            this.checkEnemyAttackCollision(currentTime);
 
             // Spawn enemies
-            if (this.clock.getElapsedTime() - this.lastSpawnTime > 2) {
+            if (currentTime - this.lastSpawnTime > 2) {
                 this.spawnEnemy();
-                this.lastSpawnTime = this.clock.getElapsedTime();
+                this.lastSpawnTime = currentTime;
             }
 
-            // Update enemies (with wall collision)
-            this.enemies.forEach(enemy => enemy.update(delta, this.player, 98));
+            // Update enemies (with wall collision AND attack behavior)
+            this.enemies.forEach(enemy => enemy.update(delta, this.player, 98, currentTime));
 
             // Update Projectiles & Collision
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -429,16 +451,14 @@ export class ThreeEngineService implements OnDestroy {
         }
     }
 
-    // Check collision between player and enemies
-    private checkEnemyCollision(delta: number) {
+    // Check collision between player and enemies (ONLY when enemy attacks)
+    private checkEnemyAttackCollision(currentTime: number) {
         // Calculate collision threshold: sum of both radii
         const collisionDistance = PlayerThree.COLLISION_RADIUS + EnemyThree.COLLISION_RADIUS;
 
         // Reset stats
         this.collisionChecksPerFrame = 0;
         this.enemiesCheckedPerFrame = 0;
-
-        let isDamagingThisFrame = false;
 
         for (const enemy of this.enemies) {
             if (enemy.isDead) continue;
@@ -452,21 +472,31 @@ export class ThreeEngineService implements OnDestroy {
 
             this.enemiesCheckedPerFrame++;
 
-            // NARROW PHASE: Exact collision check
-            if (dist < collisionDistance) {
+            // NARROW PHASE: Collision check ONLY when enemy is attacking
+            if (dist < collisionDistance && enemy.isCurrentlyAttacking()) {
                 this.collisionChecksPerFrame++;
-                isDamagingThisFrame = true;
 
-                // Apply damage over time
-                this.gameState.health -= this.enemyDamage * delta;
+                // Apply damage from attack
+                const damageAmount = enemy.getAttackDamage();
+                this.gameState.health -= damageAmount;
 
                 // Visual feedback on player when taking damage
                 if (this.player && this.player.mesh) {
                     // Flash effect on player (tint red briefly)
-                    const currentTime = this.clock.getElapsedTime();
-                    if (currentTime - this.lastDamageTime > 0.3) {
-                        // Visual flash notification
-                        this.lastDamageTime = currentTime;
+                    const sprite = (this.player.mesh.children[0] as THREE.Sprite);
+                    if (sprite && sprite.material) {
+                        const material = sprite.material as THREE.SpriteMaterial;
+                        const originalColor = material.color.getHex();
+                        material.color.setHex(0xff3333); // Red flash
+
+                        setTimeout(() => {
+                            material.color.setHex(originalColor);
+                        }, 100);
+                    }
+
+                    // Console log for debugging
+                    if (this.gameState.debugMode) {
+                        console.log(`[HIT] Enemy attack! Damage: ${damageAmount}, Health: ${this.gameState.health}`);
                     }
                 }
 
