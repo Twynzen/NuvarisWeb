@@ -35,8 +35,8 @@ export class EnemyThree {
     private dashCooldown = 0; // Current cooldown timer
     private dashMaxCooldown = 2.0; // 2 seconds between dashes
     private dashDuration = 0; // Current dash timer
-    private dashMaxDuration = 0.3; // 300ms dash
-    private dashSpeed = this.speed * 3; // 3x normal speed
+    private dashMaxDuration = 0.5; // 500ms dash (increased from 300ms for longer distance)
+    private dashSpeed = this.speed * 4; // 4x normal speed (increased from 3x for longer distance)
 
     // Telegraph (preparation phase)
     private isTelegraphing = false;
