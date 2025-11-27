@@ -767,7 +767,8 @@ class DamageNumber {
 
         this.mesh = new THREE.Sprite(material);
         this.mesh.scale.set(2, 1, 1);
-        this.mesh.position.set(x, 2, z); // Start at y=2 (above player)
+        // Desplazar el número de daño hacia la derecha para no superponerse con el personaje
+        this.mesh.position.set(x + 3, 2, z); // Offset 3 units a la derecha
 
         scene.add(this.mesh);
     }
