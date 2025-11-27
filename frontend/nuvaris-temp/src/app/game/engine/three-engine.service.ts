@@ -42,6 +42,8 @@ export class ThreeEngineService implements OnDestroy {
     private damageFlashColor = 0xff3333; // Red for damage
     private lastDamageTime = 0;
     private damageFlashDuration = 0.2; // seconds
+    private playerDamageImmunityTime = 0; // Current immunity timer
+    private playerDamageImmunityDuration = 0.1; // 100ms immunity after taking damage to prevent double-hits
 
     // Performance stats (for debug)
     private collisionChecksPerFrame = 0;
@@ -320,6 +322,11 @@ export class ThreeEngineService implements OnDestroy {
 
         const currentTime = this.clock.getElapsedTime();
 
+        // Update player damage immunity timer
+        if (this.playerDamageImmunityTime > 0) {
+            this.playerDamageImmunityTime -= delta;
+        }
+
         if (this.player) {
             this.player.update(delta, this.keys);
 
@@ -497,10 +504,16 @@ export class ThreeEngineService implements OnDestroy {
                 const isDashing = enemy.isCurrentlyDashing();
                 const damageAlreadyDealt = isDashing ? enemy.hasDealtDashDamage() : enemy.hasDealtDamage();
 
-                if (!damageAlreadyDealt) {
+                // Check if player is currently immune from recent damage
+                const isPlayerImmune = this.playerDamageImmunityTime > 0;
+
+                if (!damageAlreadyDealt && !isPlayerImmune) {
                     // Apply damage from attack
                     const damageAmount = enemy.getAttackDamage();
                     this.gameState.health -= damageAmount;
+
+                    // Set player damage immunity to prevent multiple hits within 100ms
+                    this.playerDamageImmunityTime = this.playerDamageImmunityDuration;
 
                     // Mark damage as dealt (use appropriate flag based on attack type)
                     if (isDashing) {
