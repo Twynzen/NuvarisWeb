@@ -493,11 +493,21 @@ export class ThreeEngineService implements OnDestroy {
                 this.collisionChecksPerFrame++;
 
                 // Only apply damage ONCE per attack (not every frame)
-                if (!enemy.hasDealtDamage()) {
+                // For dash attacks, use separate damage flag to prevent double hits
+                const isDashing = enemy.isCurrentlyDashing();
+                const damageAlreadyDealt = isDashing ? enemy.hasDealtDashDamage() : enemy.hasDealtDamage();
+
+                if (!damageAlreadyDealt) {
                     // Apply damage from attack
                     const damageAmount = enemy.getAttackDamage();
                     this.gameState.health -= damageAmount;
-                    enemy.markDamageDealt(); // Mark that damage was dealt
+
+                    // Mark damage as dealt (use appropriate flag based on attack type)
+                    if (isDashing) {
+                        enemy.markDashDamageDealt();
+                    } else {
+                        enemy.markDamageDealt();
+                    }
 
                     // Visual feedback on player when taking damage
                     if (this.player && this.player.mesh) {

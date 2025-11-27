@@ -37,6 +37,7 @@ export class EnemyThree {
     private dashDuration = 0; // Current dash timer
     private dashMaxDuration = 0.5; // 500ms dash (increased from 300ms for longer distance)
     private dashSpeed = this.speed * 4; // 4x normal speed (increased from 3x for longer distance)
+    private hasDealtDamageThisDash = false; // Prevent multiple damage hits per dash
 
     // Telegraph (preparation phase)
     private isTelegraphing = false;
@@ -104,6 +105,7 @@ export class EnemyThree {
             this.dashDuration -= delta;
             if (this.dashDuration <= 0) {
                 this.isDashing = false;
+                this.hasDealtDamageThisDash = false; // Reset dash damage flag when dash ends
                 // Restore color after dash
                 (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
             }
@@ -256,6 +258,7 @@ export class EnemyThree {
         this.isDashing = true;
         this.dashDuration = this.dashMaxDuration;
         this.dashCooldown = this.dashMaxCooldown;
+        this.hasDealtDamageThisDash = false; // Reset dash damage flag at start of new dash
 
         // Direction already stored in dashDirection during telegraph
         // Keep white color during dash
@@ -267,6 +270,20 @@ export class EnemyThree {
      */
     public isCurrentlyDashing(): boolean {
         return this.isDashing;
+    }
+
+    /**
+     * Retorna si el daño del dash ya fue aplicado
+     */
+    public hasDealtDashDamage(): boolean {
+        return this.hasDealtDamageThisDash;
+    }
+
+    /**
+     * Marca que el daño del dash ya fue aplicado
+     */
+    public markDashDamageDealt(): void {
+        this.hasDealtDamageThisDash = true;
     }
 
     takeDamage(amount: number, scene: THREE.Scene): XPOrb | null {

@@ -9,6 +9,10 @@
     height: 100%;
     display: block;
     outline: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10; // Ensure canvas is above HUD during animations
 }
 
 #hud {
@@ -24,6 +28,7 @@
     font-family: 'Courier New', Courier, monospace;
     color: #00f5ff;
     text-shadow: 0 0 10px #00f5ff;
+    z-index: 5; // Below canvas (z-index: 10) during animations
 }
 
 .hud-top-center {
