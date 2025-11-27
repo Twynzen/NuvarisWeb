@@ -46,8 +46,9 @@ export class EnemyThree {
     private telegraphFlashTimer = 0;
 
     // Dash trigger range (in Three.js units)
-    private dashTriggerMin = 8; // Minimum distance to dash
-    private dashTriggerMax = 20; // Maximum distance to dash
+    // Triggers when player is at medium distance: closer than dashTriggerMax but farther than normal attack
+    private dashTriggerMin = 5.5; // Just beyond normal attack range (5 units)
+    private dashTriggerMax = 12; // Medium distance - not too far
 
     // Dash direction (stored when dash starts)
     private dashDirection = new THREE.Vector3();
