@@ -460,7 +460,9 @@ export class ThreeEngineService implements OnDestroy {
         const x = this.player.mesh.position.x + Math.cos(angle) * distance;
         const z = this.player.mesh.position.z + Math.sin(angle) * distance;
 
-        const enemy = new EnemyThree(this.scene, x, z);
+        // Randomly choose between spider (60%) and worm (40%)
+        const enemyType = Math.random() < 0.6 ? 'spider' : 'worm';
+        const enemy = new EnemyThree(this.scene, x, z, enemyType);
         this.enemies.push(enemy);
 
         // Create debug visualization for new enemy if debug mode is enabled

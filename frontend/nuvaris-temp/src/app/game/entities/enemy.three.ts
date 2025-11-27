@@ -10,6 +10,7 @@ export class EnemyThree {
     private speed = 5;
     public health = 50;
     public isDead = false;
+    private enemyType: 'spider' | 'worm' = 'spider'; // Enemy type
 
     // Collision and sprite dimensions (for debug visualization)
     public static readonly COLLISION_RADIUS = 1.5;
@@ -54,14 +55,28 @@ export class EnemyThree {
     // Dash direction (stored when dash starts)
     private dashDirection = new THREE.Vector3();
 
-    constructor(scene: THREE.Scene, x: number, z: number) {
+    constructor(scene: THREE.Scene, x: number, z: number, type: 'spider' | 'worm' = 'spider') {
+        this.enemyType = type;
         this.mesh = new THREE.Group();
         this.mesh.position.set(x, 0, z);
+
+        // Configure stats based on enemy type
+        if (type === 'worm') {
+            this.speed = 3; // Worms are slower
+            this.health = 30; // Worms have less health
+            this.attackDamage = 15; // Worms do less damage
+            this.originalColor = 0xaa6633; // Brown color for worms
+        } else {
+            this.speed = 5; // Spider speed
+            this.health = 50; // Spider health
+            this.attackDamage = 20; // Spider damage
+            this.originalColor = 0xffaaaa; // Pink/red for spiders
+        }
 
         // Material
         const material = new THREE.SpriteMaterial({
             transparent: true,
-            color: 0xffaaaa
+            color: this.originalColor
         });
 
         this.sprite = new THREE.Sprite(material);
@@ -78,15 +93,27 @@ export class EnemyThree {
     }
 
     private loadAnimations() {
-        this.animator.loadAnimation({
-            name: 'walk',
-            texturePath: 'assets/Enemys/spider/walk',
-            prefix: 'spider-walk-',
-            suffix: '.png',
-            frameCount: 30,
-            frameRate: 30,
-            loop: true
-        });
+        if (this.enemyType === 'worm') {
+            this.animator.loadAnimation({
+                name: 'walk',
+                texturePath: 'assets/Enemys/worm/walk',
+                prefix: 'worm-walk-',
+                suffix: '.png',
+                frameCount: 30,
+                frameRate: 30,
+                loop: true
+            });
+        } else {
+            this.animator.loadAnimation({
+                name: 'walk',
+                texturePath: 'assets/Enemys/spider/walk',
+                prefix: 'spider-walk-',
+                suffix: '.png',
+                frameCount: 30,
+                frameRate: 30,
+                loop: true
+            });
+        }
     }
 
     update(delta: number, player: PlayerThree, mapBounds: number = 98, currentTime: number = 0) {
