@@ -55,6 +55,15 @@ export class EnemyThree {
     // Dash direction (stored when dash starts)
     private dashDirection = new THREE.Vector3();
 
+    // Home portal system
+    public homePortal: any = null;
+    public isReturningToHome: boolean = false;
+    public isPatrolling: boolean = true;
+    private patrolCenter: THREE.Vector3 = new THREE.Vector3();
+    private patrolRadius: number = 0;
+    private patrolTimer: number = 0;
+    private patrolUpdateInterval: number = 1.0; // Update patrol direction every second
+
     constructor(scene: THREE.Scene, x: number, z: number, type: 'spider' | 'worm' = 'spider') {
         this.enemyType = type;
         this.mesh = new THREE.Group();
@@ -116,10 +125,212 @@ export class EnemyThree {
         }
     }
 
-    update(delta: number, player: PlayerThree, mapBounds: number = 98, currentTime: number = 0) {
+    public setHomePortal(portal: any): void {
+        this.homePortal = portal;
+        this.patrolCenter = portal.position.clone();
+        this.patrolRadius = portal.homeRange;
+    }
+
+    update(delta: number, player: PlayerThree, mapBounds: number = 98, currentTime: number = 0, isPlayerInvisible: boolean = false) {
         if (this.isDead) return;
 
         const distToPlayer = this.mesh.position.distanceTo(player.mesh.position);
+
+        // Determine behavior based on home portal state
+        if (this.homePortal) {
+            this.updateWithHomePortal(delta, player, distToPlayer, mapBounds, currentTime, isPlayerInvisible);
+        } else {
+            // Legacy behavior: simple chase
+            this.updateLegacyBehavior(delta, player, distToPlayer, mapBounds, currentTime, isPlayerInvisible);
+        }
+    }
+
+    private updateWithHomePortal(delta: number, player: PlayerThree, distToPlayer: number, mapBounds: number, currentTime: number, isPlayerInvisible: boolean) {
+        const distToHome = this.mesh.position.distanceTo(this.patrolCenter);
+
+        // Determine state - if player is invisible, never chase
+        if (isPlayerInvisible) {
+            // Player is invisible - always patrol/return home
+            if (distToHome > this.homePortal.returnThreshold) {
+                this.isReturningToHome = true;
+                this.isPatrolling = false;
+                this.updateReturnBehavior(delta, mapBounds);
+            } else {
+                this.isReturningToHome = false;
+                this.isPatrolling = true;
+                this.updatePatrolBehavior(delta, mapBounds);
+            }
+        } else if (distToPlayer < this.homePortal.detectionRange) {
+            // CHASE STATE: Player within detection range
+            this.isReturningToHome = false;
+            this.isPatrolling = false;
+            this.updateChaseBehavior(delta, player, distToPlayer, mapBounds, currentTime);
+        } else if (distToHome > this.homePortal.returnThreshold) {
+            // RETURN STATE: Too far from home
+            this.isReturningToHome = true;
+            this.isPatrolling = false;
+            this.updateReturnBehavior(delta, mapBounds);
+        } else {
+            // PATROL STATE: Near home, no player threat
+            this.isReturningToHome = false;
+            this.isPatrolling = true;
+            this.updatePatrolBehavior(delta, mapBounds);
+        }
+    }
+
+    private updateChaseBehavior(delta: number, player: PlayerThree, distToPlayer: number, mapBounds: number, currentTime: number) {
+        const direction = new THREE.Vector3()
+            .subVectors(player.mesh.position, this.mesh.position)
+            .normalize();
+
+        // Dash system
+        if (this.isDashing) {
+            // Dashing: Move at high speed in stored direction
+            this.mesh.position.add(this.dashDirection.clone().multiplyScalar(this.dashSpeed * delta));
+
+            this.dashDuration -= delta;
+            if (this.dashDuration <= 0) {
+                this.isDashing = false;
+                this.hasDealtDamageThisDash = false; // Reset dash damage flag when dash ends
+                // Restore color after dash
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+            }
+
+            // Skip normal movement and attack logic
+            this.animator.update(delta);
+            // Clamp position to map bounds even during dash
+            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            return;
+        }
+
+        // Telegraph system
+        if (this.isTelegraphing) {
+            this.telegraphDuration -= delta;
+
+            // Flash effect during telegraph
+            this.telegraphFlashTimer += delta;
+            if (this.telegraphFlashTimer >= this.telegraphFlashInterval) {
+                this.telegraphFlashTimer = 0;
+                // Toggle between white and original color
+                const currentColor = (this.sprite.material as THREE.SpriteMaterial).color.getHex();
+                if (currentColor === 0xffffff) {
+                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+                } else {
+                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffffff);
+                }
+            }
+
+            if (this.telegraphDuration <= 0) {
+                this.isTelegraphing = false;
+                this.startDash(player.mesh.position);
+            }
+
+            // Slow movement during telegraph
+            const moveSpeed = this.speed * 0.2;
+            this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
+            this.animator.update(delta);
+            // Clamp position to map bounds
+            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            return;
+        }
+
+        // Dash cooldown
+        if (this.dashCooldown > 0) {
+            this.dashCooldown -= delta;
+        }
+
+        // Dash trigger check (before normal attack check)
+        if (this.dashCooldown <= 0 && !this.isAttacking && distToPlayer >= this.dashTriggerMin && distToPlayer <= this.dashTriggerMax) {
+            this.startTelegraph(player.mesh.position);
+            this.animator.update(delta);
+            // Clamp position to map bounds
+            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            return;
+        }
+
+        // Check if should attack
+        if (distToPlayer < this.attackRange && (currentTime - this.lastAttackTime) > this.attackCooldown) {
+            this.startAttack(currentTime);
+        }
+
+        // Update attack visual
+        if (this.isAttacking) {
+            const attackElapsed = currentTime - this.attackStartTime;
+            if (attackElapsed > this.attackDuration) {
+                this.isAttacking = false;
+                this.hasDealtDamageThisAttack = false; // Reset for next attack
+                // Restore original color
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+            }
+        }
+
+        // Movement - slower during attack
+        const moveSpeed = this.isAttacking ? this.speed * 0.3 : this.speed;
+        this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
+
+        // Clamp position to map bounds (wall collision)
+        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+
+        this.animator.update(delta);
+    }
+
+    private updateReturnBehavior(delta: number, mapBounds: number) {
+        // Move back towards home portal
+        const directionToHome = new THREE.Vector3()
+            .subVectors(this.patrolCenter, this.mesh.position)
+            .normalize();
+
+        const moveSpeed = this.speed * 0.8; // 80% speed while returning
+        this.mesh.position.add(directionToHome.multiplyScalar(moveSpeed * delta));
+
+        // Clamp to map bounds
+        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+
+        this.animator.update(delta);
+    }
+
+    private updatePatrolBehavior(delta: number, mapBounds: number) {
+        // Random walk around patrol center
+        this.patrolTimer += delta;
+
+        if (this.patrolTimer >= this.patrolUpdateInterval) {
+            this.patrolTimer = 0;
+            // Change direction randomly
+            const angle = Math.random() * Math.PI * 2;
+            const moveDistance = this.speed * delta;
+            const newX = this.mesh.position.x + Math.cos(angle) * moveDistance;
+            const newZ = this.mesh.position.z + Math.sin(angle) * moveDistance;
+            const newPos = new THREE.Vector3(newX, 0, newZ);
+            const distFromCenter = newPos.distanceTo(this.patrolCenter);
+
+            // Only move if within patrol radius
+            if (distFromCenter < this.patrolRadius) {
+                this.mesh.position.x = newX;
+                this.mesh.position.z = newZ;
+            }
+        }
+
+        // Clamp to map bounds
+        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+
+        this.animator.update(delta);
+    }
+
+    private updateLegacyBehavior(delta: number, player: PlayerThree, distToPlayer: number, mapBounds: number, currentTime: number, isPlayerInvisible: boolean) {
+        // Original simple chase behavior (for enemies without portals)
+        // If player is invisible, just wander aimlessly
+        if (isPlayerInvisible) {
+            // Random idle behavior when player is invisible
+            this.animator.update(delta);
+            return;
+        }
+
         const direction = new THREE.Vector3()
             .subVectors(player.mesh.position, this.mesh.position)
             .normalize();

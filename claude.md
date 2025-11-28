@@ -1,28 +1,34 @@
 # NUVARIS - Documentacion Completa del Proyecto
 
-## Estado: MVP COMPLETO - Roguelite Vampire Survivors-like
+## Estado: EN DESARROLLO - Three.js 2.5D Roguelite
 
 ---
 
 ## 1. RESUMEN EJECUTIVO
 
-**NUVARIS** es un juego roguelite estilo **Vampire Survivors** desarrollado con dos motores:
-- **Phaser 3** - Motor principal para el gameplay 2D
-- **Three.js** - Motor secundario (parcialmente implementado)
+**NUVARIS** es un juego roguelite estilo **Vampire Survivors** en desarrollo con **Three.js** como motor principal.
 
-### Tecnologias Principales
+### ⚠️ ESTADO ACTUAL (Nov 27, 2025)
+- **Motor Activo**: Three.js 2.5D (viewport ortográfico isométrico)
+- **Rama de Desarrollo**: `claude/pulir-refactor-nuvaris-01GS9xqt6Q24sHsA2845vQU5`
+- **Nota**: La versión anterior con Phaser 3 está archivada. El desarrollo se enfoca ahora en Three.js.
+
+### Tecnologías Principales
 - **Frontend**: Angular 17+ (Standalone Components)
-- **Motor de Juego**: Phaser 3.60+
-- **Motor 3D**: Three.js (experimental)
-- **Lenguaje**: TypeScript
-- **Build**: Vite/Angular CLI
+- **Motor Principal**: Three.js (r150+) - 2.5D isométrico
+- **Framework Web**: Angular CLI / Webpack
+- **Lenguaje**: TypeScript 5.x
+- **Build Tool**: Angular CLI
 
-### Estado Actual
-- MVP funcional con 3 personajes jugables
-- Sistema de combate automatico implementado
-- Sistema de niveles y upgrades
-- 2 tipos de enemigos + Boss
-- Sistema de particulas y efectos visuales
+### Features Implementados
+✅ Sistema de portal para spawn de enemigos
+✅ AI de enemigos (3 estados: Chase/Patrol/Return)
+✅ Sistema de colisiones circular (player + enemigos + proyectiles)
+✅ Dev Console unificada (Ctrl+K)
+✅ Invisibilidad para testing (enemigos no detectan jugador)
+✅ Animaciones de sprites (30 frames por animación)
+✅ Efecto de muerte con glass break + zoom
+✅ Sistemas de daño + inmunidad + multiplicador
 
 ---
 

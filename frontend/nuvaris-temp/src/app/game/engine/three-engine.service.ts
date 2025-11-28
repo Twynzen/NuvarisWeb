@@ -6,6 +6,7 @@ import { EnemyThree } from '../entities/enemy.three';
 import { XPOrb } from '../entities/xp-orb.three';
 import { ProjectileThree } from '../entities/projectile.three';
 import { DebugVisualizer } from './debug-visualizer';
+import { PortalSystem } from '../world/portal-system';
 
 @Injectable({
     providedIn: 'root'
@@ -27,6 +28,8 @@ export class ThreeEngineService implements OnDestroy {
     private damageNumbers: DamageNumber[] = [];
     private lastSpawnTime = 0;
     private lastShootTime = 0;
+    private portalSystem!: PortalSystem;
+    private autoSpawningEnabled = true;
 
     // Auto-shoot configuration
     private autoShootInterval = 1.1; // seconds between shots (30 frames @ 30 FPS = 1.0s + 0.1s buffer)
@@ -94,39 +97,14 @@ export class ThreeEngineService implements OnDestroy {
                 this.togglePause();
             }
 
-            // Ctrl+D - Toggle Debug Mode
-            if (e.key.toLowerCase() === 'd' && e.ctrlKey) {
-                e.preventDefault();
-                this.toggleDebugMode();
-            }
-
-            // Speed control (only in debug mode) - Q, W, E, R keys
-            if (this.gameState.debugMode && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-                if (e.key.toLowerCase() === 'q') {
-                    this.timeScale = 0.25; // Very slow
-                    console.log(`[DEBUG] Time Scale: 0.25x (Very Slow) - Press Q`);
-                    e.preventDefault();
-                } else if (e.key.toLowerCase() === 'w') {
-                    this.timeScale = 0.5; // Slow
-                    console.log(`[DEBUG] Time Scale: 0.5x (Slow) - Press W`);
-                    e.preventDefault();
-                } else if (e.key.toLowerCase() === 'e') {
-                    this.timeScale = 1.0; // Normal
-                    console.log(`[DEBUG] Time Scale: 1.0x (Normal) - Press E`);
-                    e.preventDefault();
-                } else if (e.key.toLowerCase() === 'r') {
-                    this.timeScale = 0.1; // Ultra slow
-                    console.log(`[DEBUG] Time Scale: 0.1x (Ultra Slow) - Press R`);
-                    e.preventDefault();
-                }
-            }
+            // NOTE: Ctrl+D disabled - debug mode now controlled via Ctrl+K console 'debug toggle' command
         });
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
     }
 
     // Toggle debug visualization mode
-    public toggleDebugMode() {
-        if (!this.debugVisualizer) return;
+    public toggleDebugMode(): boolean {
+        if (!this.debugVisualizer) return false;
 
         this.gameState.debugMode = this.debugVisualizer.toggle();
 
@@ -134,6 +112,122 @@ export class ThreeEngineService implements OnDestroy {
             // Create initial debug visuals
             this.createDebugVisualsForAll();
         }
+
+        return this.gameState.debugMode;
+    }
+
+    // --- Developer Mode Commands ---
+
+    public setGameSpeed(speed: number) {
+        this.timeScale = speed;
+        console.log(`[DEV] Game Speed set to ${speed}x`);
+    }
+
+    public toggleGodMode(): boolean {
+        (this.gameState as any).godMode = !(this.gameState as any).godMode;
+        console.log(`[DEV] God Mode: ${(this.gameState as any).godMode}`);
+        return (this.gameState as any).godMode;
+    }
+
+    public setPlayerHealth(amount: number) {
+        this.gameState.health = amount;
+        if (this.gameState.health > this.gameState.maxHealth) {
+            this.gameState.maxHealth = this.gameState.health;
+        }
+        console.log(`[DEV] Player Health set to ${amount}`);
+    }
+
+    public toggleAutoShoot(enabled: boolean) {
+        (this.gameState as any).autoShootEnabled = enabled;
+        console.log(`[DEV] Auto-shoot: ${enabled}`);
+    }
+
+    public setDamageMultiplier(multiplier: number) {
+        (this.gameState as any).damageMultiplier = multiplier;
+        console.log(`[DEV] Damage Multiplier: ${multiplier}x`);
+    }
+
+    public toggleInvisibility(): boolean {
+        (this.gameState as any).invisible = !(this.gameState as any).invisible;
+
+        // Note: Invisibility makes player invisible to ENEMIES (they won't detect/attack)
+        // No visual change to player sprite - purely functional for AI
+
+        console.log(`[DEV] Invisibility: ${(this.gameState as any).invisible}`);
+        return (this.gameState as any).invisible;
+    }
+
+    public killAllEnemies(): number {
+        const count = this.enemies.length;
+        // Mark all as dead so they are removed in next update
+        this.enemies.forEach(e => {
+            e.takeDamage(999999, this.scene); // Ensure they drop XP/die properly
+        });
+        // Force immediate cleanup
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            const enemy = this.enemies[i];
+            this.scene.remove(enemy.mesh);
+            if (enemy.debugGroup) this.scene.remove(enemy.debugGroup);
+        }
+        this.enemies = [];
+        console.log(`[DEV] Killed ${count} enemies`);
+        return count;
+    }
+
+    public spawnEnemy(type: string, count: number = 1) {
+        if (!this.player) return;
+
+        for (let i = 0; i < count; i++) {
+            // Use portal system for spawn location
+            const spawnPos = this.portalSystem.getSpawnPoint(type === 'worm' ? 'worm' : 'spider');
+            const x = spawnPos.x;
+            const z = spawnPos.z;
+
+            const enemyType = type === 'worm' ? 'worm' : 'spider';
+            const enemy = new EnemyThree(this.scene, x, z, enemyType);
+
+            // Assign home portal
+            const portal = this.portalSystem.getPortal(enemyType);
+            if (portal) {
+                enemy.setHomePortal(portal);
+            }
+
+            this.enemies.push(enemy);
+
+            if (this.debugVisualizer?.enabled) {
+                enemy.debugGroup = this.debugVisualizer.updateEnemyDebug(
+                    enemy.mesh.position,
+                    EnemyThree.COLLISION_RADIUS,
+                    EnemyThree.SPRITE_WIDTH,
+                    EnemyThree.SPRITE_HEIGHT
+                );
+            }
+        }
+        console.log(`[DEV] Spawned ${count} ${type}(s)`);
+    }
+
+    public toggleSpawning(enabled: boolean) {
+        this.autoSpawningEnabled = enabled;
+        if (this.portalSystem) {
+            this.portalSystem.toggleSpawning(enabled);
+        }
+        console.log(`[DEV] Auto-spawn: ${enabled ? 'ON' : 'OFF'}`);
+    }
+
+    public spawnWave() {
+        // Simulate a wave spawn
+        this.spawnEnemy('spider', 3);
+        this.spawnEnemy('worm', 2);
+        console.log(`[DEV] Spawned Wave`);
+    }
+
+    public getGameStats() {
+        return {
+            fps: 1 / this.clock.getDelta(), // Approximate
+            enemyCount: this.enemies.length,
+            health: this.gameState.health,
+            timeScale: this.timeScale
+        };
     }
 
     // Create debug visuals for all existing entities
@@ -207,6 +301,9 @@ export class ThreeEngineService implements OnDestroy {
 
     // Auto-shoot at nearest enemy
     private autoShoot() {
+        // Check if auto-shoot is disabled via Dev Mode
+        if ((this.gameState as any).autoShootEnabled === false) return;
+
         const currentTime = this.clock.getElapsedTime();
         if (currentTime - this.lastShootTime < this.autoShootInterval) return;
 
@@ -272,6 +369,10 @@ export class ThreeEngineService implements OnDestroy {
 
         // Player
         this.player = new PlayerThree(this.scene, characterId);
+
+        // Initialize Portal System
+        this.portalSystem = new PortalSystem(this.scene);
+        this.portalSystem.initialize();
 
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
@@ -346,14 +447,20 @@ export class ThreeEngineService implements OnDestroy {
             // Enemy collision with player (ONLY from enemy attacks)
             this.checkEnemyAttackCollision(currentTime);
 
+            // Update portal system
+            if (this.portalSystem) {
+                this.portalSystem.update(delta);
+            }
+
             // Spawn enemies
-            if (currentTime - this.lastSpawnTime > 2) {
-                this.spawnEnemy();
+            if (this.autoSpawningEnabled && currentTime - this.lastSpawnTime > 2) {
+                this.spawnEnemy(Math.random() < 0.6 ? 'spider' : 'worm');
                 this.lastSpawnTime = currentTime;
             }
 
             // Update enemies (with wall collision AND attack behavior)
-            this.enemies.forEach(enemy => enemy.update(delta, this.player, 98, currentTime));
+            const isPlayerInvisible = (this.gameState as any).invisible || false;
+            this.enemies.forEach(enemy => enemy.update(delta, this.player, 98, currentTime, isPlayerInvisible));
 
             // Update Projectiles & Collision
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -369,7 +476,13 @@ export class ThreeEngineService implements OnDestroy {
                 for (let j = this.enemies.length - 1; j >= 0; j--) {
                     const enemy = this.enemies[j];
                     if (proj.mesh.position.distanceTo(enemy.mesh.position) < 1.5) {
-                        const orb = enemy.takeDamage(proj.damage, this.scene);
+                        // Apply damage multiplier if set
+                        let damage = proj.damage;
+                        if ((this.gameState as any).damageMultiplier) {
+                            damage *= (this.gameState as any).damageMultiplier;
+                        }
+
+                        const orb = enemy.takeDamage(damage, this.scene);
                         if (orb) {
                             this.xpOrbs.push(orb);
                             this.enemies.splice(j, 1);
@@ -456,32 +569,17 @@ export class ThreeEngineService implements OnDestroy {
         }
     }
 
-    private spawnEnemy() {
-        if (!this.player) return;
 
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 30 + Math.random() * 10;
-        const x = this.player.mesh.position.x + Math.cos(angle) * distance;
-        const z = this.player.mesh.position.z + Math.sin(angle) * distance;
 
-        // Randomly choose between spider (60%) and worm (40%)
-        const enemyType = Math.random() < 0.6 ? 'spider' : 'worm';
-        const enemy = new EnemyThree(this.scene, x, z, enemyType);
-        this.enemies.push(enemy);
 
-        // Create debug visualization for new enemy if debug mode is enabled
-        if (this.debugVisualizer?.enabled) {
-            enemy.debugGroup = this.debugVisualizer.updateEnemyDebug(
-                enemy.mesh.position,
-                EnemyThree.COLLISION_RADIUS,
-                EnemyThree.SPRITE_WIDTH,
-                EnemyThree.SPRITE_HEIGHT
-            );
-        }
-    }
 
     // Check collision between player and enemies (ONLY when enemy attacks)
     private checkEnemyAttackCollision(currentTime: number) {
+        // God Mode Check
+        if ((this.gameState as any).godMode) return;
+        // Invisibility Check - enemies shouldn't attack if invisible (simplified logic for now)
+        if ((this.gameState as any).invisible) return;
+
         // Calculate collision threshold: sum of both radii
         const collisionDistance = PlayerThree.COLLISION_RADIUS + EnemyThree.COLLISION_RADIUS;
 

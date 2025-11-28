@@ -5,12 +5,14 @@ import { LevelUpComponent } from '../../ui/level-up/level-up.component';
 import { PauseMenuComponent } from '../../ui/pause-menu/pause-menu.component';
 import { GameOverComponent } from '../../ui/game-over/game-over.component';
 
+import { DevConsoleComponent } from '../../ui/dev-console/dev-console.component';
+
 @Component({
     selector: 'app-three-game',
     templateUrl: './three-game.component.html',
     styleUrls: ['./three-game.component.scss'],
     standalone: true,
-    imports: [CommonModule, LevelUpComponent, PauseMenuComponent, GameOverComponent]
+    imports: [CommonModule, LevelUpComponent, PauseMenuComponent, GameOverComponent, DevConsoleComponent]
 })
 export class ThreeGameComponent implements AfterViewInit {
     @ViewChild('rendererCanvas', { static: true })

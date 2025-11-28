@@ -51,11 +51,10 @@
     <app-pause-menu *ngIf="gameState.isPaused" (resume)="onResume()" (quit)="onQuit()"></app-pause-menu>
 
     <!-- Game Over Screen -->
-    <app-game-over
-        *ngIf="gameState.isGameOver"
-        [score]="gameState.score"
-        [level]="gameState.level"
-        (returnToMenu)="onReturnToMenu()"
-        (playAgain)="onPlayAgain()">
+    <app-game-over *ngIf="gameState.isGameOver" [score]="gameState.score" [level]="gameState.level"
+        (returnToMenu)="onReturnToMenu()" (playAgain)="onPlayAgain()">
     </app-game-over>
+
+    <!-- Developer Console -->
+    <app-dev-console></app-dev-console>
 </div>
