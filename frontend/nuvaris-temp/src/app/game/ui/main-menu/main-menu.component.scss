@@ -1,0 +1,119 @@
+.menu-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0a0a1a;
+    display: flex;
+    color: #00f5ff;
+    font-family: 'Courier New', Courier, monospace;
+    z-index: 1000;
+}
+
+.character-list {
+    width: 40%;
+    padding: 50px;
+    border-right: 2px solid #00f5ff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.title {
+    font-size: 3em;
+    margin-bottom: 50px;
+    text-shadow: 0 0 20px #00f5ff;
+}
+
+.character-item {
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(0, 245, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:hover,
+    &.active {
+        background: rgba(0, 245, 255, 0.1);
+        border-color: #00f5ff;
+        transform: translateX(20px);
+    }
+
+    .char-name {
+        display: block;
+        font-size: 1.5em;
+        font-weight: bold;
+    }
+
+    .char-role {
+        font-size: 0.8em;
+        color: rgba(255, 255, 255, 0.7);
+    }
+}
+
+.character-preview {
+    width: 60%;
+    padding: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a1a 100%);
+}
+
+.preview-container {
+    text-align: center;
+    width: 100%;
+}
+
+.concept-art {
+    max-height: 500px;
+    filter: drop-shadow(0 0 20px rgba(0, 245, 255, 0.5));
+    margin-bottom: 30px;
+}
+
+.char-info {
+    text-align: left;
+    max-width: 600px;
+    margin: 0 auto;
+
+    h2 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        color: #ff0044;
+        text-shadow: 0 0 10px #ff0044;
+    }
+
+    p {
+        margin-bottom: 30px;
+        line-height: 1.5;
+        color: #fff;
+    }
+}
+
+.stats {
+    .stat {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+
+        span {
+            width: 50px;
+            font-weight: bold;
+        }
+
+        .bar {
+            flex-grow: 1;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #00f5ff;
+
+            div {
+                height: 100%;
+                background: #00f5ff;
+                box-shadow: 0 0 10px #00f5ff;
+                transition: width 0.3s;
+            }
+        }
+    }
+}

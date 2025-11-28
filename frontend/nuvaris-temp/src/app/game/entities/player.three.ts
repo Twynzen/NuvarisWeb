@@ -1,0 +1,393 @@
+import * as THREE from 'three';
+import { SpriteAnimator } from '../engine/sprite-animator';
+import { ProjectileThree } from './projectile.three';
+
+export class PlayerThree {
+    public mesh: THREE.Group;
+    private sprite: THREE.Sprite;
+    private animator: SpriteAnimator;
+    private speed = 10;
+
+    // State
+    private isMoving = false;
+    private isShooting = false;
+    private facingRight = true;
+    private lastMoveDir = new THREE.Vector3(1, 0, 0);
+    public isDead = false;
+
+    private characterId: string;
+
+    // Debug mode - set to true to see flip/animation logs
+    private DEBUG_FLIP = false;
+
+    // Map bounds for wall collision
+    private mapBounds = 98;
+
+    // Collision and sprite dimensions (for debug visualization)
+    public static readonly COLLISION_RADIUS = 1.5;
+    public static readonly SPRITE_WIDTH = 3;
+    public static readonly SPRITE_HEIGHT = 3;
+
+    // Debug visualization group
+    public debugGroup: THREE.Group | null = null;
+
+    constructor(scene: THREE.Scene, characterId: string = 'arcadio') {
+        this.characterId = characterId;
+        this.mesh = new THREE.Group();
+
+        // Configure Stats
+        switch (characterId) {
+            case 'arcadio':
+                this.speed = 8; // Slow
+                break;
+            case 'lars':
+                this.speed = 12; // Medium
+                break;
+            case 'yurany':
+                this.speed = 18; // Fast
+                break;
+        }
+
+        // Sprite & Material
+        const material = new THREE.SpriteMaterial({
+            transparent: true,
+            color: 0xffffff,
+            side: THREE.DoubleSide
+        });
+
+        this.sprite = new THREE.Sprite(material);
+        this.sprite.center.set(0.5, 0);
+        this.sprite.scale.set(3, 3, 1);
+        this.mesh.add(this.sprite);
+
+        // Shadow
+        const shadowGeo = new THREE.CircleGeometry(0.8, 32);
+        const shadowMat = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.3
+        });
+        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+        shadow.rotation.x = -Math.PI / 2;
+        shadow.position.y = 0.05;
+        this.mesh.add(shadow);
+
+        scene.add(this.mesh);
+
+        // Animator
+        this.animator = new SpriteAnimator(material);
+        this.loadAnimations();
+        this.animator.play('idle');
+    }
+
+    private loadAnimations() {
+        let folder = this.characterId;
+        let prefix = `${this.characterId}-`;
+
+        // Handle folder naming inconsistencies if any
+        if (this.characterId === 'yurany') {
+            folder = 'proyecto-y';
+            prefix = 'y-';
+        }
+
+        // Idle
+        let idlePrefix = `${prefix}idle-`;
+        if (this.characterId === 'yurany') {
+            idlePrefix = 'y-idle-one-';
+        } else if (this.characterId === 'lars') {
+            idlePrefix = 'lars-idle-one-';
+        }
+
+        this.animator.loadAnimation({
+            name: 'idle',
+            texturePath: `assets/${folder}/idle`,
+            prefix: idlePrefix,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // Run (Right)
+        this.animator.loadAnimation({
+            name: 'run-right',
+            texturePath: `assets/${folder}/right`,
+            prefix: `${prefix}walk-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // Run (Left) - Pre-flipped frames
+        this.animator.loadAnimation({
+            name: 'run-left',
+            texturePath: `assets/${folder}/left`,
+            prefix: `${prefix}walk-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // Shoot (Right)
+        this.animator.loadAnimation({
+            name: 'shoot-right',
+            texturePath: `assets/${folder}/shoot/right`,
+            prefix: `${prefix}shoot-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        // Shoot (Left) - Pre-flipped frames
+        this.animator.loadAnimation({
+            name: 'shoot-left',
+            texturePath: `assets/${folder}/shoot/left`,
+            prefix: `${prefix}shoot-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        // Shoot (Up)
+        this.animator.loadAnimation({
+            name: 'shoot-up',
+            texturePath: `assets/${folder}/shoot/up`,
+            prefix: `${prefix}shoot-up-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        // Shoot (Down)
+        this.animator.loadAnimation({
+            name: 'shoot-down',
+            texturePath: `assets/${folder}/shoot/down`,
+            prefix: `${prefix}shoot-down-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        // Walk Up
+        this.animator.loadAnimation({
+            name: 'up',
+            texturePath: `assets/${folder}/up`,
+            prefix: `${prefix}walk-up-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // Walk Down
+        this.animator.loadAnimation({
+            name: 'down',
+            texturePath: `assets/${folder}/down`,
+            prefix: `${prefix}walk-down-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // Dead
+        this.animator.loadAnimation({
+            name: 'dead',
+            texturePath: `assets/${folder}/dead`,
+            prefix: `${prefix}dead-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+    }
+
+    update(delta: number, keys: { [key: string]: boolean }) {
+        // Don't update if dead
+        if (this.isDead) {
+            this.animator.update(delta);
+            return;
+        }
+
+        const moveX = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
+        const moveZ = (keys['s'] ? 1 : 0) - (keys['w'] ? 1 : 0);
+
+        this.isMoving = moveX !== 0 || moveZ !== 0;
+
+        // Track previous state for logging
+        const prevFacingRight = this.facingRight;
+
+        if (this.isMoving) {
+            const moveDir = new THREE.Vector3(moveX, 0, moveZ).normalize();
+            this.mesh.position.add(moveDir.multiplyScalar(this.speed * delta));
+            this.lastMoveDir.copy(moveDir);
+
+            // Face direction - only update on horizontal movement
+            if (moveX > 0) this.facingRight = true;
+            else if (moveX < 0) this.facingRight = false;
+        }
+
+        // Clamp position to map bounds (wall collision)
+        this.mesh.position.x = Math.max(-this.mapBounds, Math.min(this.mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-this.mapBounds, Math.min(this.mapBounds, this.mesh.position.z));
+
+        // Debug log when facing direction changes
+        if (this.DEBUG_FLIP && prevFacingRight !== this.facingRight) {
+            console.log(`[DIRECTION] Changed: facingRight=${this.facingRight}`);
+        }
+
+        // Animation State Machine
+        // Priority: Shooting > Horizontal Movement > Vertical Movement > Idle
+        // Uses separate left/right animations instead of scale flip
+        let animationPlayed = '';
+
+        if (this.isShooting) {
+            // Shooting animation is handled in shoot()
+            animationPlayed = 'shooting';
+        } else if (this.isMoving) {
+            // Prioritize horizontal movement for run animation
+            if (moveX > 0) {
+                // Moving right
+                this.animator.play('run-right', true, 30);
+                animationPlayed = 'run-right';
+            } else if (moveX < 0) {
+                // Moving left - use pre-flipped left animation
+                this.animator.play('run-left', true, 30);
+                animationPlayed = 'run-left';
+            } else if (moveZ < 0) {
+                // Pure vertical up movement
+                this.animator.play('up', true, 30);
+                animationPlayed = 'up';
+            } else if (moveZ > 0) {
+                // Pure vertical down movement
+                this.animator.play('down', true, 30);
+                animationPlayed = 'down';
+            }
+        } else {
+            this.animator.play('idle', true, 30);
+            animationPlayed = 'idle';
+        }
+
+        // Debug log for animation state (throttled - only when moving)
+        if (this.DEBUG_FLIP && this.isMoving) {
+            console.log(`[ANIM] moveX=${moveX}, moveZ=${moveZ}, anim=${animationPlayed}, facingRight=${this.facingRight}`);
+        }
+
+        this.animator.update(delta);
+    }
+
+    shoot(scene: THREE.Scene, targetPosition?: THREE.Vector3): ProjectileThree | null {
+        if (this.isShooting) return null;
+
+        this.isShooting = true;
+
+        // Determine shoot direction and animation
+        let shootAnim = 'shoot-right';
+        let direction = new THREE.Vector3(1, 0, 0);
+
+        if (targetPosition) {
+            // Auto-aim: Calculate direction to target
+            direction = new THREE.Vector3()
+                .subVectors(targetPosition, this.mesh.position)
+                .normalize();
+
+            // Determine animation based on direction to target
+            const absX = Math.abs(direction.x);
+            const absZ = Math.abs(direction.z);
+
+            if (absZ > absX) {
+                // Vertical direction is dominant
+                if (direction.z < 0) {
+                    shootAnim = 'shoot-up';
+                } else {
+                    shootAnim = 'shoot-down';
+                }
+            } else {
+                // Horizontal direction is dominant
+                if (direction.x < 0) {
+                    shootAnim = 'shoot-left';
+                    this.facingRight = false;
+                } else {
+                    shootAnim = 'shoot-right';
+                    this.facingRight = true;
+                }
+            }
+        } else {
+            // Manual aim: Use last move direction
+            if (this.lastMoveDir.z < -0.5) {
+                shootAnim = 'shoot-up';
+                direction.set(0, 0, -1);
+            } else if (this.lastMoveDir.z > 0.5) {
+                shootAnim = 'shoot-down';
+                direction.set(0, 0, 1);
+            } else {
+                shootAnim = this.facingRight ? 'shoot-right' : 'shoot-left';
+                direction.set(this.facingRight ? 1 : -1, 0, 0);
+            }
+        }
+
+        if (this.DEBUG_FLIP) {
+            console.log(`[SHOOT] anim=${shootAnim}, direction=(${direction.x.toFixed(2)}, ${direction.z.toFixed(2)}), facingRight=${this.facingRight}`);
+        }
+
+        this.animator.play(shootAnim, false, 30);
+
+        // Reset shooting state after animation completes
+        // 30 frames @ 30 FPS = 1000ms
+        setTimeout(() => {
+            this.isShooting = false;
+        }, 1000);
+
+        // Create Projectile
+        return new ProjectileThree(scene, this.mesh.position.x, this.mesh.position.z, direction, this.characterId);
+    }
+
+    // Called when player dies
+    die(): void {
+        if (this.isDead) return;
+
+        this.isDead = true;
+        this.isMoving = false;
+        this.isShooting = false;
+
+        // Play death animation once
+        this.animator.play('dead', false, 15); // Slower for dramatic effect
+    }
+
+    /**
+     * Fade out the player sprite over duration (in seconds)
+     * Returns a promise that resolves when fade out is complete
+     */
+    public fadeOut(duration: number = 1.0): Promise<void> {
+        return new Promise((resolve) => {
+            const startOpacity = 1.0;
+            const startTime = Date.now();
+
+            const animate = () => {
+                const elapsed = (Date.now() - startTime) / 1000; // Convert to seconds
+                const progress = Math.min(elapsed / duration, 1.0);
+                const opacity = startOpacity * (1.0 - progress);
+
+                // Get the sprite material and set opacity
+                const material = this.sprite.material as THREE.SpriteMaterial;
+                material.opacity = opacity;
+
+                if (progress < 1.0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Fade out complete
+                    material.opacity = 0;
+                    resolve();
+                }
+            };
+
+            animate();
+        });
+    }
+}
