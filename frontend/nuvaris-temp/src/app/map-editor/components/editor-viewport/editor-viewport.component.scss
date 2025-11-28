@@ -451,3 +451,235 @@ $accent-red: #ff4466;
     background: rgba(100, 100, 150, 0.6);
   }
 }
+
+// ========== PROCEDURAL GENERATION PANEL ==========
+.procedural-btn {
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.3), rgba(0, 245, 255, 0.3)) !important;
+  border-color: rgba(153, 69, 255, 0.5) !important;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(153, 69, 255, 0.5), rgba(0, 245, 255, 0.5)) !important;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(153, 69, 255, 0.6), rgba(0, 245, 255, 0.6)) !important;
+    border-color: $accent-cyan !important;
+    box-shadow: 0 0 12px rgba(0, 245, 255, 0.3);
+  }
+}
+
+.procedural-panel {
+  position: absolute;
+  top: 60px;
+  right: 280px;
+  width: 320px;
+  background: $bg-panel;
+  border: 1px solid $border-color;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  z-index: 500;
+  overflow: hidden;
+}
+
+.procedural-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.2), rgba(0, 245, 255, 0.1));
+  border-bottom: 1px solid $border-color;
+}
+
+.procedural-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: $text-primary;
+}
+
+.close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: $text-secondary;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba($accent-red, 0.3);
+    color: $accent-red;
+  }
+}
+
+.procedural-content {
+  padding: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.procedural-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba($border-color, 0.5);
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: $accent-purple;
+  margin-bottom: 10px;
+}
+
+.seed-row {
+  display: flex;
+  gap: 8px;
+}
+
+.seed-input {
+  flex: 1;
+  padding: 10px 12px;
+  background: $bg-darker;
+  border: 1px solid $border-color;
+  border-radius: 6px;
+  color: $text-primary;
+  font-size: 14px;
+  font-family: 'Roboto Mono', monospace;
+  letter-spacing: 1px;
+
+  &:focus {
+    outline: none;
+    border-color: $accent-cyan;
+  }
+}
+
+.seed-refresh {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba($accent-cyan, 0.2);
+  border: 1px solid rgba($accent-cyan, 0.4);
+  border-radius: 6px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba($accent-cyan, 0.3);
+    transform: rotate(90deg);
+  }
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+
+  label {
+    width: 110px;
+    font-size: 12px;
+    color: $text-secondary;
+  }
+
+  input {
+    flex: 1;
+    padding: 8px 10px;
+    background: $bg-darker;
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    color: $text-primary;
+    font-size: 12px;
+    font-family: 'Roboto Mono', monospace;
+
+    &:focus {
+      outline: none;
+      border-color: $accent-cyan;
+    }
+  }
+
+  .hint {
+    font-size: 10px;
+    color: $text-secondary;
+    opacity: 0.7;
+  }
+}
+
+.procedural-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.generate-btn {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, $accent-purple, $accent-cyan);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(153, 69, 255, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.export-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: rgba($accent-green, 0.2);
+  border: 1px solid rgba($accent-green, 0.4);
+  border-radius: 6px;
+  color: $accent-green;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba($accent-green, 0.3);
+  }
+}
+
+.procedural-info {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+
+  p {
+    font-size: 11px;
+    color: $text-secondary;
+    line-height: 1.5;
+    margin: 0 0 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

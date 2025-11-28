@@ -4,6 +4,13 @@ import { FormsModule } from '@angular/forms';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import {
+    ProceduralMapGenerator,
+    ProceduralMapConfig,
+    GeneratedMapData,
+    Room,
+    Corridor
+} from '../../services/procedural-map-generator';
 
 // Object types for the catalog
 interface CatalogItem {
@@ -103,6 +110,25 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
   showFileMenu = false;
   showEditMenu = false;
   showViewMenu = false;
+
+  // Procedural Generation
+  showProceduralPanel = false;
+  isGenerating = false;
+  private proceduralGenerator: ProceduralMapGenerator | null = null;
+  private lastGeneratedData: GeneratedMapData | null = null;
+  private roomVisualization: THREE.Group | null = null;
+
+  // Procedural config (exposed for UI)
+  proceduralConfig = {
+    seed: ProceduralMapGenerator.generateRandomSeed(),
+    mapWidth: 200,
+    mapDepth: 200,
+    minRoomSize: 15,
+    maxRoomSize: 40,
+    corridorWidth: 6,
+    maxDepth: 5,
+    portalCount: 4
+  };
 
   constructor(private cdr: ChangeDetectorRef) {}
 
@@ -863,6 +889,265 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
         homeRangeIndicator.geometry = new THREE.RingGeometry(value - 1, value, 32);
       }
     }
+  }
+
+  // ========== PROCEDURAL GENERATION ==========
+
+  toggleProceduralPanel(): void {
+    this.showProceduralPanel = !this.showProceduralPanel;
+    this.closeAllMenus();
+  }
+
+  generateRandomSeed(): void {
+    this.proceduralConfig.seed = ProceduralMapGenerator.generateRandomSeed();
+    this.cdr.detectChanges();
+  }
+
+  generateProceduralMap(): void {
+    this.isGenerating = true;
+    this.closeAllMenus();
+
+    // Small delay to show loading state
+    setTimeout(() => {
+      try {
+        // Create generator with current config
+        this.proceduralGenerator = new ProceduralMapGenerator({
+          seed: this.proceduralConfig.seed,
+          mapWidth: this.proceduralConfig.mapWidth,
+          mapDepth: this.proceduralConfig.mapDepth,
+          minRoomSize: this.proceduralConfig.minRoomSize,
+          maxRoomSize: this.proceduralConfig.maxRoomSize,
+          corridorWidth: this.proceduralConfig.corridorWidth,
+          maxDepth: this.proceduralConfig.maxDepth,
+          portalCount: this.proceduralConfig.portalCount,
+          roomPadding: 3,
+          splitChance: 0.9,
+          wallThickness: 2
+        });
+
+        // Generate the map
+        this.lastGeneratedData = this.proceduralGenerator.generate();
+
+        // Clear current map and apply generated data
+        this.clearAllObjects();
+        this.applyGeneratedMap(this.lastGeneratedData);
+
+        console.log('[MapEditor] Procedural map generated with seed:', this.proceduralConfig.seed);
+      } catch (error) {
+        console.error('[MapEditor] Error generating procedural map:', error);
+        alert('Error generating map. Please try again.');
+      } finally {
+        this.isGenerating = false;
+        this.cdr.detectChanges();
+      }
+    }, 100);
+  }
+
+  private clearAllObjects(): void {
+    // Remove all map objects from scene
+    this.mapObjects.forEach(obj => {
+      this.scene.remove(obj.mesh);
+    });
+    this.mapObjects = [];
+
+    // Remove room visualization if exists
+    if (this.roomVisualization) {
+      this.scene.remove(this.roomVisualization);
+      this.roomVisualization = null;
+    }
+
+    this.deselectObject();
+  }
+
+  private applyGeneratedMap(data: GeneratedMapData): void {
+    // Create room floor visualizations
+    this.createRoomVisualizations(data.rooms, data.corridors);
+
+    // Create walls
+    data.walls.forEach(wall => {
+      this.createWall(
+        wall.id,
+        wall.x,
+        wall.z,
+        wall.width,
+        wall.depth,
+        wall.isPerimeter
+      );
+    });
+
+    // Create portals
+    data.portals.forEach(portal => {
+      this.createPortal(
+        portal.id,
+        portal.x,
+        portal.z,
+        portal.type
+      );
+    });
+
+    // Create player spawn
+    this.createSpawnPoint(
+      'player_spawn',
+      data.playerSpawn.x,
+      data.playerSpawn.z,
+      'player'
+    );
+
+    // Update grid size based on map size
+    this.updateGroundSize(data.config.mapWidth, data.config.mapDepth);
+
+    // Set view to top for better overview
+    this.setView('top');
+
+    console.log(`[MapEditor] Applied procedural map: ${data.rooms.length} rooms, ${data.walls.length} walls, ${data.portals.length} portals`);
+  }
+
+  private createRoomVisualizations(rooms: Room[], corridors: Corridor[]): void {
+    this.roomVisualization = new THREE.Group();
+    this.roomVisualization.name = 'room_visualization';
+
+    // Create floor planes for rooms
+    rooms.forEach((room, index) => {
+      const floorGeo = new THREE.PlaneGeometry(room.width, room.depth);
+      const hue = (index * 0.15) % 1;
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color().setHSL(hue, 0.3, 0.15),
+        roughness: 0.9,
+        transparent: true,
+        opacity: 0.8
+      });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(room.centerX, 0.03, room.centerZ);
+      floor.receiveShadow = true;
+      floor.name = `room_floor_${room.id}`;
+      this.roomVisualization!.add(floor);
+
+      // Add room label
+      // Note: For text, we'd need a text geometry or sprite, keeping it simple
+    });
+
+    // Create floor planes for corridors
+    corridors.forEach(corridor => {
+      let width: number, depth: number, x: number, z: number;
+
+      if (corridor.horizontal) {
+        width = corridor.endX - corridor.startX;
+        depth = corridor.width;
+        x = corridor.startX + width / 2;
+        z = corridor.startZ;
+      } else {
+        width = corridor.width;
+        depth = corridor.endZ - corridor.startZ;
+        x = corridor.startX;
+        z = corridor.startZ + depth / 2;
+      }
+
+      const corridorGeo = new THREE.PlaneGeometry(width, depth);
+      const corridorMat = new THREE.MeshStandardMaterial({
+        color: 0x1a1a2e,
+        roughness: 0.9,
+        transparent: true,
+        opacity: 0.7
+      });
+      const corridorMesh = new THREE.Mesh(corridorGeo, corridorMat);
+      corridorMesh.rotation.x = -Math.PI / 2;
+      corridorMesh.position.set(x, 0.02, z);
+      corridorMesh.receiveShadow = true;
+      corridorMesh.name = `corridor_floor_${corridor.id}`;
+      this.roomVisualization!.add(corridorMesh);
+    });
+
+    this.scene.add(this.roomVisualization);
+  }
+
+  private updateGroundSize(width: number, depth: number): void {
+    // Update visible ground
+    const visibleGround = this.scene.getObjectByName('ground_visible') as THREE.Mesh;
+    if (visibleGround) {
+      visibleGround.geometry.dispose();
+      visibleGround.geometry = new THREE.PlaneGeometry(width, depth);
+    }
+
+    // Update raycast plane
+    if (this.groundPlane) {
+      this.groundPlane.geometry.dispose();
+      this.groundPlane.geometry = new THREE.PlaneGeometry(width + 50, depth + 50);
+    }
+
+    // Update grid
+    if (this.gridHelper) {
+      this.scene.remove(this.gridHelper);
+      const divisions = Math.max(width, depth) / 5;
+      this.gridHelper = new THREE.GridHelper(Math.max(width, depth), divisions, 0x00f5ff, 0x1a1a2e);
+      this.gridHelper.position.y = 0.02;
+      (this.gridHelper.material as THREE.Material).opacity = 0.4;
+      (this.gridHelper.material as THREE.Material).transparent = true;
+      this.gridHelper.visible = this.showGrid;
+      this.scene.add(this.gridHelper);
+    }
+  }
+
+  // Export generated map as JSON (compatible with game)
+  exportProceduralMapAsJSON(): void {
+    if (!this.lastGeneratedData) {
+      alert('No hay un mapa procedural generado. Genera uno primero.');
+      return;
+    }
+
+    const mapData = {
+      name: `Procedural Map - ${this.proceduralConfig.seed}`,
+      version: '1.0',
+      gridSize: 5,
+      generatedWith: {
+        seed: this.proceduralConfig.seed,
+        config: this.proceduralConfig
+      },
+      playerSpawn: this.lastGeneratedData.playerSpawn,
+      objects: [
+        // Walls
+        ...this.lastGeneratedData.walls.map(w => ({
+          id: w.id,
+          type: 'wall' as const,
+          subtype: w.isPerimeter ? 'perimeter' : 'normal',
+          position: { x: w.x, z: w.z },
+          scale: { x: w.width, z: w.depth }
+        })),
+        // Portals
+        ...this.lastGeneratedData.portals.map(p => ({
+          id: p.id,
+          type: 'portal' as const,
+          subtype: p.type,
+          position: { x: p.x, z: p.z },
+          config: {
+            homeRange: p.homeRange,
+            detectionRange: p.detectionRange,
+            returnThreshold: p.detectionRange + 10,
+            maxEnemies: p.maxEnemies,
+            spawnRate: p.spawnRate
+          }
+        })),
+        // Player spawn
+        {
+          id: 'spawn_player',
+          type: 'spawn' as const,
+          subtype: 'player',
+          position: this.lastGeneratedData.playerSpawn
+        }
+      ]
+    };
+
+    const json = JSON.stringify(mapData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `procedural_map_${this.proceduralConfig.seed}.json`;
+    a.click();
+
+    URL.revokeObjectURL(url);
+    console.log('[MapEditor] Procedural map exported:', mapData.name);
   }
 
   ngOnDestroy(): void {

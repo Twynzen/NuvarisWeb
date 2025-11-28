@@ -89,6 +89,115 @@
       <span class="icon">⊞</span>
       <span class="label">Snap</span>
     </button>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Procedural Generation Button -->
+    <button
+      class="tool-btn procedural-btn"
+      [class.active]="showProceduralPanel"
+      (click)="toggleProceduralPanel()"
+      title="Generador Procedural de Mapas">
+      <span class="icon">🎲</span>
+      <span class="label">Procedural</span>
+    </button>
+  </div>
+
+  <!-- PROCEDURAL GENERATION PANEL (floating) -->
+  <div class="procedural-panel" *ngIf="showProceduralPanel">
+    <div class="procedural-header">
+      <span class="procedural-title">🎲 GENERADOR PROCEDURAL</span>
+      <button class="close-btn" (click)="toggleProceduralPanel()">✕</button>
+    </div>
+
+    <div class="procedural-content">
+      <!-- Seed -->
+      <div class="procedural-section">
+        <div class="section-label">SEED</div>
+        <div class="seed-row">
+          <input
+            type="text"
+            [(ngModel)]="proceduralConfig.seed"
+            class="seed-input"
+            placeholder="Seed del mapa">
+          <button class="seed-refresh" (click)="generateRandomSeed()" title="Generar nuevo seed">
+            🔄
+          </button>
+        </div>
+      </div>
+
+      <!-- Map Size -->
+      <div class="procedural-section">
+        <div class="section-label">TAMAÑO DEL MAPA</div>
+        <div class="config-row">
+          <label>Ancho:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.mapWidth" min="100" max="400" step="20">
+        </div>
+        <div class="config-row">
+          <label>Profundidad:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.mapDepth" min="100" max="400" step="20">
+        </div>
+      </div>
+
+      <!-- Room Settings -->
+      <div class="procedural-section">
+        <div class="section-label">HABITACIONES</div>
+        <div class="config-row">
+          <label>Tamaño Mínimo:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.minRoomSize" min="10" max="30" step="5">
+        </div>
+        <div class="config-row">
+          <label>Tamaño Máximo:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.maxRoomSize" min="20" max="60" step="5">
+        </div>
+        <div class="config-row">
+          <label>Complejidad:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.maxDepth" min="3" max="8" step="1">
+          <span class="hint">(más = más habitaciones)</span>
+        </div>
+      </div>
+
+      <!-- Corridor Settings -->
+      <div class="procedural-section">
+        <div class="section-label">PASILLOS</div>
+        <div class="config-row">
+          <label>Ancho:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.corridorWidth" min="3" max="12" step="1">
+        </div>
+      </div>
+
+      <!-- Portals -->
+      <div class="procedural-section">
+        <div class="section-label">PORTALES</div>
+        <div class="config-row">
+          <label>Cantidad:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.portalCount" min="1" max="8" step="1">
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <div class="procedural-actions">
+        <button
+          class="generate-btn"
+          (click)="generateProceduralMap()"
+          [disabled]="isGenerating">
+          <span *ngIf="!isGenerating">🎮 GENERAR MAPA</span>
+          <span *ngIf="isGenerating">⏳ Generando...</span>
+        </button>
+        <button
+          class="export-btn"
+          (click)="exportProceduralMapAsJSON()"
+          title="Exportar como JSON para el juego">
+          💾 Exportar JSON
+        </button>
+      </div>
+
+      <!-- Info -->
+      <div class="procedural-info">
+        <p>El generador usa BSP (Binary Space Partitioning) para crear mapas tipo dungeon con habitaciones conectadas por pasillos.</p>
+        <p>Usa el mismo seed para regenerar el mismo mapa.</p>
+      </div>
+    </div>
   </div>
 
   <!-- MAIN CONTENT -->
