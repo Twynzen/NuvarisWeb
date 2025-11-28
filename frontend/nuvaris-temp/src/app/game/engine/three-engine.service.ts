@@ -1,4 +1,4 @@
-import { Injectable, ElementRef, NgZone, OnDestroy } from '@angular/core';
+import { Injectable, ElementRef, NgZone, OnDestroy, Inject } from '@angular/core';
 import * as THREE from 'three';
 import { PlayerThree } from '../entities/player.three';
 import { MapGenerator } from '../world/map-generator';
@@ -6,12 +6,16 @@ import { EnemyThree } from '../entities/enemy.three';
 import { XPOrb } from '../entities/xp-orb.three';
 import { ProjectileThree } from '../entities/projectile.three';
 import { DebugVisualizer } from './debug-visualizer';
-import { PortalSystem } from '../world/portal-system';
+import { PortalSystem, MapPortalData } from '../world/portal-system';
 import { LabStructures } from '../world/lab-structures';
 import { CharacterAbilityThree } from '../abilities/character-ability-three';
 import { ArcadioAbilityThree } from '../abilities/arcadio-ability-three';
 import { LarsAbilityThree } from '../abilities/lars-ability-three';
 import { YuranyAbilityThree } from '../abilities/yurany-ability-three';
+import { MapLoaderService, MapData, MapObject } from '../services/map-loader.service';
+
+// Default map to load on game start
+const DEFAULT_MAP_NAME = 'default';
 
 @Injectable({
     providedIn: 'root'
@@ -36,6 +40,11 @@ export class ThreeEngineService implements OnDestroy {
     private portalSystem!: PortalSystem;
     private labStructures!: LabStructures;
     private autoSpawningEnabled = true;
+
+    // Map system
+    private mapWalls: THREE.Mesh[] = [];
+    private currentMapName: string = '';
+    private mapFloor: THREE.Mesh | null = null;
 
     // Character Abilities System
     private characterAbility!: CharacterAbilityThree;
@@ -93,7 +102,10 @@ export class ThreeEngineService implements OnDestroy {
         return this.camera;
     }
 
-    constructor(private ngZone: NgZone) {
+    constructor(
+        private ngZone: NgZone,
+        private mapLoader: MapLoaderService
+    ) {
         this.setupInput();
     }
 
@@ -410,30 +422,185 @@ export class ThreeEngineService implements OnDestroy {
         // Ground
         this.createGround();
 
-        // Map Generation
-        const mapGen = new MapGenerator(this.scene);
-        mapGen.generate();
-
-        // Player
-        this.player = new PlayerThree(this.scene, characterId);
-
-        // Initialize Character Ability based on selected character
-        this.initializeCharacterAbility(characterId);
-
-        // Initialize Portal System
+        // Initialize Portal System (will be populated by map loader)
         this.portalSystem = new PortalSystem(this.scene);
-        this.portalSystem.initialize();
-
-        // Initialize Lab Structures (prison, portal chambers, psychiatric wards)
-        this.labStructures = new LabStructures(this.scene);
-        this.labStructures.generateProcedural(); // Generate laboratory complex with 3 wings
 
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
 
+        // Load default map asynchronously
+        this.loadMapByName(DEFAULT_MAP_NAME).then(() => {
+            // Player - created after map loads to use correct spawn position
+            const spawnPos = this.mapLoader.getPlayerSpawnPosition(this.mapLoader.getCurrentMapData()!);
+            this.player = new PlayerThree(this.scene, characterId);
+            this.player.mesh.position.set(spawnPos.x, 0, spawnPos.z);
+
+            // Initialize Character Ability based on selected character
+            this.initializeCharacterAbility(characterId);
+
+            console.log(`[Game] Started with map: ${this.currentMapName}`);
+        }).catch((err) => {
+            // Fallback to legacy hardcoded map if loading fails
+            console.warn('[Game] Failed to load default map, using legacy fallback', err);
+            this.loadLegacyMap();
+
+            // Player at center
+            this.player = new PlayerThree(this.scene, characterId);
+            this.initializeCharacterAbility(characterId);
+        });
+
         this.animate();
 
         window.addEventListener('resize', () => this.resize());
+    }
+
+    // ============================================
+    // MAP LOADING SYSTEM
+    // ============================================
+
+    /**
+     * Load a map by name (for Dev Console command)
+     */
+    public async loadMapByName(mapName: string): Promise<void> {
+        try {
+            const mapData = await this.mapLoader.loadByName(mapName);
+            this.applyMapData(mapData);
+            this.currentMapName = mapName;
+            console.log(`[Game] Map "${mapName}" loaded successfully`);
+        } catch (error) {
+            console.error(`[Game] Failed to load map: ${mapName}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Apply loaded map data to the scene
+     */
+    private applyMapData(mapData: MapData): void {
+        // Clear existing map objects
+        this.clearCurrentMap();
+
+        // Create walls from map data
+        const walls = this.mapLoader.getWallConfigs(mapData);
+        for (const wall of walls) {
+            this.createWallFromConfig(wall);
+        }
+
+        // Initialize portals from map data
+        const portals = this.mapLoader.getPortalConfigs(mapData);
+        this.portalSystem.initializeFromConfig(portals as MapPortalData[]);
+
+        // Update player position if player exists
+        if (this.player) {
+            const spawnPos = this.mapLoader.getPlayerSpawnPosition(mapData);
+            this.player.mesh.position.set(spawnPos.x, 0, spawnPos.z);
+        }
+
+        // Kill all existing enemies when map changes
+        this.killAllEnemies();
+
+        console.log(`[Game] Applied map: ${mapData.name} (${mapData.objects.length} objects)`);
+    }
+
+    /**
+     * Create a wall mesh from map config
+     */
+    private createWallFromConfig(wallConfig: MapObject): void {
+        const textureLoader = new THREE.TextureLoader();
+        const wallTexture = textureLoader.load('assets/environment/wall_1.png');
+        wallTexture.wrapS = THREE.RepeatWrapping;
+        wallTexture.wrapT = THREE.RepeatWrapping;
+
+        const scaleX = wallConfig.scale?.x || 10;
+        const scaleZ = wallConfig.scale?.z || 2;
+        const wallHeight = 8;
+
+        wallTexture.repeat.set(scaleX / 10, 1);
+
+        const wallMat = new THREE.MeshStandardMaterial({
+            map: wallTexture,
+            roughness: 0.5,
+            metalness: 0.3
+        });
+
+        const geo = new THREE.BoxGeometry(scaleX, wallHeight, scaleZ);
+        const mesh = new THREE.Mesh(geo, wallMat);
+        mesh.position.set(wallConfig.position.x, wallHeight / 2, wallConfig.position.z);
+
+        if (wallConfig.rotation) {
+            mesh.rotation.y = THREE.MathUtils.degToRad(wallConfig.rotation);
+        }
+
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        this.scene.add(mesh);
+        this.mapWalls.push(mesh);
+    }
+
+    /**
+     * Clear current map (walls and portals)
+     */
+    private clearCurrentMap(): void {
+        // Remove all walls
+        for (const wall of this.mapWalls) {
+            this.scene.remove(wall);
+            wall.geometry.dispose();
+            if (wall.material instanceof THREE.Material) {
+                wall.material.dispose();
+            }
+        }
+        this.mapWalls = [];
+
+        // Clear portals
+        this.portalSystem.clear();
+
+        console.log('[Game] Cleared current map');
+    }
+
+    /**
+     * Legacy map loading (fallback when JSON loading fails)
+     */
+    private loadLegacyMap(): void {
+        // Use old MapGenerator for walls
+        const mapGen = new MapGenerator(this.scene);
+        mapGen.generate();
+
+        // Use old portal initialization
+        this.portalSystem.initialize();
+
+        // Initialize Lab Structures
+        this.labStructures = new LabStructures(this.scene);
+        this.labStructures.generateProcedural();
+
+        this.currentMapName = 'legacy';
+        console.log('[Game] Loaded legacy hardcoded map');
+    }
+
+    /**
+     * Get current map name (for Dev Console)
+     */
+    public getCurrentMapName(): string {
+        return this.currentMapName || 'none';
+    }
+
+    /**
+     * Get map info (for Dev Console)
+     */
+    public getMapInfo(): { name: string; objects: number; portals: number; walls: number } {
+        const info = this.mapLoader.getMapInfo();
+        return {
+            name: info.name,
+            objects: info.objects,
+            portals: info.portals,
+            walls: info.walls
+        };
+    }
+
+    /**
+     * Get available maps (for Dev Console)
+     */
+    public getAvailableMaps(): string[] {
+        return this.mapLoader.getAvailableMaps();
     }
 
     private createGround() {

@@ -219,6 +219,16 @@ export class DevConsoleComponent implements AfterViewInit {
                 case 'spawn-toggle':
                     this.handleSpawnToggle(args);
                     break;
+                // Map commands
+                case 'loadmap':
+                    this.handleLoadMap(args);
+                    break;
+                case 'maps':
+                    this.handleListMaps();
+                    break;
+                case 'mapinfo':
+                    this.handleMapInfo();
+                    break;
                 default:
                     this.addLog('error', `Unknown command: "${cmd}". Type "help" for available commands.`);
             }
@@ -246,7 +256,10 @@ export class DevConsoleComponent implements AfterViewInit {
             { cmd: 'spawn-toggle <on/off>', desc: 'Toggle auto-spawn system' },
             { cmd: 'enemies-list', desc: 'List active enemies' },
             { cmd: 'debug', desc: 'Toggle debug visualization (colisiones)' },
-            { cmd: 'fps', desc: 'Toggle FPS/Stats display' }
+            { cmd: 'fps', desc: 'Toggle FPS/Stats display' },
+            { cmd: 'loadmap <name>', desc: 'Load a map by name' },
+            { cmd: 'maps', desc: 'List available maps' },
+            { cmd: 'mapinfo', desc: 'Show current map info' }
         ];
 
         this.addLog('info', '--- Available Commands ---');
@@ -382,5 +395,49 @@ export class DevConsoleComponent implements AfterViewInit {
         const enabled = args[0].toLowerCase() === 'on';
         this.engineService.toggleSpawning(enabled);
         this.addLog('success', `Auto-spawn: ${enabled ? 'ON' : 'OFF'}`);
+    }
+
+    // --- Map Commands ---
+
+    private handleLoadMap(args: string[]) {
+        if (args.length === 0) {
+            throw new Error('Missing argument: map name required. Use "maps" to list available maps.');
+        }
+        const mapName = args[0].toLowerCase();
+
+        this.addLog('info', `Loading map: ${mapName}...`);
+
+        this.engineService.loadMapByName(mapName).then(() => {
+            const info = this.engineService.getMapInfo();
+            this.addLog('success', `Map "${mapName}" loaded successfully!`);
+            this.addLog('info', `  Objects: ${info.objects} | Walls: ${info.walls} | Portals: ${info.portals}`);
+        }).catch((err: Error) => {
+            this.addLog('error', `Failed to load map: ${err.message}`);
+            this.addLog('info', 'Use "maps" to see available maps.');
+        });
+    }
+
+    private handleListMaps() {
+        const maps = this.engineService.getAvailableMaps();
+        const currentMap = this.engineService.getCurrentMapName();
+
+        this.addLog('info', '--- Available Maps ---');
+        maps.forEach(map => {
+            const marker = map === currentMap ? ' (current)' : '';
+            this.addLog('info', `  ${map}${marker}`);
+        });
+        this.addLog('info', '');
+        this.addLog('info', 'Usage: loadmap <name>');
+    }
+
+    private handleMapInfo() {
+        const info = this.engineService.getMapInfo();
+        const currentMap = this.engineService.getCurrentMapName();
+
+        this.addLog('info', '--- Current Map Info ---');
+        this.addLog('info', `  Name: ${currentMap}`);
+        this.addLog('info', `  Objects: ${info.objects}`);
+        this.addLog('info', `  Walls: ${info.walls}`);
+        this.addLog('info', `  Portals: ${info.portals}`);
     }
 }

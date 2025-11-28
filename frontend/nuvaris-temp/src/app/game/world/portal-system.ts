@@ -187,12 +187,27 @@ export class Portal {
     }
 }
 
+// Interface for map loader portal data
+export interface MapPortalData {
+    id: string;
+    type: 'portal';
+    subtype: 'spider' | 'worm';
+    position: { x: number; z: number };
+    config: {
+        homeRange: number;
+        detectionRange: number;
+        returnThreshold?: number;
+        maxEnemies: number;
+        spawnRate?: number;
+    };
+}
+
 export class PortalSystem {
     private scene: THREE.Scene;
     private portals: Portal[] = [];
     private spawningEnabled = true;
 
-    // Portal distribution: 2 spider, 2 worm
+    // Portal distribution: spider and worm
     private spiderPortals: Portal[] = [];
     private wormPortals: Portal[] = [];
 
@@ -200,6 +215,9 @@ export class PortalSystem {
         this.scene = scene;
     }
 
+    /**
+     * Initialize with hardcoded default portals (legacy method)
+     */
     public initialize() {
         // Spider Portal 1
         const spiderPortal1 = new Portal(this.scene, {
@@ -248,6 +266,67 @@ export class PortalSystem {
         });
         this.wormPortals.push(wormPortal2);
         this.portals.push(wormPortal2);
+    }
+
+    /**
+     * Initialize portals from map data (new method for map loader)
+     */
+    public initializeFromConfig(portalDataList: MapPortalData[]) {
+        // Clear existing portals first
+        this.clear();
+
+        for (const portalData of portalDataList) {
+            const portalType = portalData.subtype as 'spider' | 'worm';
+            const config: PortalConfig = {
+                position: new THREE.Vector3(portalData.position.x, 0, portalData.position.z),
+                type: portalType,
+                homeRange: portalData.config.homeRange,
+                detectionRange: portalData.config.detectionRange,
+                returnThreshold: portalData.config.returnThreshold || portalData.config.detectionRange + 10,
+                maxEnemies: portalData.config.maxEnemies
+            };
+
+            const portal = new Portal(this.scene, config);
+
+            if (portalType === 'spider') {
+                this.spiderPortals.push(portal);
+            } else {
+                this.wormPortals.push(portal);
+            }
+            this.portals.push(portal);
+        }
+
+        console.log(`[PortalSystem] Initialized ${this.portals.length} portals from config`);
+    }
+
+    /**
+     * Clear all portals from the scene
+     */
+    public clear() {
+        // Remove all portal meshes from scene
+        for (const portal of this.portals) {
+            this.scene.remove(portal.mesh);
+            // Dispose of geometries and materials
+            portal.mesh.traverse((child) => {
+                if (child instanceof THREE.Mesh) {
+                    child.geometry?.dispose();
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(m => m.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                }
+            });
+        }
+
+        // Clear arrays
+        this.portals = [];
+        this.spiderPortals = [];
+        this.wormPortals = [];
+
+        console.log('[PortalSystem] Cleared all portals');
     }
 
     public getSpawnPoint(type: 'spider' | 'worm'): THREE.Vector3 {

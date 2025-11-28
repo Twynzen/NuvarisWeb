@@ -1,0 +1,68 @@
+{
+  "name": "Small Arena",
+  "version": "1.0",
+  "gridSize": 5,
+  "playerSpawn": { "x": 0, "z": 0 },
+  "objects": [
+    {
+      "id": "wall_north",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": 0, "z": 30 },
+      "scale": { "x": 60, "z": 2 }
+    },
+    {
+      "id": "wall_south",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": 0, "z": -30 },
+      "scale": { "x": 60, "z": 2 }
+    },
+    {
+      "id": "wall_east",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": 30, "z": 0 },
+      "scale": { "x": 2, "z": 60 }
+    },
+    {
+      "id": "wall_west",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": -30, "z": 0 },
+      "scale": { "x": 2, "z": 60 }
+    },
+    {
+      "id": "portal_spider_1",
+      "type": "portal",
+      "subtype": "spider",
+      "position": { "x": 20, "z": 20 },
+      "config": {
+        "homeRange": 15,
+        "detectionRange": 25,
+        "returnThreshold": 30,
+        "maxEnemies": 8,
+        "spawnRate": 1.5
+      }
+    },
+    {
+      "id": "portal_worm_1",
+      "type": "portal",
+      "subtype": "worm",
+      "position": { "x": -20, "z": -20 },
+      "config": {
+        "homeRange": 12,
+        "detectionRange": 20,
+        "returnThreshold": 25,
+        "maxEnemies": 8,
+        "spawnRate": 1.5
+      }
+    },
+    {
+      "id": "spawn_player",
+      "type": "spawn",
+      "subtype": "player",
+      "position": { "x": 0, "z": 0 }
+    }
+  ]
+}
