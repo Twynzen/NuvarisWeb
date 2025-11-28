@@ -1,0 +1,99 @@
+<div class="editor-viewport">
+  <!-- Toolbar -->
+  <div class="editor-toolbar">
+    <!-- Transform Tools -->
+    <div class="tool-group">
+      <button
+        class="tool-btn"
+        [class.active]="currentMode === 'translate'"
+        (click)="setMode('translate')"
+        title="Move (W)">
+        <span class="icon">⬌</span>
+      </button>
+      <button
+        class="tool-btn"
+        [class.active]="currentMode === 'rotate'"
+        (click)="setMode('rotate')"
+        title="Rotate (E)">
+        <span class="icon">↻</span>
+      </button>
+      <button
+        class="tool-btn"
+        [class.active]="currentMode === 'scale'"
+        (click)="setMode('scale')"
+        title="Scale (R)">
+        <span class="icon">⤢</span>
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Snap Toggle -->
+    <div class="tool-group">
+      <button
+        class="tool-btn"
+        [class.active]="isSnapEnabled"
+        (click)="toggleSnap()"
+        title="Toggle Snap (Hold Shift)">
+        <span class="icon">⊞</span>
+        <span class="label">Snap</span>
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- View Presets -->
+    <div class="tool-group">
+      <button class="tool-btn" (click)="setView('top')" title="Top View">
+        <span class="icon">⬇</span>
+        <span class="label">Top</span>
+      </button>
+      <button class="tool-btn" (click)="setView('front')" title="Front View">
+        <span class="icon">◯</span>
+        <span class="label">Front</span>
+      </button>
+      <button class="tool-btn" (click)="setView('isometric')" title="Isometric View">
+        <span class="icon">◇</span>
+        <span class="label">Iso</span>
+      </button>
+      <button class="tool-btn" (click)="setView('side')" title="Side View">
+        <span class="icon">▷</span>
+        <span class="label">Side</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Canvas Container -->
+  <div class="canvas-container">
+    <canvas #editorCanvas></canvas>
+  </div>
+
+  <!-- Info Panel (Bottom) -->
+  <div class="info-panel" *ngIf="selectedObjectName">
+    <div class="info-item">
+      <span class="info-label">Selected:</span>
+      <span class="info-value">{{ selectedObjectName }}</span>
+    </div>
+    <div class="info-item" *ngIf="selectedObjectPosition">
+      <span class="info-label">Position:</span>
+      <span class="info-value">
+        X: {{ selectedObjectPosition.x | number:'1.1-1' }},
+        Z: {{ selectedObjectPosition.z | number:'1.1-1' }}
+      </span>
+    </div>
+    <button class="clear-btn" (click)="clearSelection()" title="Clear Selection (Esc)">
+      ✕
+    </button>
+  </div>
+
+  <!-- Help Tooltip -->
+  <div class="help-tooltip">
+    <div class="help-title">Controls</div>
+    <div class="help-item">LMB: Select</div>
+    <div class="help-item">RMB: Rotate View</div>
+    <div class="help-item">Scroll: Zoom</div>
+    <div class="help-item">W/E/R: Transform Mode</div>
+    <div class="help-item">Shift: Snap</div>
+    <div class="help-item">Esc: Deselect</div>
+  </div>
+</div>

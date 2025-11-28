@@ -7,6 +7,10 @@ const routes: Routes = [
     loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
   },
   {
+    path: 'map-editor',
+    loadChildren: () => import('./map-editor/map-editor.module').then( m => m.MapEditorModule)
+  },
+  {
     path: '',
     redirectTo: 'home',
     pathMatch: 'full'
