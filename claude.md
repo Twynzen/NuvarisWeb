@@ -8,9 +8,9 @@
 
 **NUVARIS** es un juego roguelite estilo **Vampire Survivors** en desarrollo con **Three.js** como motor principal.
 
-### ⚠️ ESTADO ACTUAL (Nov 27, 2025)
+### ⚠️ ESTADO ACTUAL (Nov 28, 2025)
 - **Motor Activo**: Three.js 2.5D (viewport ortográfico isométrico)
-- **Rama de Desarrollo**: `claude/pulir-refactor-nuvaris-01GS9xqt6Q24sHsA2845vQU5`
+- **Rama de Desarrollo**: `feature/map-integration`
 - **Nota**: La versión anterior con Phaser 3 está archivada. El desarrollo se enfoca ahora en Three.js.
 
 ### Tecnologías Principales
@@ -29,6 +29,11 @@
 ✅ Animaciones de sprites (30 frames por animación)
 ✅ Efecto de muerte con glass break + zoom
 ✅ Sistemas de daño + inmunidad + multiplicador
+✅ **Sistema de habilidades Three.js** (Arcadio, Lars, Yurany)
+✅ **Arcadio: Hoz curva** (proyectil en arco de 90°)
+✅ **Números de daño flotantes** (blancos sobre enemigos)
+✅ **Lifesteal de Arcadio** (15% + números verdes de curación)
+✅ **Map Editor completo** (crear/editar mapas del juego)
 
 ---
 
@@ -80,7 +85,14 @@ frontend/nuvaris-temp/
 │   │   ├── level-up/
 │   │   └── pause-menu/
 │   └── world/               # Generacion de mundo
-│       └── map-generator.ts
+│       ├── map-generator.ts
+│       └── portal-system.ts
+├── map-editor/              # Editor de mapas
+│   └── components/
+│       └── editor-viewport/
+│           ├── editor-viewport.component.ts   # Logica Three.js
+│           ├── editor-viewport.component.html # UI layout
+│           └── editor-viewport.component.scss # Estilos
 └── assets/                  # Assets del juego
     ├── arcadio/
     ├── lars/
@@ -581,58 +593,188 @@ Motor alternativo usando Three.js para graficos 3D:
 - `projectile.three.ts` - Proyectiles con trails
 - `xp-orb.three.ts` - Orbes de XP
 
-**Estado**: Parcialmente implementado, no es la version principal
+**Estado**: Motor principal activo - todas las features nuevas usan Three.js
 
 ---
 
-## 12. PROBLEMAS CONOCIDOS Y TODO
+## 12. MAP EDITOR (editor-viewport.component.ts)
 
-### 12.1 Bugs Conocidos
+### 12.1 Descripcion General
+Editor visual para crear y modificar mapas del juego. Permite colocar estructuras, portales y puntos de spawn que luego se exportan a JSON para cargarlos en el juego.
+
+**Ruta**: `/map-editor`
+**Archivo**: `src/app/map-editor/components/editor-viewport/`
+
+### 12.2 Interfaz de Usuario
+
+```
++------------------------------------------------------------------+
+|  [Archivo v] [Editar v] [Vista v]  |  [W] [E] [R]  |  [Snap]     |  <- Toolbar
++------------------------------------------------------------------+
+| OBJETOS      |                                   | PROPIEDADES   |
+| -----------  |                                   | -----------   |
+| ESTRUCTURAS  |                                   | ID: wall_1    |
+|   Wall       |        [VIEWPORT 3D]              | Tipo: WALL    |
+| PORTALES     |        Three.js Canvas            | Posicion:     |
+|   Spider     |        OrbitControls              |   X: 0.0      |
+|   Worm       |        TransformControls          |   Z: 0.0      |
+| SPAWN POINTS |                                   |               |
+|   Player     |                                   | [Duplicar]    |
+|   Enemy      |                                   | [Eliminar]    |
++------------------------------------------------------------------+
+| Cursor: X: 10 | Z: 5  | Seleccionado: wall_1     | LMB/RMB/Scroll|
++------------------------------------------------------------------+
+```
+
+### 12.3 Catalogo de Objetos
+
+| Categoria | Item | Icono | Tipo | Descripcion |
+|-----------|------|-------|------|-------------|
+| ESTRUCTURAS | Wall | 🧱 | wall | Muro colisionable |
+| PORTALES | Portal Spider | 🕷️ | portal | Spawn de aranas |
+| PORTALES | Portal Worm | 🪱 | portal | Spawn de gusanos |
+| SPAWN POINTS | Player Spawn | 👤 | spawn | Punto inicial del jugador |
+| SPAWN POINTS | Enemy Spawn Zone | 💀 | spawn | Zona de spawn enemigos |
+
+### 12.4 Controles del Editor
+
+**Mouse**:
+- LMB (arrastrar): Pan de camara
+- RMB (arrastrar): Rotar camara
+- Scroll: Zoom in/out
+- Click en objeto: Seleccionar
+
+**Teclado**:
+- W: Modo Translate (mover)
+- E: Modo Rotate (rotar)
+- R: Modo Scale (escalar)
+- G: Toggle Grid
+- Delete/Supr: Eliminar seleccionado
+- Ctrl+D: Duplicar seleccionado
+- Esc: Deseleccionar
+
+### 12.5 Configuracion de Portales
+
+Cada portal tiene parametros configurables:
+
+| Parametro | Rango | Default | Descripcion |
+|-----------|-------|---------|-------------|
+| homeRange | 5-50 | 15 | Radio donde enemigos patrullan |
+| detectionRange | 10-100 | 30 | Radio de deteccion del jugador |
+| maxEnemies | 1-50 | 10 | Maximo enemigos simultaneos |
+| spawnRate | 0.5-10 | 2 | Segundos entre spawns |
+
+### 12.6 Formato JSON de Mapas
+
+```typescript
+interface MapData {
+  name: string;           // Nombre del mapa
+  version: string;        // Version del formato
+  gridSize: number;       // Tamano de celda del grid
+  objects: MapObject[];   // Array de objetos
+}
+
+interface MapObject {
+  id: string;             // ID unico (ej: "wall_1", "portal_spider_0")
+  type: 'wall' | 'portal' | 'spawn';
+  subtype?: string;       // 'normal', 'spider', 'worm', 'player', 'enemy'
+  position: { x: number, z: number };
+  rotation?: number;      // Rotacion en Y (grados)
+  scale?: { x: number, z: number };
+  config?: PortalConfig;  // Solo para portales
+}
+```
+
+### 12.7 Funciones del Menu
+
+**Archivo**:
+- Nuevo Mapa: Limpia escena, carga mapa base
+- Cargar Mapa (JSON): Importa archivo .json
+- Guardar Mapa: Exporta a archivo .json
+- Cargar Plantilla Base: Carga mapa con muros perimetrales
+
+**Editar**:
+- Duplicar (Ctrl+D): Copia objeto seleccionado
+- Eliminar (Delete): Borra objeto seleccionado
+- Deseleccionar (Esc): Quita seleccion
+
+**Vista**:
+- Vista Superior/Frontal/Lateral/Isometrica
+- Toggle Grid
+- Toggle Rangos (visualiza homeRange/detectionRange)
+
+### 12.8 Mapa Base por Defecto
+
+Al iniciar o crear nuevo mapa:
+- 4 muros perimetrales (100x100 unidades)
+- 4 portales en las esquinas:
+  - NE: Spider (x:40, z:40)
+  - NW: Worm (x:-40, z:40)
+  - SE: Worm (x:40, z:-40)
+  - SW: Spider (x:-40, z:-40)
+- 1 spawn de jugador en el centro (0, 0)
+
+---
+
+## 13. PROBLEMAS CONOCIDOS Y TODO
+
+### 13.1 Bugs Conocidos
 - [ ] Upgrade system en Three.js no aplica efectos
 - [ ] Algunas animaciones faltan frames
 - [ ] Mind Control timer puede no limpiarse correctamente
 
-### 12.2 Features Pendientes
+### 13.2 Features Pendientes
 - [ ] Sistema de audio completo
 - [ ] Mas tipos de enemigos
 - [ ] Sistema de guardado
 - [ ] Leaderboard
 - [ ] Mas armas desbloqueables
 - [ ] Modo endless vs modo historia
+- [ ] Integrar mapas del editor con el juego
 
-### 12.3 Optimizaciones Pendientes
+### 13.3 Optimizaciones Pendientes
 - [ ] Texture atlases para reducir draw calls
 - [ ] Spatial hashing para colisiones
 - [ ] Web Workers para IA enemigos
 
 ---
 
-## 13. COMO EJECUTAR
+## 14. COMO EJECUTAR
 
 ```bash
 cd frontend/nuvaris-temp
 npm install
 npm run start
 # Abrir http://localhost:4200
+# Map Editor: http://localhost:4200/map-editor
 ```
 
-### Controles
+### Controles del Juego
 - **WASD/Flechas**: Movimiento
 - **ESC**: Pausa
 - **Click**: Seleccionar en menus
 - **SPACE**: Confirmar/Continuar
 
+### Controles del Map Editor
+- **W/E/R**: Translate/Rotate/Scale
+- **G**: Toggle Grid
+- **Delete**: Eliminar objeto
+- **Ctrl+D**: Duplicar objeto
+- **LMB**: Pan camara
+- **RMB**: Rotar camara
+- **Scroll**: Zoom
+
 ---
 
-## 14. CREDITOS
+## 15. CREDITOS
 
-- **Engine**: Phaser 3 / Three.js
+- **Engine**: Three.js (principal) / Phaser 3 (legacy)
 - **Framework**: Angular 17
 - **Assets**: Custom sprites (30 frames por animacion)
 - **Inspiracion**: Vampire Survivors, Brotato
 
 ---
 
-*Documentacion generada el 2025-11-26*
-*Rama: claude/pulir-refactor-nuvaris-01GS9xqt6Q24sHsA2845vQU5*
-*Base: neon-survivors-refactor*
+*Documentacion actualizada: 2025-11-28*
+*Rama: feature/map-integration*
+*Base: entorno-limpio*

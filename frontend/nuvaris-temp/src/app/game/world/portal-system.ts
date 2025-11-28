@@ -19,10 +19,11 @@ export class Portal {
     public maxEnemies: number;
     public currentEnemyCount = 0;
 
-    private rotationSpeed = 2.0;
+    private rotationSpeed = 0.3; // Very slow rotation
     private pulsePhase = 0;
+    private pulseSpeed = 1.0; // Subtle pulsing
     private floatPhase = 0;
-    private floatAmount = 1.0;
+    private floatAmount = 0.3; // Very subtle floating
 
     constructor(scene: THREE.Scene, config: PortalConfig) {
         this.position = config.position;
@@ -45,134 +46,144 @@ export class Portal {
     }
 
     private createSpiderPortal() {
-        // Spider Portal: Vórtex energético 3D con anillos rotatorios
-        const color = 0xff4444; // Red
+        // Spider Portal: Madriguera de araña con telaraña - BLANCO
+        const spiderColor = 0xdddddd; // White/light gray spider
+        const webColor = 0xeeeeee;   // Very light gray for web
+        const centerColor = 0xffffff; // White center
 
-        // Anillo exterior rotativo
-        const torusGeom1 = new THREE.TorusGeometry(5, 0.6, 16, 100);
-        const torusMat1 = new THREE.MeshBasicMaterial({
-            color,
-            transparent: true,
-            opacity: 0.8
-        });
-        const torus1 = new THREE.Mesh(torusGeom1, torusMat1);
-        torus1.rotation.x = Math.PI / 3;
-        this.mesh.add(torus1);
-
-        // Anillo intermedio
-        const torusGeom2 = new THREE.TorusGeometry(4, 0.5, 16, 100);
-        const torusMat2 = new THREE.MeshBasicMaterial({
-            color: 0xff8888,
+        // Base: Estructura de telaraña (anillo central) - MÁS PEQUEÑO
+        const baseGeom = new THREE.TorusGeometry(2.2, 0.15, 16, 64);
+        const baseMat = new THREE.MeshStandardMaterial({
+            color: webColor,
+            roughness: 0.8,
+            metalness: 0.0,
             transparent: true,
             opacity: 0.6
         });
-        const torus2 = new THREE.Mesh(torusGeom2, torusMat2);
-        torus2.rotation.x = -Math.PI / 4;
-        this.mesh.add(torus2);
+        const base = new THREE.Mesh(baseGeom, baseMat);
+        base.rotation.x = Math.PI / 2;
+        this.mesh.add(base);
 
-        // Anillo interior
-        const torusGeom3 = new THREE.TorusGeometry(3, 0.4, 16, 100);
-        const torusMat3 = new THREE.MeshBasicMaterial({
-            color: 0xffaaaa,
+        // Telaraña radiante (líneas del portal)
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const lineGeom = new THREE.BufferGeometry();
+            const points = [
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(Math.cos(angle) * 2.5, 0, Math.sin(angle) * 2.5)
+            ];
+            lineGeom.setFromPoints(points);
+            const lineMat = new THREE.LineBasicMaterial({
+                color: webColor,
+                linewidth: 2,
+                transparent: true,
+                opacity: 0.5
+            });
+            const line = new THREE.Line(lineGeom, lineMat);
+            this.mesh.add(line);
+        }
+
+        // Centro de la madriguera (oscuro, como un agujero)
+        const holeGeom = new THREE.CircleGeometry(0.75, 32);
+        const holeMat = new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            roughness: 0.9,
             transparent: true,
             opacity: 0.7
         });
-        const torus3 = new THREE.Mesh(torusGeom3, torusMat3);
-        torus3.rotation.x = Math.PI / 5;
-        this.mesh.add(torus3);
+        const hole = new THREE.Mesh(holeGeom, holeMat);
+        hole.position.z = 0.01;
+        this.mesh.add(hole);
 
-        // Esfera central brillante
-        const sphereGeom = new THREE.SphereGeometry(1.2, 16, 16);
-        const sphereMat = new THREE.MeshBasicMaterial({
-            color: 0xffff99,
-            transparent: true,
-            opacity: 0.9
-        });
-        const sphere = new THREE.Mesh(sphereGeom, sphereMat);
-        this.mesh.add(sphere);
-
-        // Pirámides puntiagudas alrededor (10 puntos)
-        for (let i = 0; i < 10; i++) {
-            const angle = (i / 10) * Math.PI * 2;
-            const coneGeom = new THREE.ConeGeometry(0.4, 1.5, 8);
-            const coneMat = new THREE.MeshBasicMaterial({
-                color: 0xff6666,
-                transparent: true,
-                opacity: 0.7
+        // Pequeños puntos de araña alrededor (estaticos)
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const spiderDotGeom = new THREE.SphereGeometry(0.08, 8, 8);
+            const spiderDotMat = new THREE.MeshStandardMaterial({
+                color: spiderColor,
+                roughness: 0.6
             });
-            const cone = new THREE.Mesh(coneGeom, coneMat);
-            cone.position.x = Math.cos(angle) * 6;
-            cone.position.z = Math.sin(angle) * 6;
-            cone.lookAt(this.mesh.position);
-            this.mesh.add(cone);
+            const dot = new THREE.Mesh(spiderDotGeom, spiderDotMat);
+            dot.position.x = Math.cos(angle) * 2.2;
+            dot.position.z = Math.sin(angle) * 2.2;
+            dot.position.y = 0.15;
+            this.mesh.add(dot);
         }
     }
 
     private createWormPortal() {
-        // Worm Portal: Agujero/túnel terroso con efecto de vórtice
-        const color = 0x8B6914; // Dark brown
+        // Worm Portal: Agujero en la tierra - CAFÉ (BROWN)
+        const burrColor = 0xA0754A; // Medium brown
+        const dirtColor = 0x6B5240;  // Darker brown
+        const edgeColor = 0x8B6F47;  // Warm brown
 
-        // Cilindro exterior (borde terroso)
-        const cylGeom1 = new THREE.CylinderGeometry(4.5, 4.5, 2, 16);
-        const cylMat1 = new THREE.MeshBasicMaterial({
-            color,
+        // Borde elevado del agujero (tierra elevada) - MÁS PEQUEÑO
+        const rimGeom = new THREE.TorusGeometry(2.5, 0.4, 16, 64);
+        const rimMat = new THREE.MeshStandardMaterial({
+            color: edgeColor,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+        const rim = new THREE.Mesh(rimGeom, rimMat);
+        rim.rotation.x = Math.PI / 2;
+        rim.position.y = 0.1;
+        this.mesh.add(rim);
+
+        // Agujero principal (oscuro, profundo)
+        const holeGeom = new THREE.CircleGeometry(1.9, 32);
+        const holeMat = new THREE.MeshStandardMaterial({
+            color: 0x2a1810,
+            roughness: 0.95,
+            metalness: 0.0,
             transparent: true,
             opacity: 0.8
         });
-        const cyl1 = new THREE.Mesh(cylGeom1, cylMat1);
-        this.mesh.add(cyl1);
+        const hole = new THREE.Mesh(holeGeom, holeMat);
+        hole.rotation.x = -Math.PI / 2;
+        hole.position.y = -0.05;
+        this.mesh.add(hole);
 
-        // Cilindro interior (túnel oscuro)
-        const cylGeom2 = new THREE.CylinderGeometry(3, 3, 2.5, 16);
-        const cylMat2 = new THREE.MeshBasicMaterial({
-            color: 0x5a4a0a,
-            transparent: true,
-            opacity: 0.7
+        // Paredes interiores del túnel (cilindro oscuro)
+        const tunnelGeom = new THREE.CylinderGeometry(1.9, 1.9, 1.5, 32);
+        const tunnelMat = new THREE.MeshStandardMaterial({
+            color: dirtColor,
+            roughness: 0.95,
+            metalness: 0.0
         });
-        const cyl2 = new THREE.Mesh(cylGeom2, cylMat2);
-        cyl2.position.y = 0.1;
-        this.mesh.add(cyl2);
+        const tunnel = new THREE.Mesh(tunnelGeom, tunnelMat);
+        tunnel.position.y = -0.75;
+        tunnel.castShadow = true;
+        tunnel.receiveShadow = true;
+        this.mesh.add(tunnel);
 
-        // Espiral de tierra girando (para efecto dinámico)
-        const spiralGeom = new THREE.TorusGeometry(3.5, 0.6, 12, 50);
-        const spiralMat = new THREE.MeshBasicMaterial({
-            color: 0xaa7744,
-            transparent: true,
-            opacity: 0.6
-        });
-        const spiral = new THREE.Mesh(spiralGeom, spiralMat);
-        this.mesh.add(spiral);
-
-        // Rocas/Partículas estáticas alrededor
-        for (let i = 0; i < 10; i++) {
-            const angle = (i / 10) * Math.PI * 2;
-            const rockGeom = new THREE.TetrahedronGeometry(0.5);
-            const rockMat = new THREE.MeshBasicMaterial({
-                color: 0x6b5d3f,
-                transparent: true,
-                opacity: 0.8
+        // Rocas/tierra saliente alrededor del borde (estaticas)
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const rockGeom = new THREE.TetrahedronGeometry(0.2);
+            const rockMat = new THREE.MeshStandardMaterial({
+                color: edgeColor,
+                roughness: 0.8
             });
             const rock = new THREE.Mesh(rockGeom, rockMat);
-            rock.position.x = Math.cos(angle) * 5.5;
-            rock.position.z = Math.sin(angle) * 5.5;
+            rock.position.x = Math.cos(angle) * 2.6;
+            rock.position.z = Math.sin(angle) * 2.6;
+            rock.position.y = 0.1;
             rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
             this.mesh.add(rock);
         }
     }
 
     public update(delta: number) {
-        // Rotación
+        // Muy poca rotación (casi inmóvil)
         this.mesh.rotation.y += this.rotationSpeed * delta;
 
-        // Pulsación
-        this.pulsePhase += delta * 3;
-        const pulse = Math.sin(this.pulsePhase) * 0.15 + 1.0;
+        // Pulsación muy sutil (apenas perceptible)
+        this.pulsePhase += delta * this.pulseSpeed;
+        const pulse = Math.sin(this.pulsePhase) * 0.05 + 1.0; // Only 5% scale variation
         this.mesh.scale.set(pulse, 1, pulse);
 
-        // Flotación (movimiento vertical suave)
-        this.floatPhase += delta * 1.5;
-        const floatOffset = Math.sin(this.floatPhase) * this.floatAmount;
-        this.mesh.position.y = floatOffset;
+        // Sin flotación - se quedan estaticos en Y
+        // Solo aparecen a parpadear sutilmente
     }
 }
 

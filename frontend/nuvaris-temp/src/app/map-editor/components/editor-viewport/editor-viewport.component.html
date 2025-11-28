@@ -1,99 +1,254 @@
-<div class="editor-viewport">
-  <!-- Toolbar -->
+<div class="editor-container">
+  <!-- TOOLBAR (arriba) -->
   <div class="editor-toolbar">
+    <!-- Menú Archivo -->
+    <div class="menu-container">
+      <button class="menu-btn" (click)="toggleMenu('file'); $event.stopPropagation()">
+        Archivo ▼
+      </button>
+      <div class="dropdown-menu" *ngIf="showFileMenu">
+        <button (click)="newMap()">📄 Nuevo Mapa</button>
+        <button (click)="loadMap()">📂 Cargar Mapa (JSON)</button>
+        <button (click)="saveMap()">💾 Guardar Mapa</button>
+        <div class="menu-divider"></div>
+        <button (click)="loadTemplate()">🗺️ Cargar Plantilla Base</button>
+      </div>
+    </div>
+
+    <!-- Menú Editar -->
+    <div class="menu-container">
+      <button class="menu-btn" (click)="toggleMenu('edit'); $event.stopPropagation()">
+        Editar ▼
+      </button>
+      <div class="dropdown-menu" *ngIf="showEditMenu">
+        <button (click)="duplicateSelected()" [disabled]="!selectedObject">📋 Duplicar (Ctrl+D)</button>
+        <button (click)="deleteSelected()" [disabled]="!selectedObject">🗑️ Eliminar (Delete)</button>
+        <div class="menu-divider"></div>
+        <button (click)="deselectObject()">❌ Deseleccionar (Esc)</button>
+      </div>
+    </div>
+
+    <!-- Menú Vista -->
+    <div class="menu-container">
+      <button class="menu-btn" (click)="toggleMenu('view'); $event.stopPropagation()">
+        Vista ▼
+      </button>
+      <div class="dropdown-menu" *ngIf="showViewMenu">
+        <button (click)="setView('top'); closeAllMenus()">⬇️ Vista Superior</button>
+        <button (click)="setView('front'); closeAllMenus()">➡️ Vista Frontal</button>
+        <button (click)="setView('side'); closeAllMenus()">⬆️ Vista Lateral</button>
+        <button (click)="setView('isometric'); closeAllMenus()">◇ Vista Isométrica</button>
+        <div class="menu-divider"></div>
+        <button (click)="toggleGrid(); closeAllMenus()">
+          {{ showGrid ? '✅' : '⬜' }} Mostrar Grid
+        </button>
+        <button (click)="toggleRanges(); closeAllMenus()">
+          {{ showRanges ? '✅' : '⬜' }} Mostrar Rangos
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
     <!-- Transform Tools -->
     <div class="tool-group">
       <button
         class="tool-btn"
         [class.active]="currentMode === 'translate'"
         (click)="setMode('translate')"
-        title="Move (W)">
+        title="Mover (W)">
         <span class="icon">⬌</span>
+        <span class="label">W</span>
       </button>
       <button
         class="tool-btn"
         [class.active]="currentMode === 'rotate'"
         (click)="setMode('rotate')"
-        title="Rotate (E)">
+        title="Rotar (E)">
         <span class="icon">↻</span>
+        <span class="label">E</span>
       </button>
       <button
         class="tool-btn"
         [class.active]="currentMode === 'scale'"
         (click)="setMode('scale')"
-        title="Scale (R)">
+        title="Escalar (R)">
         <span class="icon">⤢</span>
+        <span class="label">R</span>
       </button>
     </div>
 
-    <div class="divider"></div>
+    <div class="toolbar-divider"></div>
 
     <!-- Snap Toggle -->
-    <div class="tool-group">
-      <button
-        class="tool-btn"
-        [class.active]="isSnapEnabled"
-        (click)="toggleSnap()"
-        title="Toggle Snap (Hold Shift)">
-        <span class="icon">⊞</span>
-        <span class="label">Snap</span>
-      </button>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- View Presets -->
-    <div class="tool-group">
-      <button class="tool-btn" (click)="setView('top')" title="Top View">
-        <span class="icon">⬇</span>
-        <span class="label">Top</span>
-      </button>
-      <button class="tool-btn" (click)="setView('front')" title="Front View">
-        <span class="icon">◯</span>
-        <span class="label">Front</span>
-      </button>
-      <button class="tool-btn" (click)="setView('isometric')" title="Isometric View">
-        <span class="icon">◇</span>
-        <span class="label">Iso</span>
-      </button>
-      <button class="tool-btn" (click)="setView('side')" title="Side View">
-        <span class="icon">▷</span>
-        <span class="label">Side</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Canvas Container -->
-  <div class="canvas-container">
-    <canvas #editorCanvas></canvas>
-  </div>
-
-  <!-- Info Panel (Bottom) -->
-  <div class="info-panel" *ngIf="selectedObjectName">
-    <div class="info-item">
-      <span class="info-label">Selected:</span>
-      <span class="info-value">{{ selectedObjectName }}</span>
-    </div>
-    <div class="info-item" *ngIf="selectedObjectPosition">
-      <span class="info-label">Position:</span>
-      <span class="info-value">
-        X: {{ selectedObjectPosition.x | number:'1.1-1' }},
-        Z: {{ selectedObjectPosition.z | number:'1.1-1' }}
-      </span>
-    </div>
-    <button class="clear-btn" (click)="clearSelection()" title="Clear Selection (Esc)">
-      ✕
+    <button
+      class="tool-btn"
+      [class.active]="isSnapEnabled"
+      (click)="toggleSnap()"
+      title="Snap al Grid (Shift)">
+      <span class="icon">⊞</span>
+      <span class="label">Snap</span>
     </button>
   </div>
 
-  <!-- Help Tooltip -->
-  <div class="help-tooltip">
-    <div class="help-title">Controls</div>
-    <div class="help-item">LMB: Select</div>
-    <div class="help-item">RMB: Rotate View</div>
-    <div class="help-item">Scroll: Zoom</div>
-    <div class="help-item">W/E/R: Transform Mode</div>
-    <div class="help-item">Shift: Snap</div>
-    <div class="help-item">Esc: Deselect</div>
+  <!-- MAIN CONTENT -->
+  <div class="editor-main">
+    <!-- PANEL IZQUIERDO - Catálogo de Objetos -->
+    <div class="left-panel">
+      <div class="panel-header">
+        <span class="panel-title">📦 OBJETOS</span>
+      </div>
+      <div class="catalog-content">
+        <div class="catalog-category" *ngFor="let category of objectCatalog">
+          <div class="category-header" (click)="toggleCategory(category)">
+            <span class="category-icon">{{ category.icon }}</span>
+            <span class="category-name">{{ category.name }}</span>
+            <span class="category-arrow">{{ category.expanded ? '▼' : '▶' }}</span>
+          </div>
+          <div class="category-items" *ngIf="category.expanded">
+            <div
+              class="catalog-item"
+              *ngFor="let item of category.items"
+              (click)="onCatalogItemClick(item)"
+              title="Click para colocar">
+              <span class="item-icon">{{ item.icon }}</span>
+              <span class="item-name">{{ item.name }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEWPORT 3D -->
+    <div class="viewport-container">
+      <canvas #editorCanvas></canvas>
+    </div>
+
+    <!-- PANEL DERECHO - Propiedades -->
+    <div class="right-panel">
+      <div class="panel-header">
+        <span class="panel-title">⚙️ PROPIEDADES</span>
+      </div>
+
+      <div class="properties-content" *ngIf="selectedObject; else noSelection">
+        <!-- Información básica -->
+        <div class="property-section">
+          <div class="section-title">INFORMACIÓN</div>
+          <div class="property-row">
+            <label>ID:</label>
+            <span class="property-value">{{ selectedObject.id }}</span>
+          </div>
+          <div class="property-row">
+            <label>Tipo:</label>
+            <span class="property-value type-badge" [attr.data-type]="selectedObject.type">
+              {{ selectedObject.type | uppercase }}
+            </span>
+          </div>
+          <div class="property-row" *ngIf="selectedObject.subtype">
+            <label>Subtipo:</label>
+            <span class="property-value">{{ selectedObject.subtype }}</span>
+          </div>
+        </div>
+
+        <!-- Posición -->
+        <div class="property-section">
+          <div class="section-title">POSICIÓN</div>
+          <div class="property-row">
+            <label>X:</label>
+            <input
+              type="number"
+              [value]="selectedObject.mesh.position.x | number:'1.1-1'"
+              (change)="updateObjectPosition('x', $any($event.target).valueAsNumber)"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Z:</label>
+            <input
+              type="number"
+              [value]="selectedObject.mesh.position.z | number:'1.1-1'"
+              (change)="updateObjectPosition('z', $any($event.target).valueAsNumber)"
+              step="1">
+          </div>
+        </div>
+
+        <!-- Configuración de Portal -->
+        <div class="property-section" *ngIf="selectedObject.type === 'portal'">
+          <div class="section-title">CONFIGURACIÓN PORTAL</div>
+          <div class="property-row">
+            <label>Home Range:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.homeRange"
+              (change)="updatePortalConfig('homeRange', $any($event.target).valueAsNumber)"
+              min="5"
+              max="50"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Detection Range:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.detectionRange"
+              (change)="updatePortalConfig('detectionRange', $any($event.target).valueAsNumber)"
+              min="10"
+              max="100"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Max Enemies:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.maxEnemies"
+              (change)="updatePortalConfig('maxEnemies', $any($event.target).valueAsNumber)"
+              min="1"
+              max="50"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Spawn Rate:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.spawnRate"
+              (change)="updatePortalConfig('spawnRate', $any($event.target).valueAsNumber)"
+              min="0.5"
+              max="10"
+              step="0.5">
+          </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="property-section actions">
+          <button class="action-btn duplicate" (click)="duplicateSelected()">
+            📋 Duplicar
+          </button>
+          <button class="action-btn delete" (click)="deleteSelected()">
+            🗑️ Eliminar
+          </button>
+        </div>
+      </div>
+
+      <ng-template #noSelection>
+        <div class="no-selection">
+          <div class="no-selection-icon">🎯</div>
+          <div class="no-selection-text">Selecciona un objeto para ver sus propiedades</div>
+          <div class="no-selection-hint">Click en un objeto del viewport o del catálogo</div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="status-label">Cursor:</span>
+      <span class="status-value">X: {{ cursorPosition.x }} | Z: {{ cursorPosition.z }}</span>
+    </div>
+    <div class="status-item" *ngIf="selectedObject">
+      <span class="status-label">Seleccionado:</span>
+      <span class="status-value">{{ selectedObject.id }}</span>
+    </div>
+    <div class="status-item help">
+      <span>LMB: Pan | RMB: Rotar | Scroll: Zoom | W/E/R: Transform | G: Grid | Delete: Eliminar</span>
+    </div>
   </div>
 </div>
