@@ -7,6 +7,11 @@ import { XPOrb } from '../entities/xp-orb.three';
 import { ProjectileThree } from '../entities/projectile.three';
 import { DebugVisualizer } from './debug-visualizer';
 import { PortalSystem } from '../world/portal-system';
+import { LabStructures } from '../world/lab-structures';
+import { CharacterAbilityThree } from '../abilities/character-ability-three';
+import { ArcadioAbilityThree } from '../abilities/arcadio-ability-three';
+import { LarsAbilityThree } from '../abilities/lars-ability-three';
+import { YuranyAbilityThree } from '../abilities/yurany-ability-three';
 
 @Injectable({
     providedIn: 'root'
@@ -29,7 +34,11 @@ export class ThreeEngineService implements OnDestroy {
     private lastSpawnTime = 0;
     private lastShootTime = 0;
     private portalSystem!: PortalSystem;
+    private labStructures!: LabStructures;
     private autoSpawningEnabled = true;
+
+    // Character Abilities System
+    private characterAbility!: CharacterAbilityThree;
 
     // Auto-shoot configuration
     private autoShootInterval = 1.1; // seconds between shots (30 frames @ 30 FPS = 1.0s + 0.1s buffer)
@@ -299,14 +308,33 @@ export class ThreeEngineService implements OnDestroy {
         return nearest;
     }
 
-    // Auto-shoot at nearest enemy
+    // Auto-attack at nearest enemy (different behavior per character)
     private autoShoot() {
         // Check if auto-shoot is disabled via Dev Mode
         if ((this.gameState as any).autoShootEnabled === false) return;
 
         const currentTime = this.clock.getElapsedTime();
+
+        // Check cooldown
         if (currentTime - this.lastShootTime < this.autoShootInterval) return;
 
+        // ========== ARCADIO: HOZ CURVA (rango corto) ==========
+        if (this.player.usesCurvedProjectile()) {
+            // Arcadio solo ataca enemigos CERCANOS (rango 8 unidades)
+            const arcadioRange = 8;
+            const nearestEnemy = this.findNearestEnemyInRange(arcadioRange);
+
+            if (!nearestEnemy) return; // No hay enemigo cerca, NO atacar
+
+            const projectile = this.player.shoot(this.scene, nearestEnemy.mesh.position);
+            if (projectile) {
+                this.projectiles.push(projectile);
+                this.lastShootTime = currentTime;
+            }
+            return;
+        }
+
+        // ========== LARS & YURANY: RANGED ATTACK (rango largo) ==========
         const nearestEnemy = this.findNearestEnemy();
         if (!nearestEnemy) return;
 
@@ -315,6 +343,26 @@ export class ThreeEngineService implements OnDestroy {
             this.projectiles.push(projectile);
             this.lastShootTime = currentTime;
         }
+    }
+
+    // Find nearest enemy within a specific range (for Arcadio)
+    private findNearestEnemyInRange(maxRange: number): EnemyThree | null {
+        if (this.enemies.length === 0) return null;
+
+        let nearest: EnemyThree | null = null;
+        let nearestDist = maxRange;
+
+        for (const enemy of this.enemies) {
+            if (enemy.isDead || enemy.isMindControlled) continue;
+
+            const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = enemy;
+            }
+        }
+
+        return nearest;
     }
 
     ngOnDestroy(): void {
@@ -342,7 +390,6 @@ export class ThreeEngineService implements OnDestroy {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.Fog(0x0a0a1a, 30, 100);
         this.scene.background = new THREE.Color(0x0a0a1a);
 
         this.camera = new THREE.PerspectiveCamera(
@@ -351,8 +398,8 @@ export class ThreeEngineService implements OnDestroy {
         this.camera.position.set(0, 25, 20);
         this.camera.lookAt(0, 0, 0);
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x222244, 0.5);
+        // Lighting - ambient + directional for better visibility
+        const ambientLight = new THREE.AmbientLight(0x222244, 0.7);
         this.scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -370,9 +417,16 @@ export class ThreeEngineService implements OnDestroy {
         // Player
         this.player = new PlayerThree(this.scene, characterId);
 
+        // Initialize Character Ability based on selected character
+        this.initializeCharacterAbility(characterId);
+
         // Initialize Portal System
         this.portalSystem = new PortalSystem(this.scene);
         this.portalSystem.initialize();
+
+        // Initialize Lab Structures (prison, portal chambers, psychiatric wards)
+        this.labStructures = new LabStructures(this.scene);
+        this.labStructures.generateProcedural(); // Generate laboratory complex with 3 wings
 
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
@@ -383,22 +437,30 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     private createGround() {
-        const groundGeo = new THREE.PlaneGeometry(200, 200, 50, 50);
-        const groundMat = new THREE.MeshStandardMaterial({
+        // Inner floor (gray, visible area within walls)
+        const innerFloorGeo = new THREE.PlaneGeometry(196, 196, 50, 50);
+        const innerFloorMat = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const innerFloor = new THREE.Mesh(innerFloorGeo, innerFloorMat);
+        innerFloor.rotation.x = -Math.PI / 2;
+        innerFloor.position.y = 0.01;
+        innerFloor.receiveShadow = true;
+        this.scene.add(innerFloor);
+
+        // Outer background (dark)
+        const outerFloorGeo = new THREE.PlaneGeometry(200, 200, 50, 50);
+        const outerFloorMat = new THREE.MeshStandardMaterial({
             color: 0x0a0a1a,
             roughness: 0.9,
             metalness: 0.1
         });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        this.scene.add(ground);
-
-        const gridHelper = new THREE.GridHelper(200, 40, 0x00f5ff, 0x1a1a2e);
-        gridHelper.position.y = 0.01;
-        gridHelper.material.opacity = 0.3;
-        gridHelper.material.transparent = true;
-        this.scene.add(gridHelper);
+        const outerFloor = new THREE.Mesh(outerFloorGeo, outerFloorMat);
+        outerFloor.rotation.x = -Math.PI / 2;
+        outerFloor.receiveShadow = true;
+        this.scene.add(outerFloor);
     }
 
     animate(): void {
@@ -441,6 +503,11 @@ export class ThreeEngineService implements OnDestroy {
                 return;
             }
 
+            // UPDATE ABILITY: Called every frame for continuous ability logic
+            if (this.characterAbility) {
+                this.characterAbility.update(delta, this.scene, this.player, this.enemies);
+            }
+
             // Auto-shoot at nearest enemy
             this.autoShoot();
 
@@ -460,7 +527,10 @@ export class ThreeEngineService implements OnDestroy {
 
             // Update enemies (with wall collision AND attack behavior)
             const isPlayerInvisible = (this.gameState as any).invisible || false;
-            this.enemies.forEach(enemy => enemy.update(delta, this.player, 98, currentTime, isPlayerInvisible));
+            this.enemies.forEach(enemy => enemy.update(delta, this.player, 98, currentTime, isPlayerInvisible, this.enemies));
+
+            // Clean up enemies killed by mind-controlled allies
+            this.enemies = this.enemies.filter(e => !e.isDead);
 
             // Update Projectiles & Collision
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -482,10 +552,27 @@ export class ThreeEngineService implements OnDestroy {
                             damage *= (this.gameState as any).damageMultiplier;
                         }
 
+                        // CALL ABILITY HOOK: onProjectileHit (for Chain Lightning, Mind Control, etc.)
+                        if (this.characterAbility) {
+                            this.characterAbility.onProjectileHit(
+                                proj,
+                                enemy,
+                                damage,
+                                this.scene,
+                                this.enemies
+                            );
+                        }
+
                         const orb = enemy.takeDamage(damage, this.scene);
                         if (orb) {
                             this.xpOrbs.push(orb);
                             this.enemies.splice(j, 1);
+                        }
+
+                        // ARCADIO LIFESTEAL: Robar vida cuando el proyectil golpea
+                        if (this.characterAbility && this.characterAbility.name === 'Titan Strength') {
+                            const arcadioAbility = this.characterAbility as ArcadioAbilityThree;
+                            arcadioAbility.applyLifesteal(damage, 1);
                         }
 
                         // Destroy projectile
@@ -612,8 +699,20 @@ export class ThreeEngineService implements OnDestroy {
                 const isPlayerImmune = this.playerDamageImmunityTime > 0;
 
                 if (!damageAlreadyDealt && !isPlayerImmune) {
-                    // Apply damage from attack
-                    const damageAmount = enemy.getAttackDamage();
+                    // Get base damage from enemy
+                    let damageAmount = enemy.getAttackDamage();
+
+                    // CALL ABILITY HOOK: onEnemyHitPlayer (for dodge, thorns, etc.)
+                    if (this.characterAbility) {
+                        damageAmount = this.characterAbility.onEnemyHitPlayer(
+                            enemy,
+                            this.player,
+                            damageAmount,
+                            this.scene
+                        );
+                    }
+
+                    // Apply damage to player
                     this.gameState.health -= damageAmount;
 
                     // Set player damage immunity to prevent multiple hits within 100ms
@@ -865,6 +964,9 @@ export class ThreeEngineService implements OnDestroy {
         // Create new player
         this.player = new PlayerThree(this.scene, this.currentCharacterId);
 
+        // Reinitialize character ability for new player
+        this.initializeCharacterAbility(this.currentCharacterId);
+
         // Reset timers
         this.lastSpawnTime = 0;
         this.lastShootTime = 0;
@@ -872,6 +974,38 @@ export class ThreeEngineService implements OnDestroy {
 
         // Resume game rendering
         this.render();
+    }
+
+    // ========== Character Ability System ==========
+
+    /**
+     * Initialize character-specific ability based on selected character
+     */
+    private initializeCharacterAbility(characterId: string): void {
+        switch (characterId) {
+            case 'arcadio':
+                this.characterAbility = new ArcadioAbilityThree();
+                break;
+            case 'lars':
+                this.characterAbility = new LarsAbilityThree();
+                break;
+            case 'yurany':
+                this.characterAbility = new YuranyAbilityThree();
+                break;
+            default:
+                this.characterAbility = new ArcadioAbilityThree();
+        }
+
+        // Initialize the ability with game state reference
+        this.characterAbility.initialize(this.scene, this.player, this.gameState);
+
+        // For Arcadio, also set game state reference for lifesteal
+        if (characterId === 'arcadio' && this.characterAbility) {
+            (this.characterAbility as ArcadioAbilityThree).setGameState(this.gameState);
+        }
+
+        // Store reference to ability in player for potential direct access
+        (this.player as any).ability = this.characterAbility;
     }
 }
 

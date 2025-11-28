@@ -64,6 +64,17 @@ export class EnemyThree {
     private patrolTimer: number = 0;
     private patrolUpdateInterval: number = 1.0; // Update patrol direction every second
 
+    // ========== MIND CONTROL SYSTEM (Lars Ability) ==========
+    public isMindControlled: boolean = false;
+    private mindControlDuration: number = 0;
+    private mindControlMaxDuration: number = 10; // 10 seconds default
+    private mindControlColor: number = 0x0066ff; // Blue color for mind controlled
+    public targetAllies: boolean = false; // When true, attacks other enemies instead of player
+
+    // ========== STUN SYSTEM (Yurany Ability) ==========
+    public isStunned: boolean = false;
+    private stunDuration: number = 0;
+
     constructor(scene: THREE.Scene, x: number, z: number, type: 'spider' | 'worm' = 'spider') {
         this.enemyType = type;
         this.mesh = new THREE.Group();
@@ -131,10 +142,35 @@ export class EnemyThree {
         this.patrolRadius = portal.homeRange;
     }
 
-    update(delta: number, player: PlayerThree, mapBounds: number = 98, currentTime: number = 0, isPlayerInvisible: boolean = false) {
+    update(delta: number, player: PlayerThree, mapBounds: number = 98, currentTime: number = 0, isPlayerInvisible: boolean = false, allEnemies: EnemyThree[] = []) {
         if (this.isDead) return;
 
+        // ========== STUN CHECK ==========
+        if (this.isStunned) {
+            this.stunDuration -= delta;
+            if (this.stunDuration <= 0) {
+                this.isStunned = false;
+            }
+            // Don't move or attack while stunned, just animate
+            this.animator.update(delta);
+            return;
+        }
+
+        // ========== MIND CONTROL TIMER ==========
+        if (this.isMindControlled) {
+            this.mindControlDuration -= delta;
+            if (this.mindControlDuration <= 0) {
+                this.revertMindControl();
+            }
+        }
+
         const distToPlayer = this.mesh.position.distanceTo(player.mesh.position);
+
+        // ========== MIND CONTROLLED BEHAVIOR ==========
+        if (this.isMindControlled && this.targetAllies && allEnemies.length > 0) {
+            this.updateMindControlledBehavior(delta, player, allEnemies, mapBounds, currentTime);
+            return;
+        }
 
         // Determine behavior based on home portal state
         if (this.homePortal) {
@@ -526,17 +562,280 @@ export class EnemyThree {
 
     takeDamage(amount: number, scene: THREE.Scene): XPOrb | null {
         this.health -= amount;
+
+        // Mostrar número de daño flotante en BLANCO encima del enemigo
+        this.showDamageNumber(amount, scene);
+
         if (this.health <= 0) {
             this.isDead = true;
             this.mesh.visible = false;
             return new XPOrb(scene, this.mesh.position.x, this.mesh.position.z, 20);
         } else {
-            // Flash effect
-            this.sprite.material.color.setHex(0xff0000);
+            // Flash effect - use mind control color if controlled, otherwise red
+            const flashColor = this.isMindControlled ? 0x00ffff : 0xff0000;
+            const restoreColor = this.isMindControlled ? this.mindControlColor : this.originalColor;
+            this.sprite.material.color.setHex(flashColor);
             setTimeout(() => {
-                if (!this.isDead) this.sprite.material.color.setHex(0xffaaaa);
+                if (!this.isDead) this.sprite.material.color.setHex(restoreColor);
             }, 100);
             return null;
         }
+    }
+
+    /**
+     * Muestra un número de daño flotante encima del enemigo
+     */
+    private showDamageNumber(damage: number, scene: THREE.Scene): void {
+        // Crear canvas para el texto
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 64;
+        const context = canvas.getContext('2d')!;
+
+        // Dibujar texto de daño en BLANCO
+        context.fillStyle = '#ffffff';
+        context.strokeStyle = '#000000';
+        context.lineWidth = 3;
+        context.font = 'bold 42px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+
+        const text = Math.round(damage).toString();
+        context.strokeText(text, 64, 32); // Borde negro
+        context.fillText(text, 64, 32);   // Texto blanco
+
+        // Crear sprite
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true
+        });
+
+        const damageSprite = new THREE.Sprite(material);
+        damageSprite.scale.set(2, 1, 1);
+
+        // Posición encima del enemigo con pequeño offset aleatorio
+        const offsetX = (Math.random() - 0.5) * 1;
+        damageSprite.position.set(
+            this.mesh.position.x + offsetX,
+            this.mesh.position.y + 3,
+            this.mesh.position.z
+        );
+
+        scene.add(damageSprite);
+
+        // Animación: subir y desvanecerse
+        const startY = damageSprite.position.y;
+        const startTime = Date.now();
+        const duration = 800; // 800ms
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Subir
+            damageSprite.position.y = startY + progress * 2;
+
+            // Desvanecer
+            material.opacity = 1 - progress;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Limpiar
+                scene.remove(damageSprite);
+                texture.dispose();
+                material.dispose();
+            }
+        };
+
+        animate();
+    }
+
+    // ========== MIND CONTROL METHODS (Lars Ability) ==========
+
+    /**
+     * Apply mind control to this enemy - turns it into an ally
+     * @param duration How long the mind control lasts (default 10s)
+     * @param healthMult Multiplier for health (from upgrades)
+     * @param damageMult Multiplier for damage (from upgrades)
+     */
+    public mindControl(duration: number = 10, healthMult: number = 1, damageMult: number = 1): void {
+        if (this.isMindControlled) return; // Already controlled
+
+        this.isMindControlled = true;
+        this.targetAllies = true;
+        this.mindControlDuration = duration;
+
+        // Apply multipliers
+        this.health *= healthMult;
+        this.attackDamage *= damageMult;
+
+        // Visual: Change to blue color
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.mindControlColor);
+
+        console.log(`[MIND CONTROL] Enemy converted! Duration: ${duration}s`);
+    }
+
+    /**
+     * Revert mind control - enemy returns to hostile
+     */
+    public revertMindControl(): void {
+        if (!this.isMindControlled) return;
+
+        this.isMindControlled = false;
+        this.targetAllies = false;
+        this.mindControlDuration = 0;
+
+        // Restore original color
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+
+        console.log(`[MIND CONTROL] Enemy reverted to hostile`);
+    }
+
+    /**
+     * Mind controlled behavior - attack other enemies instead of player
+     */
+    private updateMindControlledBehavior(delta: number, player: PlayerThree, allEnemies: EnemyThree[], mapBounds: number, currentTime: number): void {
+        // Find nearest NON-controlled enemy to attack
+        let nearestEnemy: EnemyThree | null = null;
+        let nearestDist = Infinity;
+
+        for (const enemy of allEnemies) {
+            if (enemy === this || enemy.isDead || enemy.isMindControlled) continue;
+
+            const dist = this.mesh.position.distanceTo(enemy.mesh.position);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestEnemy = enemy;
+            }
+        }
+
+        if (!nearestEnemy) {
+            // No enemies to attack, follow player as ally
+            const dirToPlayer = new THREE.Vector3()
+                .subVectors(player.mesh.position, this.mesh.position)
+                .normalize();
+
+            // Stay at a distance from player (ally behavior)
+            const distToPlayer = this.mesh.position.distanceTo(player.mesh.position);
+            if (distToPlayer > 5) {
+                this.mesh.position.add(dirToPlayer.multiplyScalar(this.speed * delta));
+            }
+
+            this.animator.update(delta);
+            return;
+        }
+
+        // Chase and attack the nearest enemy
+        const direction = new THREE.Vector3()
+            .subVectors(nearestEnemy.mesh.position, this.mesh.position)
+            .normalize();
+
+        // Check if should attack
+        if (nearestDist < this.attackRange && (currentTime - this.lastAttackTime) > this.attackCooldown) {
+            this.lastAttackTime = currentTime;
+            this.isAttacking = true;
+            this.attackStartTime = currentTime;
+
+            // Visual feedback: Cyan flash for ally attack
+            (this.sprite.material as THREE.SpriteMaterial).color.setHex(0x00ffff);
+
+            // Deal damage to enemy target!
+            nearestEnemy.takeDamageFromAlly(this.attackDamage);
+        }
+
+        // Update attack visual
+        if (this.isAttacking) {
+            const attackElapsed = currentTime - this.attackStartTime;
+            if (attackElapsed > this.attackDuration) {
+                this.isAttacking = false;
+                // Restore mind control color
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.mindControlColor);
+            }
+        }
+
+        // Movement - chase enemy
+        const moveSpeed = this.isAttacking ? this.speed * 0.3 : this.speed;
+        this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
+
+        // Clamp to map bounds
+        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+
+        this.animator.update(delta);
+    }
+
+    /**
+     * Take damage from a mind-controlled ally
+     */
+    public takeDamageFromAlly(amount: number): void {
+        this.health -= amount;
+
+        // Flash effect
+        this.sprite.material.color.setHex(0x00ffff); // Cyan flash
+        setTimeout(() => {
+            if (!this.isDead && !this.isMindControlled) {
+                this.sprite.material.color.setHex(this.originalColor);
+            }
+        }, 100);
+
+        if (this.health <= 0) {
+            this.isDead = true;
+            this.mesh.visible = false;
+        }
+    }
+
+    // ========== STUN METHODS (Yurany Ability) ==========
+
+    /**
+     * Apply stun to this enemy
+     * @param duration How long the stun lasts
+     */
+    public applyStun(duration: number = 0.5): void {
+        this.isStunned = true;
+        this.stunDuration = duration;
+
+        // Visual: Yellow flash
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffff00);
+        setTimeout(() => {
+            if (!this.isDead && !this.isMindControlled) {
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+            } else if (this.isMindControlled) {
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.mindControlColor);
+            }
+        }, 200);
+    }
+
+    // ========== KNOCKBACK METHOD (Arcadio Ability) ==========
+
+    /**
+     * Apply knockback force to this enemy
+     * @param fromPosition Position to knock back FROM
+     * @param force Knockback force strength
+     */
+    public applyKnockback(fromPosition: THREE.Vector3, force: number): void {
+        const direction = new THREE.Vector3()
+            .subVectors(this.mesh.position, fromPosition)
+            .normalize();
+
+        this.mesh.position.add(direction.multiplyScalar(force));
+
+        // Visual feedback: white flash
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffffff);
+        setTimeout(() => {
+            if (!this.isDead && !this.isMindControlled) {
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+            } else if (this.isMindControlled) {
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.mindControlColor);
+            }
+        }, 100);
+    }
+
+    /**
+     * Get enemy type for ability logic
+     */
+    public getType(): 'spider' | 'worm' {
+        return this.enemyType;
     }
 }

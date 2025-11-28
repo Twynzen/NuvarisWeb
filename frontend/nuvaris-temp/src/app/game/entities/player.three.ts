@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { SpriteAnimator } from '../engine/sprite-animator';
 import { ProjectileThree } from './projectile.three';
+import { EnemyThree } from './enemy.three';
 
 export class PlayerThree {
     public mesh: THREE.Group;
@@ -16,6 +17,16 @@ export class PlayerThree {
     public isDead = false;
 
     private characterId: string;
+
+    // ========== MELEE ATTACK SYSTEM (Arcadio) ==========
+    private isMeleeAttacking = false;
+    private meleeAttackRange = 5; // Units
+    private meleeAttackDamage = 40; // Base damage
+    private meleeKnockbackForce = 3; // Knockback strength
+    private meleeAttackCooldown = 1.0; // Seconds between attacks (matches animation duration)
+    private lastMeleeAttackTime = 0;
+    private meleeAnimationDuration = 0.5; // Damage applies at 500ms into animation
+    private pendingMeleeCallback: (() => void) | null = null;
 
     // Debug mode - set to true to see flip/animation logs
     private DEBUG_FLIP = false;
@@ -243,11 +254,14 @@ export class PlayerThree {
         }
 
         // Animation State Machine
-        // Priority: Shooting > Horizontal Movement > Vertical Movement > Idle
+        // Priority: Melee/Shooting > Horizontal Movement > Vertical Movement > Idle
         // Uses separate left/right animations instead of scale flip
         let animationPlayed = '';
 
-        if (this.isShooting) {
+        if (this.isMeleeAttacking) {
+            // Melee animation is handled in meleeAttack() - don't override it
+            animationPlayed = 'melee';
+        } else if (this.isShooting) {
             // Shooting animation is handled in shoot()
             animationPlayed = 'shooting';
         } else if (this.isMoving) {
@@ -346,6 +360,154 @@ export class PlayerThree {
 
         // Create Projectile
         return new ProjectileThree(scene, this.mesh.position.x, this.mesh.position.z, direction, this.characterId);
+    }
+
+    // ========== MELEE ATTACK (Arcadio) ==========
+
+    /**
+     * Perform a melee attack that damages all enemies in range
+     * DAÑO SE APLICA AL FINAL DE LA ANIMACIÓN (no instantáneo)
+     * @param scene Three.js scene for visual effects
+     * @param enemies Array of all enemies to check
+     * @param currentTime Current game time for cooldown
+     * @param damageMultiplier Optional damage multiplier from abilities
+     * @param knockbackMultiplier Optional knockback multiplier from abilities
+     * @param onDamageDealt Callback when damage is dealt (for lifesteal)
+     * @returns Empty result immediately - damage happens after animation
+     */
+    meleeAttack(
+        scene: THREE.Scene,
+        enemies: EnemyThree[],
+        currentTime: number,
+        damageMultiplier: number = 1,
+        knockbackMultiplier: number = 1,
+        onDamageDealt?: (totalDamage: number, enemiesHit: number, orbs: any[]) => void
+    ): { orbs: any[], enemiesHit: EnemyThree[] } {
+        const result = { orbs: [] as any[], enemiesHit: [] as EnemyThree[] };
+
+        // Check cooldown
+        if (currentTime - this.lastMeleeAttackTime < this.meleeAttackCooldown) {
+            return result;
+        }
+
+        if (this.isMeleeAttacking) {
+            return result;
+        }
+
+        this.isMeleeAttacking = true;
+        this.lastMeleeAttackTime = currentTime;
+
+        // Find nearest enemy to determine attack direction
+        let nearestEnemy: EnemyThree | null = null;
+        let nearestDist = this.meleeAttackRange * 2; // Look a bit further to aim
+
+        for (const enemy of enemies) {
+            if (enemy.isDead || enemy.isMindControlled) continue;
+            const dist = this.mesh.position.distanceTo(enemy.mesh.position);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestEnemy = enemy;
+            }
+        }
+
+        // Determine attack direction based on nearest enemy
+        // ARCADIO uses directional shoot animations (shoot-right, shoot-left, shoot-up, shoot-down)
+        let attackAnim = this.facingRight ? 'shoot-right' : 'shoot-left';
+
+        if (nearestEnemy) {
+            const dirToEnemy = new THREE.Vector3()
+                .subVectors(nearestEnemy.mesh.position, this.mesh.position)
+                .normalize();
+
+            const absX = Math.abs(dirToEnemy.x);
+            const absZ = Math.abs(dirToEnemy.z);
+
+            if (absZ > absX) {
+                // Vertical direction is dominant
+                attackAnim = dirToEnemy.z < 0 ? 'shoot-up' : 'shoot-down';
+            } else {
+                // Horizontal direction is dominant
+                if (dirToEnemy.x < 0) {
+                    attackAnim = 'shoot-left';
+                    this.facingRight = false;
+                } else {
+                    attackAnim = 'shoot-right';
+                    this.facingRight = true;
+                }
+            }
+        }
+
+        // Play attack animation (30 frames at 30 FPS = 1 second)
+        this.animator.play(attackAnim, false, 30);
+
+        // Calculate damage with multiplier
+        const finalDamage = this.meleeAttackDamage * damageMultiplier;
+        const finalKnockback = this.meleeKnockbackForce * knockbackMultiplier;
+
+        // DAÑO DIFERIDO: Se aplica al terminar la animación (500ms)
+        setTimeout(() => {
+            const delayedResult = { orbs: [] as any[], enemiesHit: [] as EnemyThree[], totalDamage: 0 };
+
+            // Find and damage all enemies in range AT THE MOMENT OF IMPACT
+            for (const enemy of enemies) {
+                if (enemy.isDead || enemy.isMindControlled) continue;
+
+                const dist = this.mesh.position.distanceTo(enemy.mesh.position);
+                if (dist <= this.meleeAttackRange) {
+                    // Apply knockback first
+                    enemy.applyKnockback(this.mesh.position, finalKnockback);
+
+                    // Apply damage
+                    const orb = enemy.takeDamage(finalDamage, scene);
+                    if (orb) {
+                        delayedResult.orbs.push(orb);
+                    }
+
+                    delayedResult.enemiesHit.push(enemy);
+                    delayedResult.totalDamage += finalDamage;
+                }
+            }
+
+            if (delayedResult.enemiesHit.length > 0) {
+                console.log(`[MELEE] Hit ${delayedResult.enemiesHit.length} enemies for ${finalDamage} damage each`);
+            }
+
+            // Callback for lifesteal and other effects
+            if (onDamageDealt) {
+                onDamageDealt(delayedResult.totalDamage, delayedResult.enemiesHit.length, delayedResult.orbs);
+            }
+        }, this.meleeAnimationDuration * 1000); // 500ms delay
+
+        // Reset melee attacking state after full animation
+        setTimeout(() => {
+            this.isMeleeAttacking = false;
+        }, this.meleeAttackCooldown * 1000);
+
+        // Return empty - damage happens later
+        return result;
+    }
+
+
+    /**
+     * Check if this character uses melee attacks
+     * NOTE: Arcadio now uses curved projectile (hoz), not melee
+     */
+    public isMeleeCharacter(): boolean {
+        return false; // Todos usan proyectiles ahora
+    }
+
+    /**
+     * Check if this character uses curved projectile (Arcadio's hoz)
+     */
+    public usesCurvedProjectile(): boolean {
+        return this.characterId === 'arcadio';
+    }
+
+    /**
+     * Get character ID
+     */
+    public getCharacterId(): string {
+        return this.characterId;
     }
 
     // Called when player dies
