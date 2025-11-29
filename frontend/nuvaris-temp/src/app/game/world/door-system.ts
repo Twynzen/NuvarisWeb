@@ -643,4 +643,21 @@ export class DoorSystem {
         });
         return count;
     }
+
+    /**
+     * Get doors data for minimap
+     */
+    public getDoorsForMinimap(): Array<{ x: number; z: number; width: number; rotation: number; isOpen: boolean }> {
+        const result: Array<{ x: number; z: number; width: number; rotation: number; isOpen: boolean }> = [];
+        this.doors.forEach(door => {
+            result.push({
+                x: door.config.position.x,
+                z: door.config.position.z,
+                width: door.config.width,
+                rotation: door.config.rotation || 0,
+                isOpen: door.isOpen
+            });
+        });
+        return result;
+    }
 }

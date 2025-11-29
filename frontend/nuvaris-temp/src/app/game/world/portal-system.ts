@@ -367,4 +367,12 @@ export class PortalSystem {
     public getPortals(): Portal[] {
         return this.portals;
     }
+
+    public getPortalsForMinimap(): Array<{ x: number; z: number; type: string }> {
+        return this.portals.map(portal => ({
+            x: portal.position.x,
+            z: portal.position.z,
+            type: portal.type
+        }));
+    }
 }

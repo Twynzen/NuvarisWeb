@@ -181,6 +181,81 @@ export class ThreeEngineService implements OnDestroy {
         return this.roomVisibilityManager.getStats();
     }
 
+    // Toggle fog on/off (nebline command)
+    private savedFog: THREE.Fog | THREE.FogExp2 | null = null;
+    public setFog(enabled: boolean): boolean {
+        if (!this.scene) return false;
+
+        if (enabled) {
+            // Restore saved fog or create default
+            if (this.savedFog) {
+                this.scene.fog = this.savedFog;
+            } else {
+                // Default fog if none was saved
+                this.scene.fog = new THREE.Fog(0x0a0a1a, 20, 80);
+            }
+            console.log('[DEV] Fog: ON');
+            return true;
+        } else {
+            // Save current fog before removing
+            if (this.scene.fog) {
+                this.savedFog = this.scene.fog;
+            }
+            this.scene.fog = null;
+            console.log('[DEV] Fog: OFF');
+            return false;
+        }
+    }
+
+    // Get current fog state
+    public isFogEnabled(): boolean {
+        return this.scene?.fog !== null;
+    }
+
+    // --- Minimap Data Access ---
+
+    public getPlayerPosition(): { x: number; z: number } | null {
+        if (!this.player?.mesh) return null;
+        return { x: this.player.mesh.position.x, z: this.player.mesh.position.z };
+    }
+
+    public getPlayerDirection(): { x: number; z: number } | null {
+        if (!this.player) return null;
+        // Get direction from player's last movement or facing direction
+        const dir = (this.player as any).lastDirection || { x: 0, z: -1 };
+        return dir;
+    }
+
+    public getMapWallsForMinimap(): Array<{ x: number; z: number; width: number; depth: number; rotation?: number }> {
+        return this.mapWalls.map(wall => ({
+            x: wall.position.x,
+            z: wall.position.z,
+            width: wall.userData.wallWidth || 10,
+            depth: wall.userData.wallDepth || 2,
+            rotation: wall.rotation.y
+        }));
+    }
+
+    public getEnemiesForMinimap(): Array<{ x: number; z: number; type: string }> {
+        return this.enemies
+            .filter(e => !e.isDead)
+            .map(enemy => ({
+                x: enemy.mesh.position.x,
+                z: enemy.mesh.position.z,
+                type: enemy.type || 'enemy'
+            }));
+    }
+
+    public getDoorsForMinimap(): Array<{ x: number; z: number; width: number; rotation: number; isOpen: boolean }> {
+        if (!this.doorSystem) return [];
+        return this.doorSystem.getDoorsForMinimap();
+    }
+
+    public getPortalsForMinimap(): Array<{ x: number; z: number; type: string }> {
+        if (!this.portalSystem) return [];
+        return this.portalSystem.getPortalsForMinimap();
+    }
+
     // --- Developer Mode Commands ---
 
     public setGameSpeed(speed: number) {
@@ -614,10 +689,83 @@ export class ThreeEngineService implements OnDestroy {
             mesh.rotation.y = THREE.MathUtils.degToRad(wallConfig.rotation);
         }
 
+        // Store collision data for wall collision system
+        mesh.userData.isWall = true;
+        mesh.userData.wallWidth = scaleX;
+        mesh.userData.wallDepth = scaleZ;
+        mesh.userData.collisionBox = new THREE.Box3().setFromObject(mesh);
+
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         this.scene.add(mesh);
         this.mapWalls.push(mesh);
+    }
+
+    /**
+     * Check collision between a point (with radius) and map walls
+     * Returns push-back vector if collision detected
+     */
+    private checkMapWallCollision(x: number, z: number, radius: number): { x: number; z: number } {
+        const result = { x: 0, z: 0 };
+
+        for (const wall of this.mapWalls) {
+            if (!wall.userData.isWall) continue;
+
+            const wallPos = wall.position;
+            const halfWidth = (wall.userData.wallWidth || 10) / 2;
+            const halfDepth = (wall.userData.wallDepth || 2) / 2;
+
+            // Handle rotated walls
+            const rotation = wall.rotation.y;
+
+            // Transform point to wall's local space
+            const dx = x - wallPos.x;
+            const dz = z - wallPos.z;
+
+            let localX: number, localZ: number;
+            if (Math.abs(rotation) > 0.01) {
+                const cos = Math.cos(-rotation);
+                const sin = Math.sin(-rotation);
+                localX = dx * cos - dz * sin;
+                localZ = dx * sin + dz * cos;
+            } else {
+                localX = dx;
+                localZ = dz;
+            }
+
+            // Find closest point on wall AABB
+            const closestX = Math.max(-halfWidth, Math.min(halfWidth, localX));
+            const closestZ = Math.max(-halfDepth, Math.min(halfDepth, localZ));
+
+            // Calculate distance from point to closest point
+            const distX = localX - closestX;
+            const distZ = localZ - closestZ;
+            const distSq = distX * distX + distZ * distZ;
+
+            if (distSq < radius * radius && distSq > 0.0001) {
+                const dist = Math.sqrt(distSq);
+                const overlap = radius - dist;
+
+                // Calculate push direction in local space
+                let pushX = (distX / dist) * overlap;
+                let pushZ = (distZ / dist) * overlap;
+
+                // Transform back to world space
+                if (Math.abs(rotation) > 0.01) {
+                    const cos = Math.cos(rotation);
+                    const sin = Math.sin(rotation);
+                    const worldPushX = pushX * cos - pushZ * sin;
+                    const worldPushZ = pushX * sin + pushZ * cos;
+                    result.x += worldPushX;
+                    result.z += worldPushZ;
+                } else {
+                    result.x += pushX;
+                    result.z += pushZ;
+                }
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -829,6 +977,19 @@ export class ThreeEngineService implements OnDestroy {
                 }
             }
 
+            // Wall collision for player (using map walls from JSON)
+            if (this.mapWalls.length > 0) {
+                const wallCollision = this.checkMapWallCollision(
+                    this.player.mesh.position.x,
+                    this.player.mesh.position.z,
+                    PlayerThree.COLLISION_RADIUS
+                );
+                if (wallCollision.x !== 0 || wallCollision.z !== 0) {
+                    this.player.mesh.position.x += wallCollision.x;
+                    this.player.mesh.position.z += wallCollision.z;
+                }
+            }
+
             // Spawn enemies
             if (this.autoSpawningEnabled && currentTime - this.lastSpawnTime > 2) {
                 this.spawnEnemy(Math.random() < 0.6 ? 'spider' : 'worm');
@@ -879,6 +1040,22 @@ export class ThreeEngineService implements OnDestroy {
                     );
                     // Update enemy position if collision resolved
                     enemy.mesh.position.copy(resolvedPos);
+                });
+            }
+
+            // Wall collision for enemies (using map walls from JSON)
+            if (this.mapWalls.length > 0) {
+                this.enemies.forEach(enemy => {
+                    if (enemy.isDead) return;
+                    const wallCollision = this.checkMapWallCollision(
+                        enemy.mesh.position.x,
+                        enemy.mesh.position.z,
+                        EnemyThree.COLLISION_RADIUS
+                    );
+                    if (wallCollision.x !== 0 || wallCollision.z !== 0) {
+                        enemy.mesh.position.x += wallCollision.x;
+                        enemy.mesh.position.z += wallCollision.z;
+                    }
                 });
             }
 

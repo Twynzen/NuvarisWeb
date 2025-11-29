@@ -229,6 +229,9 @@ export class DevConsoleComponent implements AfterViewInit {
                 case 'mapinfo':
                     this.handleMapInfo();
                     break;
+                case 'nebline':
+                    this.handleFog(args);
+                    break;
                 default:
                     this.addLog('error', `Unknown command: "${cmd}". Type "help" for available commands.`);
             }
@@ -259,7 +262,8 @@ export class DevConsoleComponent implements AfterViewInit {
             { cmd: 'fps', desc: 'Toggle FPS/Stats display' },
             { cmd: 'loadmap <name>', desc: 'Load a map by name' },
             { cmd: 'maps', desc: 'List available maps' },
-            { cmd: 'mapinfo', desc: 'Show current map info' }
+            { cmd: 'mapinfo', desc: 'Show current map info' },
+            { cmd: 'nebline <true/false>', desc: 'Toggle fog/nebline on or off' }
         ];
 
         this.addLog('info', '--- Available Commands ---');
@@ -439,5 +443,28 @@ export class DevConsoleComponent implements AfterViewInit {
         this.addLog('info', `  Objects: ${info.objects}`);
         this.addLog('info', `  Walls: ${info.walls}`);
         this.addLog('info', `  Portals: ${info.portals}`);
+    }
+
+    // --- Fog/Nebline Command ---
+
+    private handleFog(args: string[]) {
+        if (args.length === 0) {
+            // Toggle if no argument
+            const currentState = this.engineService.isFogEnabled();
+            const newState = this.engineService.setFog(!currentState);
+            this.addLog('success', `Fog: ${newState ? 'ON' : 'OFF'}`);
+            return;
+        }
+
+        const arg = args[0].toLowerCase();
+        if (arg === 'true' || arg === 'on') {
+            this.engineService.setFog(true);
+            this.addLog('success', 'Fog: ON');
+        } else if (arg === 'false' || arg === 'off') {
+            this.engineService.setFog(false);
+            this.addLog('success', 'Fog: OFF');
+        } else {
+            throw new Error('Invalid argument. Use: nebline true/false or nebline on/off');
+        }
     }
 }
