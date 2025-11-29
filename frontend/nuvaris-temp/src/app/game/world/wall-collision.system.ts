@@ -35,7 +35,7 @@ export class WallCollisionSystem {
      */
     registerRoomWalls(room: RoomInstance): void {
         for (const wallMesh of room.walls) {
-            if (!wallMesh.userData.isWall) continue;
+            if (!wallMesh.userData['isWall']) continue;
 
             // Calculate world-space bounding box
             wallMesh.updateMatrixWorld(true);
@@ -60,7 +60,7 @@ export class WallCollisionSystem {
      * Register walls from map data (legacy format)
      */
     registerWallMesh(mesh: THREE.Mesh): void {
-        mesh.userData.isWall = true;
+        mesh.userData['isWall'] = true;
         mesh.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(mesh);
 

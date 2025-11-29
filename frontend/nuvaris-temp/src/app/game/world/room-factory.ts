@@ -344,9 +344,9 @@ export class RoomFactory {
         mesh.name = wallDef.id;
 
         // Store collision data for WallCollisionSystem
-        mesh.userData.isWall = true;
-        mesh.userData.wallType = wallDef.wallType;
-        mesh.userData.collisionBox = new THREE.Box3().setFromObject(mesh);
+        mesh.userData['isWall'] = true;
+        mesh.userData['wallType'] = wallDef.wallType;
+        mesh.userData['collisionBox'] = new THREE.Box3().setFromObject(mesh);
 
         return mesh;
     }
@@ -508,7 +508,7 @@ export class RoomFactory {
      */
     getWallBoxes(room: RoomInstance): THREE.Box3[] {
         return room.walls
-            .filter(wall => wall.userData.isWall)
+            .filter(wall => wall.userData['isWall'])
             .map(wall => {
                 // Update collision box to world position
                 const box = new THREE.Box3().setFromObject(wall);

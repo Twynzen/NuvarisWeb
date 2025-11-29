@@ -230,8 +230,8 @@ export class ThreeEngineService implements OnDestroy {
         return this.mapWalls.map(wall => ({
             x: wall.position.x,
             z: wall.position.z,
-            width: wall.userData.wallWidth || 10,
-            depth: wall.userData.wallDepth || 2,
+            width: wall.userData['wallWidth'] || 10,
+            depth: wall.userData['wallDepth'] || 2,
             rotation: wall.rotation.y
         }));
     }
@@ -242,7 +242,7 @@ export class ThreeEngineService implements OnDestroy {
             .map(enemy => ({
                 x: enemy.mesh.position.x,
                 z: enemy.mesh.position.z,
-                type: enemy.type || 'enemy'
+                type: (enemy as any).type || 'enemy'
             }));
     }
 
@@ -690,10 +690,10 @@ export class ThreeEngineService implements OnDestroy {
         }
 
         // Store collision data for wall collision system
-        mesh.userData.isWall = true;
-        mesh.userData.wallWidth = scaleX;
-        mesh.userData.wallDepth = scaleZ;
-        mesh.userData.collisionBox = new THREE.Box3().setFromObject(mesh);
+        mesh.userData['isWall'] = true;
+        mesh.userData['wallWidth'] = scaleX;
+        mesh.userData['wallDepth'] = scaleZ;
+        mesh.userData['collisionBox'] = new THREE.Box3().setFromObject(mesh);
 
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -709,11 +709,11 @@ export class ThreeEngineService implements OnDestroy {
         const result = { x: 0, z: 0 };
 
         for (const wall of this.mapWalls) {
-            if (!wall.userData.isWall) continue;
+            if (!wall.userData['isWall']) continue;
 
             const wallPos = wall.position;
-            const halfWidth = (wall.userData.wallWidth || 10) / 2;
-            const halfDepth = (wall.userData.wallDepth || 2) / 2;
+            const halfWidth = (wall.userData['wallWidth'] || 10) / 2;
+            const halfDepth = (wall.userData['wallDepth'] || 2) / 2;
 
             // Handle rotated walls
             const rotation = wall.rotation.y;
