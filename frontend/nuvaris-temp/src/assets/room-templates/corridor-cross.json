@@ -1,0 +1,73 @@
+{
+  "id": "corridor_cross_01",
+  "name": "Cruce de Corredores",
+  "type": "corridor_cross",
+  "biome": "corridor",
+  "width": 12,
+  "depth": 12,
+  "height": 8,
+  "walls": [
+    { "id": "wall_nw", "localPosition": { "x": -4, "z": 4 }, "width": 4, "depth": 4, "wallType": "normal" },
+    { "id": "wall_ne", "localPosition": { "x": 4, "z": 4 }, "width": 4, "depth": 4, "wallType": "normal" },
+    { "id": "wall_sw", "localPosition": { "x": -4, "z": -4 }, "width": 4, "depth": 4, "wallType": "normal" },
+    { "id": "wall_se", "localPosition": { "x": 4, "z": -4 }, "width": 4, "depth": 4, "wallType": "normal" }
+  ],
+  "doorSockets": [
+    {
+      "id": "door_north",
+      "localPosition": { "x": 0, "z": 6 },
+      "direction": "N",
+      "width": 4,
+      "socketType": "large",
+      "required": false
+    },
+    {
+      "id": "door_south",
+      "localPosition": { "x": 0, "z": -6 },
+      "direction": "S",
+      "width": 4,
+      "socketType": "large",
+      "required": false
+    },
+    {
+      "id": "door_east",
+      "localPosition": { "x": 6, "z": 0 },
+      "direction": "E",
+      "width": 4,
+      "socketType": "large",
+      "required": false
+    },
+    {
+      "id": "door_west",
+      "localPosition": { "x": -6, "z": 0 },
+      "direction": "W",
+      "width": 4,
+      "socketType": "large",
+      "required": false
+    }
+  ],
+  "lights": [
+    {
+      "id": "light_center",
+      "localPosition": { "x": 0, "y": 7.5, "z": 0 },
+      "type": "point",
+      "color": 16764057,
+      "intensity": 0.8,
+      "distance": 12,
+      "decay": 2,
+      "castShadow": false
+    }
+  ],
+  "spawnPoints": [
+    { "id": "spawn_center", "localPosition": { "x": 0, "z": 0 }, "type": "enemy", "subtype": "ambush" }
+  ],
+  "lightingPreset": {
+    "ambient": { "color": 1710618, "intensity": 0.15 },
+    "fog": { "color": 657930, "near": 8, "far": 18 }
+  },
+  "floorColor": 1710618,
+  "wallColor": 2763306,
+  "difficulty": 2,
+  "tags": ["connector", "junction", "cross", "ambush_point"],
+  "maxExits": 4
+}

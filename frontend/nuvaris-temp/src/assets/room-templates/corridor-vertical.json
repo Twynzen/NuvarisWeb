@@ -1,0 +1,63 @@
+{
+  "id": "corridor_v_01",
+  "name": "Corredor Vertical",
+  "type": "corridor_vertical",
+  "biome": "corridor",
+  "width": 5,
+  "depth": 16,
+  "height": 8,
+  "walls": [
+    { "id": "wall_e", "localPosition": { "x": 2.5, "z": 0 }, "width": 0.5, "depth": 16, "wallType": "normal" },
+    { "id": "wall_w", "localPosition": { "x": -2.5, "z": 0 }, "width": 0.5, "depth": 16, "wallType": "normal" }
+  ],
+  "doorSockets": [
+    {
+      "id": "door_north",
+      "localPosition": { "x": 0, "z": 8 },
+      "direction": "N",
+      "width": 4,
+      "socketType": "large",
+      "required": true
+    },
+    {
+      "id": "door_south",
+      "localPosition": { "x": 0, "z": -8 },
+      "direction": "S",
+      "width": 4,
+      "socketType": "large",
+      "required": true
+    }
+  ],
+  "lights": [
+    {
+      "id": "light_n",
+      "localPosition": { "x": 0, "y": 7, "z": 5 },
+      "type": "point",
+      "color": 16764057,
+      "intensity": 0.5,
+      "distance": 8,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "light_s",
+      "localPosition": { "x": 0, "y": 7, "z": -5 },
+      "type": "point",
+      "color": 16764057,
+      "intensity": 0.5,
+      "distance": 8,
+      "decay": 2,
+      "castShadow": false
+    }
+  ],
+  "spawnPoints": [],
+  "lightingPreset": {
+    "ambient": { "color": 1710618, "intensity": 0.15 },
+    "fog": { "color": 657930, "near": 6, "far": 16 }
+  },
+  "floorColor": 1710618,
+  "wallColor": 2763306,
+  "difficulty": 1,
+  "tags": ["connector", "vertical"],
+  "maxExits": 2
+}

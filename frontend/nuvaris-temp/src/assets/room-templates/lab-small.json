@@ -1,0 +1,80 @@
+{
+  "id": "lab_small_01",
+  "name": "Laboratorio de Pruebas",
+  "type": "lab_small",
+  "biome": "laboratory",
+  "width": 10,
+  "depth": 10,
+  "height": 8,
+  "walls": [
+    { "id": "wall_n", "localPosition": { "x": 0, "z": 5 }, "width": 10, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_s", "localPosition": { "x": 0, "z": -5 }, "width": 10, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_e", "localPosition": { "x": 5, "z": 0 }, "width": 1, "depth": 10, "wallType": "reinforced" },
+    { "id": "wall_w", "localPosition": { "x": -5, "z": 0 }, "width": 1, "depth": 10, "wallType": "reinforced" },
+    { "id": "console_1", "localPosition": { "x": -3, "z": 3 }, "width": 2, "depth": 1, "height": 3, "wallType": "glass" },
+    { "id": "console_2", "localPosition": { "x": 3, "z": 3 }, "width": 2, "depth": 1, "height": 3, "wallType": "glass" }
+  ],
+  "doorSockets": [
+    {
+      "id": "door_south",
+      "localPosition": { "x": 0, "z": -5 },
+      "direction": "S",
+      "width": 4,
+      "socketType": "large",
+      "required": true
+    },
+    {
+      "id": "door_east",
+      "localPosition": { "x": 5, "z": 0 },
+      "direction": "E",
+      "width": 3,
+      "socketType": "small",
+      "required": false
+    }
+  ],
+  "lights": [
+    {
+      "id": "main_light",
+      "localPosition": { "x": 0, "y": 7.5, "z": 0 },
+      "type": "point",
+      "color": 13434879,
+      "intensity": 1.0,
+      "distance": 15,
+      "decay": 2,
+      "castShadow": true
+    },
+    {
+      "id": "accent_nw",
+      "localPosition": { "x": -3, "y": 4, "z": 3 },
+      "type": "point",
+      "color": 65535,
+      "intensity": 0.4,
+      "distance": 5,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "accent_ne",
+      "localPosition": { "x": 3, "y": 4, "z": 3 },
+      "type": "point",
+      "color": 65535,
+      "intensity": 0.4,
+      "distance": 5,
+      "decay": 2,
+      "castShadow": false
+    }
+  ],
+  "spawnPoints": [
+    { "id": "spawn_center", "localPosition": { "x": 0, "z": 0 }, "type": "enemy", "subtype": "scientist" },
+    { "id": "item_spawn", "localPosition": { "x": 0, "z": -2 }, "type": "item", "subtype": "health" }
+  ],
+  "lightingPreset": {
+    "ambient": { "color": 2768970, "intensity": 0.4 },
+    "fog": { "color": 1714234, "near": 12, "far": 28 }
+  },
+  "floorColor": 2763322,
+  "wallColor": 3816266,
+  "difficulty": 2,
+  "tags": ["tech", "small", "loot"],
+  "maxExits": 2
+}

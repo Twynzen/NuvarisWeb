@@ -1,0 +1,126 @@
+{
+  "id": "lab_large_01",
+  "name": "Laboratorio Central",
+  "type": "lab_large",
+  "biome": "laboratory",
+  "width": 20,
+  "depth": 16,
+  "height": 10,
+  "walls": [
+    { "id": "wall_n_w", "localPosition": { "x": -6, "z": 8 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_n_e", "localPosition": { "x": 6, "z": 8 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_s_w", "localPosition": { "x": -6, "z": -8 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_s_e", "localPosition": { "x": 6, "z": -8 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_e_n", "localPosition": { "x": 10, "z": 4 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "wall_e_s", "localPosition": { "x": 10, "z": -4 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "wall_w_n", "localPosition": { "x": -10, "z": 4 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "wall_w_s", "localPosition": { "x": -10, "z": -4 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "capsule_nw", "localPosition": { "x": -5, "z": 4 }, "width": 3, "depth": 3, "height": 6, "wallType": "glass" },
+    { "id": "capsule_ne", "localPosition": { "x": 5, "z": 4 }, "width": 3, "depth": 3, "height": 6, "wallType": "glass" },
+    { "id": "capsule_sw", "localPosition": { "x": -5, "z": -4 }, "width": 3, "depth": 3, "height": 6, "wallType": "glass" },
+    { "id": "capsule_se", "localPosition": { "x": 5, "z": -4 }, "width": 3, "depth": 3, "height": 6, "wallType": "glass" }
+  ],
+  "doorSockets": [
+    {
+      "id": "door_north",
+      "localPosition": { "x": 0, "z": 8 },
+      "direction": "N",
+      "width": 5,
+      "socketType": "large",
+      "required": false
+    },
+    {
+      "id": "door_south",
+      "localPosition": { "x": 0, "z": -8 },
+      "direction": "S",
+      "width": 5,
+      "socketType": "large",
+      "required": true
+    },
+    {
+      "id": "door_east",
+      "localPosition": { "x": 10, "z": 0 },
+      "direction": "E",
+      "width": 4,
+      "socketType": "large",
+      "required": false
+    },
+    {
+      "id": "door_west",
+      "localPosition": { "x": -10, "z": 0 },
+      "direction": "W",
+      "width": 4,
+      "socketType": "large",
+      "required": false
+    }
+  ],
+  "lights": [
+    {
+      "id": "main_light",
+      "localPosition": { "x": 0, "y": 9, "z": 0 },
+      "type": "spot",
+      "color": 16777215,
+      "intensity": 1.5,
+      "distance": 25,
+      "decay": 2,
+      "angle": 1.047,
+      "penumbra": 0.3,
+      "castShadow": true
+    },
+    {
+      "id": "capsule_nw",
+      "localPosition": { "x": -5, "y": 5, "z": 4 },
+      "type": "point",
+      "color": 65280,
+      "intensity": 0.6,
+      "distance": 6,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "capsule_ne",
+      "localPosition": { "x": 5, "y": 5, "z": 4 },
+      "type": "point",
+      "color": 65280,
+      "intensity": 0.6,
+      "distance": 6,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "capsule_sw",
+      "localPosition": { "x": -5, "y": 5, "z": -4 },
+      "type": "point",
+      "color": 16711680,
+      "intensity": 0.6,
+      "distance": 6,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "capsule_se",
+      "localPosition": { "x": 5, "y": 5, "z": -4 },
+      "type": "point",
+      "color": 16711680,
+      "intensity": 0.6,
+      "distance": 6,
+      "decay": 2,
+      "castShadow": false
+    }
+  ],
+  "spawnPoints": [
+    { "id": "spawn_center", "localPosition": { "x": 0, "z": 0 }, "type": "enemy", "subtype": "experiment" },
+    { "id": "spawn_nw", "localPosition": { "x": -5, "z": 4 }, "type": "enemy", "subtype": "spider" },
+    { "id": "spawn_ne", "localPosition": { "x": 5, "z": 4 }, "type": "enemy", "subtype": "spider" },
+    { "id": "portal_spawn", "localPosition": { "x": 0, "z": 5 }, "type": "portal", "subtype": "spider" }
+  ],
+  "lightingPreset": {
+    "ambient": { "color": 2768970, "intensity": 0.35 },
+    "fog": { "color": 1714234, "near": 18, "far": 40 }
+  },
+  "floorColor": 2763322,
+  "wallColor": 3816266,
+  "difficulty": 4,
+  "tags": ["hub", "large", "boss_eligible", "multi_exit"],
+  "maxExits": 4
+}
