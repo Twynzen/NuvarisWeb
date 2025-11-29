@@ -35,9 +35,10 @@ export class PlayerThree {
     private mapBounds = 98;
 
     // Collision and sprite dimensions (for debug visualization)
-    public static readonly COLLISION_RADIUS = 1.5;
-    public static readonly SPRITE_WIDTH = 3;
-    public static readonly SPRITE_HEIGHT = 3;
+    // Player is ~2x2 units to fit through small doors (4 units wide)
+    public static readonly COLLISION_RADIUS = 1.0;
+    public static readonly SPRITE_WIDTH = 2;
+    public static readonly SPRITE_HEIGHT = 2;
 
     // Debug visualization group
     public debugGroup: THREE.Group | null = null;

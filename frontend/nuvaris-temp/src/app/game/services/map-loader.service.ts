@@ -18,8 +18,9 @@ export interface DoorMapConfig {
     width: number;
     height?: number;
     depth?: number;
-    type: 'small' | 'large' | 'garage';
+    type: 'small' | 'large' | 'garage' | 'custom';
     isOpen: boolean;
+    locked?: boolean;
     autoClose?: boolean;
     autoCloseDelay?: number;
     linkedTo?: string;
@@ -72,6 +73,14 @@ interface LegacySpawnPoint {
     type: string;
 }
 
+interface LegacyDoor {
+    id: string;
+    position: [number, number];  // [x, z] array
+    size: [number, number];      // [width, depth] array
+    state: 'open' | 'closed';
+    locked?: boolean;
+}
+
 interface LegacyMapData {
     id?: string;
     name: string;
@@ -80,6 +89,7 @@ interface LegacyMapData {
     walls: LegacyWall[];
     portals: LegacyPortal[];
     spawnPoints: LegacySpawnPoint[];
+    doors?: LegacyDoor[];
 }
 
 // ============================================
@@ -92,7 +102,7 @@ interface LegacyMapData {
 export class MapLoaderService {
     // Available maps - hardcoded list for now
     // In production, this could be fetched from a server
-    private readonly AVAILABLE_MAPS = ['default', 'small-arena', 'sector-omega'];
+    private readonly AVAILABLE_MAPS = ['default', 'small-arena', 'sector-omega', 'nivel1-lab'];
 
     private currentMapName: string = '';
     private currentMapData: MapData | null = null;
@@ -169,8 +179,8 @@ export class MapLoaderService {
             return rawData as MapData;
         }
 
-        // Check if it's legacy format (has 'walls', 'portals', 'spawnPoints')
-        if (rawData.walls || rawData.portals || rawData.spawnPoints) {
+        // Check if it's legacy format (has 'walls', 'portals', 'spawnPoints', 'doors')
+        if (rawData.walls || rawData.portals || rawData.spawnPoints || rawData.doors) {
             console.log('[MapLoader] Detected legacy format, converting...');
             return this.convertLegacyFormat(rawData as LegacyMapData);
         }
@@ -246,6 +256,40 @@ export class MapLoaderService {
             }
         }
 
+        // Convert doors
+        if (legacy.doors) {
+            for (const door of legacy.doors) {
+                // Determine door type based on size
+                const width = door.size[0];
+                const depth = door.size[1];
+                const maxDim = Math.max(width, depth);
+                let doorType: 'small' | 'large' | 'garage' | 'custom' = 'custom';
+                if (maxDim <= 4) doorType = 'small';
+                else if (maxDim <= 6) doorType = 'large';
+                else if (maxDim >= 10) doorType = 'garage';
+
+                objects.push({
+                    id: door.id,
+                    type: 'door',
+                    position: {
+                        x: door.position[0],
+                        z: door.position[1]
+                    },
+                    // Calculate rotation based on which dimension is larger
+                    rotation: width > depth ? 0 : 90,
+                    config: {
+                        width: Math.max(width, depth),  // Use larger dimension as width
+                        depth: Math.min(width, depth),  // Use smaller as depth
+                        height: 8,  // Standard door height
+                        type: doorType,
+                        isOpen: door.state === 'open',
+                        locked: door.locked || false,
+                        autoClose: true  // Enable auto-close by default
+                    }
+                });
+            }
+        }
+
         const normalized: MapData = {
             name: legacy.name,
             version: legacy.version,
@@ -253,7 +297,7 @@ export class MapLoaderService {
             objects
         };
 
-        console.log(`[MapLoader] Converted legacy format: ${objects.length} objects (${legacy.walls?.length || 0} walls, ${legacy.portals?.length || 0} portals, ${legacy.spawnPoints?.length || 0} spawns)`);
+        console.log(`[MapLoader] Converted legacy format: ${objects.length} objects (${legacy.walls?.length || 0} walls, ${legacy.portals?.length || 0} portals, ${legacy.spawnPoints?.length || 0} spawns, ${legacy.doors?.length || 0} doors)`);
 
         return normalized;
     }

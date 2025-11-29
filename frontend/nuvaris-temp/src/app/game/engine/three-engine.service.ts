@@ -520,8 +520,13 @@ export class ThreeEngineService implements OnDestroy {
         const doorObjects = this.mapLoader.getDoorConfigs(mapData);
         const doorConfigs: DoorConfig[] = doorObjects.map(obj => {
             // Get default values from door presets
-            const defaults = { small: { height: 8, depth: 2 }, large: { height: 8, depth: 2 }, garage: { height: 10, depth: 3 } };
-            const preset = defaults[obj.config.type] || defaults.small;
+            const defaults: Record<string, { height: number; depth: number }> = {
+                small: { height: 8, depth: 2 },
+                large: { height: 8, depth: 2 },
+                garage: { height: 10, depth: 3 },
+                custom: { height: 8, depth: 2 }
+            };
+            const preset = defaults[obj.config.type] || defaults['custom'];
 
             return {
                 id: obj.id,
@@ -530,9 +535,10 @@ export class ThreeEngineService implements OnDestroy {
                 height: obj.config.height ?? preset.height,
                 depth: obj.config.depth ?? preset.depth,
                 rotation: obj.rotation ? THREE.MathUtils.degToRad(obj.rotation) : 0,
-                type: obj.config.type,
+                type: obj.config.type as 'small' | 'large' | 'garage' | 'custom',
                 isOpen: obj.config.isOpen,
-                autoClose: obj.config.autoClose,
+                locked: obj.config.locked,
+                autoClose: obj.config.autoClose ?? true,
                 autoCloseDelay: obj.config.autoCloseDelay,
                 linkedTo: obj.config.linkedTo
             };
@@ -740,13 +746,14 @@ export class ThreeEngineService implements OnDestroy {
                 this.portalSystem.update(delta);
             }
 
-            // Update door system (animations)
+            // Update door system (animations + proximity auto-open)
+            const playerX = this.player.mesh.position.x;
+            const playerZ = this.player.mesh.position.z;
             if (this.doorSystem) {
-                this.doorSystem.update(delta);
+                // Pass player position for auto-open/close proximity detection
+                this.doorSystem.update(delta, playerX, playerZ);
 
                 // Check door collision - prevent player from walking through closed doors
-                const playerX = this.player.mesh.position.x;
-                const playerZ = this.player.mesh.position.z;
                 const collidingDoor = this.doorSystem.checkCollision(
                     playerX,
                     playerZ,
@@ -775,6 +782,32 @@ export class ThreeEngineService implements OnDestroy {
             // Update enemies (with wall collision AND attack behavior)
             const isPlayerInvisible = (this.gameState as any).invisible || false;
             this.enemies.forEach(enemy => enemy.update(delta, this.player, 98, currentTime, isPlayerInvisible, this.enemies));
+
+            // Check door collision for enemies - push them away from closed doors
+            if (this.doorSystem) {
+                this.enemies.forEach(enemy => {
+                    if (enemy.isDead) return;
+                    const enemyX = enemy.mesh.position.x;
+                    const enemyZ = enemy.mesh.position.z;
+                    const collidingDoor = this.doorSystem.checkCollision(
+                        enemyX,
+                        enemyZ,
+                        EnemyThree.COLLISION_RADIUS
+                    );
+                    if (collidingDoor) {
+                        // Push enemy away from closed door
+                        const doorPos = collidingDoor.config.position;
+                        const dx = enemyX - doorPos.x;
+                        const dz = enemyZ - doorPos.z;
+                        const dist = Math.sqrt(dx * dx + dz * dz);
+                        if (dist > 0.1) {
+                            const pushStrength = 0.4;
+                            enemy.mesh.position.x += (dx / dist) * pushStrength;
+                            enemy.mesh.position.z += (dz / dist) * pushStrength;
+                        }
+                    }
+                });
+            }
 
             // Clean up enemies killed by mind-controlled allies
             this.enemies = this.enemies.filter(e => !e.isDead);

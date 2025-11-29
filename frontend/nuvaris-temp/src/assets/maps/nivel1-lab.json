@@ -1,0 +1,200 @@
+{
+  "id": "map_nivel1_lab",
+  "name": "Nivel 1 - Laboratorio de Pruebas",
+  "version": "1.0",
+  "size": { "width": 200, "height": 200 },
+
+  "walls": [
+    { "id": "perim_n", "position": [0, 100], "size": [200, 4], "type": "perimeter" },
+    { "id": "perim_s", "position": [0, -100], "size": [200, 4], "type": "perimeter" },
+    { "id": "perim_e", "position": [100, 0], "size": [4, 200], "type": "perimeter" },
+    { "id": "perim_w", "position": [-100, 0], "size": [4, 200], "type": "perimeter" },
+
+    { "id": "lab_n_w", "position": [-10, 15], "size": [10, 3], "type": "reinforced" },
+    { "id": "lab_n_e", "position": [10, 15], "size": [10, 3], "type": "reinforced" },
+    { "id": "lab_s_w", "position": [-10, -15], "size": [10, 3], "type": "reinforced" },
+    { "id": "lab_s_e", "position": [10, -15], "size": [10, 3], "type": "reinforced" },
+    { "id": "lab_e_n", "position": [15, 7], "size": [3, 13], "type": "reinforced" },
+    { "id": "lab_e_s", "position": [15, -7], "size": [3, 13], "type": "reinforced" },
+    { "id": "lab_w_n", "position": [-15, 7], "size": [3, 13], "type": "reinforced" },
+    { "id": "lab_w_s", "position": [-15, -7], "size": [3, 13], "type": "reinforced" },
+
+    { "id": "capsule_nw", "position": [-7, 7], "size": [4, 4], "type": "capsule" },
+    { "id": "capsule_ne", "position": [7, 7], "size": [4, 4], "type": "capsule" },
+    { "id": "capsule_sw", "position": [-7, -7], "size": [4, 4], "type": "capsule" },
+    { "id": "capsule_se", "position": [7, -7], "size": [4, 4], "type": "capsule" },
+
+    { "id": "corr_n_outer", "position": [0, 28], "size": [50, 2], "type": "normal" },
+    { "id": "corr_n_inner_w", "position": [-18, 20], "size": [14, 2], "type": "normal" },
+    { "id": "corr_n_inner_e", "position": [18, 20], "size": [14, 2], "type": "normal" },
+    { "id": "corr_s_outer", "position": [0, -28], "size": [50, 2], "type": "normal" },
+    { "id": "corr_s_inner_w", "position": [-18, -20], "size": [14, 2], "type": "normal" },
+    { "id": "corr_s_inner_e", "position": [18, -20], "size": [14, 2], "type": "normal" },
+    { "id": "corr_e_outer", "position": [28, 0], "size": [2, 54], "type": "normal" },
+    { "id": "corr_e_inner_n", "position": [20, 12], "size": [2, 14], "type": "normal" },
+    { "id": "corr_e_inner_s", "position": [20, -12], "size": [2, 14], "type": "normal" },
+    { "id": "corr_w_outer", "position": [-28, 0], "size": [2, 54], "type": "normal" },
+    { "id": "corr_w_inner_n", "position": [-20, 12], "size": [2, 14], "type": "normal" },
+    { "id": "corr_w_inner_s", "position": [-20, -12], "size": [2, 14], "type": "normal" },
+    { "id": "pillar_ne", "position": [24, 24], "size": [6, 6], "type": "pillar" },
+    { "id": "pillar_nw", "position": [-24, 24], "size": [6, 6], "type": "pillar" },
+    { "id": "pillar_se", "position": [24, -24], "size": [6, 6], "type": "pillar" },
+    { "id": "pillar_sw", "position": [-24, -24], "size": [6, 6], "type": "pillar" },
+
+    { "id": "pris_w_corr_e", "position": [-32, 0], "size": [2, 56], "type": "normal" },
+    { "id": "pris_w_corr_w", "position": [-42, 0], "size": [2, 56], "type": "normal" },
+    { "id": "pris_w_corr_n", "position": [-37, 28], "size": [12, 2], "type": "normal" },
+    { "id": "pris_w_corr_s", "position": [-37, -28], "size": [12, 2], "type": "normal" },
+    { "id": "pris_w_back", "position": [-68, 0], "size": [2, 56], "type": "normal" },
+    { "id": "cell_w_div1", "position": [-55, 18], "size": [24, 2], "type": "normal" },
+    { "id": "cell_w_div2", "position": [-55, 9], "size": [24, 2], "type": "normal" },
+    { "id": "cell_w_div3", "position": [-55, 0], "size": [24, 2], "type": "normal" },
+    { "id": "cell_w_div4", "position": [-55, -9], "size": [24, 2], "type": "normal" },
+    { "id": "cell_w_div5", "position": [-55, -18], "size": [24, 2], "type": "normal" },
+    { "id": "pris_w_top", "position": [-55, 27], "size": [24, 2], "type": "normal" },
+    { "id": "pris_w_bot", "position": [-55, -27], "size": [24, 2], "type": "normal" },
+
+    { "id": "pris_e_corr_w", "position": [32, 0], "size": [2, 56], "type": "normal" },
+    { "id": "pris_e_corr_e", "position": [42, 0], "size": [2, 56], "type": "normal" },
+    { "id": "pris_e_corr_n", "position": [37, 28], "size": [12, 2], "type": "normal" },
+    { "id": "pris_e_corr_s", "position": [37, -28], "size": [12, 2], "type": "normal" },
+    { "id": "pris_e_back", "position": [68, 0], "size": [2, 56], "type": "normal" },
+    { "id": "cell_e_div1", "position": [55, 18], "size": [24, 2], "type": "normal" },
+    { "id": "cell_e_div2", "position": [55, 9], "size": [24, 2], "type": "normal" },
+    { "id": "cell_e_div3", "position": [55, 0], "size": [24, 2], "type": "normal" },
+    { "id": "cell_e_div4", "position": [55, -9], "size": [24, 2], "type": "normal" },
+    { "id": "cell_e_div5", "position": [55, -18], "size": [24, 2], "type": "normal" },
+    { "id": "pris_e_top", "position": [55, 27], "size": [24, 2], "type": "normal" },
+    { "id": "pris_e_bot", "position": [55, -27], "size": [24, 2], "type": "normal" },
+
+    { "id": "hall_nw_s", "position": [-37, 32], "size": [12, 2], "type": "normal" },
+    { "id": "hall_nw_n", "position": [-37, 45], "size": [12, 2], "type": "normal" },
+    { "id": "hall_nw_w", "position": [-42, 38], "size": [2, 12], "type": "normal" },
+    { "id": "hall_nw_e", "position": [-32, 38], "size": [2, 12], "type": "normal" },
+    { "id": "hall_ne_s", "position": [37, 32], "size": [12, 2], "type": "normal" },
+    { "id": "hall_ne_n", "position": [37, 45], "size": [12, 2], "type": "normal" },
+    { "id": "hall_ne_w", "position": [32, 38], "size": [2, 12], "type": "normal" },
+    { "id": "hall_ne_e", "position": [42, 38], "size": [2, 12], "type": "normal" },
+
+    { "id": "garden_w_s_w", "position": [-72, 47], "size": [52, 2], "type": "normal" },
+    { "id": "garden_w_s_e", "position": [-37, 47], "size": [8, 2], "type": "normal" },
+    { "id": "garden_w_e", "position": [-32, 72], "size": [2, 52], "type": "normal" },
+    { "id": "rock_w1", "position": [-82, 88], "size": [12, 10], "type": "rock" },
+    { "id": "rock_w2", "position": [-55, 70], "size": [8, 8], "type": "rock" },
+    { "id": "rock_w3", "position": [-88, 58], "size": [8, 14], "type": "rock" },
+    { "id": "rock_w4", "position": [-70, 80], "size": [6, 6], "type": "rock" },
+    { "id": "rock_w5", "position": [-45, 90], "size": [10, 6], "type": "rock" },
+
+    { "id": "garden_e_s_e", "position": [72, 47], "size": [52, 2], "type": "normal" },
+    { "id": "garden_e_s_w", "position": [37, 47], "size": [8, 2], "type": "normal" },
+    { "id": "garden_e_w", "position": [32, 72], "size": [2, 52], "type": "normal" },
+    { "id": "rock_e1", "position": [82, 88], "size": [12, 10], "type": "rock" },
+    { "id": "rock_e2", "position": [55, 70], "size": [8, 8], "type": "rock" },
+    { "id": "rock_e3", "position": [88, 58], "size": [8, 14], "type": "rock" },
+    { "id": "rock_e4", "position": [70, 80], "size": [6, 6], "type": "rock" },
+    { "id": "rock_e5", "position": [45, 90], "size": [10, 6], "type": "rock" },
+
+    { "id": "south_hall_w", "position": [-12, -50], "size": [2, 42], "type": "normal" },
+    { "id": "south_hall_e", "position": [12, -50], "size": [2, 42], "type": "normal" },
+    { "id": "south_corr_w_n", "position": [-50, -32], "size": [74, 2], "type": "normal" },
+    { "id": "south_corr_w_s", "position": [-50, -42], "size": [74, 2], "type": "normal" },
+    { "id": "south_corr_e_n", "position": [50, -32], "size": [74, 2], "type": "normal" },
+    { "id": "south_corr_e_s", "position": [50, -42], "size": [74, 2], "type": "normal" },
+    { "id": "sec_room_w_e", "position": [-50, -60], "size": [2, 34], "type": "normal" },
+    { "id": "sec_room_w_w", "position": [-85, -60], "size": [2, 34], "type": "normal" },
+    { "id": "sec_room_w_s", "position": [-67, -76], "size": [34, 2], "type": "normal" },
+    { "id": "sec_room_e_w", "position": [50, -60], "size": [2, 34], "type": "normal" },
+    { "id": "sec_room_e_e", "position": [85, -60], "size": [2, 34], "type": "normal" },
+    { "id": "sec_room_e_s", "position": [67, -76], "size": [34, 2], "type": "normal" },
+    { "id": "entrance_w", "position": [-6, -72], "size": [10, 2], "type": "reinforced" },
+    { "id": "entrance_e", "position": [6, -72], "size": [10, 2], "type": "reinforced" }
+  ],
+
+  "doors": [
+    { "id": "door_lab_n", "position": [0, 15], "size": [6, 3], "state": "closed", "locked": true },
+    { "id": "door_lab_s", "position": [0, -15], "size": [6, 3], "state": "closed", "locked": false },
+    { "id": "door_lab_e", "position": [15, 0], "size": [3, 6], "state": "closed", "locked": false },
+    { "id": "door_lab_w", "position": [-15, 0], "size": [3, 6], "state": "closed", "locked": true },
+
+    { "id": "door_corr_n", "position": [0, 28], "size": [6, 2], "state": "open", "locked": false },
+    { "id": "door_corr_s", "position": [0, -28], "size": [6, 2], "state": "open", "locked": false },
+    { "id": "door_corr_e", "position": [28, 0], "size": [2, 6], "state": "open", "locked": false },
+    { "id": "door_corr_w", "position": [-28, 0], "size": [2, 6], "state": "open", "locked": false },
+
+    { "id": "door_pris_w_enter", "position": [-32, 0], "size": [2, 6], "state": "closed", "locked": false },
+    { "id": "door_pris_e_enter", "position": [32, 0], "size": [2, 6], "state": "closed", "locked": false },
+
+    { "id": "door_cell_w1", "position": [-42, 22], "size": [2, 4], "state": "open", "locked": false },
+    { "id": "door_cell_w2", "position": [-42, 13], "size": [2, 4], "state": "closed", "locked": true },
+    { "id": "door_cell_w3", "position": [-42, 4], "size": [2, 4], "state": "open", "locked": false },
+    { "id": "door_cell_w4", "position": [-42, -4], "size": [2, 4], "state": "closed", "locked": false },
+    { "id": "door_cell_w5", "position": [-42, -13], "size": [2, 4], "state": "open", "locked": false },
+    { "id": "door_cell_w6", "position": [-42, -22], "size": [2, 4], "state": "closed", "locked": true },
+
+    { "id": "door_cell_e1", "position": [42, 22], "size": [2, 4], "state": "open", "locked": false },
+    { "id": "door_cell_e2", "position": [42, 13], "size": [2, 4], "state": "closed", "locked": false },
+    { "id": "door_cell_e3", "position": [42, 4], "size": [2, 4], "state": "open", "locked": false },
+    { "id": "door_cell_e4", "position": [42, -4], "size": [2, 4], "state": "closed", "locked": true },
+    { "id": "door_cell_e5", "position": [42, -13], "size": [2, 4], "state": "open", "locked": false },
+    { "id": "door_cell_e6", "position": [42, -22], "size": [2, 4], "state": "closed", "locked": false },
+
+    { "id": "door_hall_nw_s", "position": [-37, 32], "size": [6, 2], "state": "open", "locked": false },
+    { "id": "door_garden_w", "position": [-37, 47], "size": [6, 2], "state": "open", "locked": false },
+    { "id": "door_hall_ne_s", "position": [37, 32], "size": [6, 2], "state": "open", "locked": false },
+    { "id": "door_garden_e", "position": [37, 47], "size": [6, 2], "state": "open", "locked": false },
+
+    { "id": "door_south_main", "position": [0, -28], "size": [6, 2], "state": "open", "locked": false },
+    { "id": "door_south_hall_w", "position": [-12, -37], "size": [2, 6], "state": "open", "locked": false },
+    { "id": "door_south_hall_e", "position": [12, -37], "size": [2, 6], "state": "open", "locked": false },
+    { "id": "door_sec_w", "position": [-50, -55], "size": [2, 6], "state": "closed", "locked": false },
+    { "id": "door_sec_e", "position": [50, -55], "size": [2, 6], "state": "closed", "locked": false },
+    { "id": "door_entrance_main", "position": [0, -72], "size": [6, 2], "state": "closed", "locked": true }
+  ],
+
+  "portals": [
+    {
+      "id": "portal_spider_nest",
+      "position": [-75, 82],
+      "type": "spider",
+      "homeRange": 30,
+      "detectionRange": 55,
+      "maxEnemies": 15,
+      "spawnRate": 2
+    },
+    {
+      "id": "portal_worm_nest",
+      "position": [75, 82],
+      "type": "worm",
+      "homeRange": 30,
+      "detectionRange": 55,
+      "maxEnemies": 12,
+      "spawnRate": 2.5
+    },
+    {
+      "id": "portal_spider_cell",
+      "position": [-58, 13],
+      "type": "spider",
+      "homeRange": 8,
+      "detectionRange": 18,
+      "maxEnemies": 3,
+      "spawnRate": 6
+    },
+    {
+      "id": "portal_worm_security",
+      "position": [67, -60],
+      "type": "worm",
+      "homeRange": 12,
+      "detectionRange": 22,
+      "maxEnemies": 4,
+      "spawnRate": 5
+    }
+  ],
+
+  "spawnPoints": [
+    {
+      "id": "player_spawn",
+      "position": [0, 0],
+      "type": "player"
+    }
+  ]
+}

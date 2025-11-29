@@ -13,9 +13,10 @@ export class EnemyThree {
     private enemyType: 'spider' | 'worm' = 'spider'; // Enemy type
 
     // Collision and sprite dimensions (for debug visualization)
-    public static readonly COLLISION_RADIUS = 1.5;
-    public static readonly SPRITE_WIDTH = 2;
-    public static readonly SPRITE_HEIGHT = 2;
+    // Enemies are slightly smaller than player to navigate corridors
+    public static readonly COLLISION_RADIUS = 0.8;
+    public static readonly SPRITE_WIDTH = 1.5;
+    public static readonly SPRITE_HEIGHT = 1.5;
 
     // Debug visualization group
     public debugGroup: THREE.Group | null = null;
