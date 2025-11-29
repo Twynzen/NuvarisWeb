@@ -130,6 +130,16 @@ export class RoomVisibilityManager {
     }
 
     /**
+     * Register an existing room instance with the visibility system
+     * Used for procedurally generated rooms that are already created
+     */
+    registerRoom(room: RoomInstance): void {
+        this.detectionSystem.registerRoom(room);
+        this.lightingSystem.registerRoomLights(room);
+        this.wallCollisionSystem.registerRoomWalls(room);
+    }
+
+    /**
      * Connect two rooms via their doors
      */
     connectRooms(
