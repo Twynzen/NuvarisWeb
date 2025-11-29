@@ -1,0 +1,128 @@
+.level-up-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 10, 26, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.container {
+    text-align: center;
+    width: 100%;
+}
+
+.title {
+    color: #00f5ff;
+    font-size: 3em;
+    margin-bottom: 50px;
+    text-shadow: 0 0 20px #00f5ff;
+    animation: pulse 2s infinite;
+}
+
+.cards-container {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    padding: 20px;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid #fff;
+    border-radius: 10px;
+    padding: 30px;
+    width: 250px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    }
+
+    .icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+    }
+
+    .name {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+        color: #fff;
+    }
+
+    .description {
+        color: #aaa;
+        font-size: 0.9em;
+        line-height: 1.4;
+    }
+
+    .rarity-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 0.7em;
+        padding: 2px 5px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    // Rarity Styles
+    &.common {
+        border-color: #00f5ff;
+
+        &:hover {
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.4);
+        }
+
+        .name {
+            color: #00f5ff;
+        }
+    }
+
+    &.rare {
+        border-color: #ff00ff;
+
+        &:hover {
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
+        }
+
+        .name {
+            color: #ff00ff;
+        }
+    }
+
+    &.legendary {
+        border-color: #ffd700;
+
+        &:hover {
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+        }
+
+        .name {
+            color: #ffd700;
+        }
+    }
+}
+
+@keyframes pulse {
+    0% {
+        text-shadow: 0 0 20px #00f5ff;
+    }
+
+    50% {
+        text-shadow: 0 0 40px #00f5ff, 0 0 10px #fff;
+    }
+
+    100% {
+        text-shadow: 0 0 20px #00f5ff;
+    }
+}

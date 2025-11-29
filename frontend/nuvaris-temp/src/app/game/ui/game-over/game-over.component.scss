@@ -1,0 +1,119 @@
+.game-over-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(20, 0, 0, 0.9);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 4000;
+    font-family: 'Courier New', Courier, monospace;
+    pointer-events: auto;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pulseRed {
+    0%, 100% {
+        text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000, 0 0 60px #ff0000;
+    }
+    50% {
+        text-shadow: 0 0 30px #ff0000, 0 0 60px #ff0000, 0 0 90px #ff0000;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.game-over-container {
+    text-align: center;
+    border: 3px solid #ff0000;
+    padding: 60px 80px;
+    background: rgba(0, 0, 0, 0.9);
+    box-shadow: 0 0 50px rgba(255, 0, 0, 0.4), inset 0 0 30px rgba(255, 0, 0, 0.1);
+    animation: slideDown 0.6s ease-out;
+}
+
+.title {
+    color: #fff;
+    font-size: 3.5em;
+    margin-bottom: 40px;
+    letter-spacing: 8px;
+}
+
+.death-title {
+    color: #ff0000;
+    animation: pulseRed 2s ease-in-out infinite;
+    text-transform: uppercase;
+}
+
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    margin-bottom: 50px;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+
+    .label {
+        color: #888;
+        font-size: 0.9em;
+        letter-spacing: 2px;
+    }
+
+    .value {
+        color: #fff;
+        font-size: 2.5em;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+}
+
+.menu-btn {
+    background: transparent;
+    border: 2px solid #ff0000;
+    color: #ff0000;
+    padding: 18px 50px;
+    font-size: 1.3em;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+
+    &:hover {
+        background: rgba(255, 0, 0, 0.2);
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+        transform: scale(1.05);
+    }
+}

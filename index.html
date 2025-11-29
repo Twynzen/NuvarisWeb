@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NÚVARIS - Roguelite Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
+        #game-container {
+            border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        #loading {
+            color: #0ff;
+            font-size: 24px;
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Cargando NÚVARIS...</div>
+    <div id="game-container"></div>
+
+    <script type="module">
+        // Este es un launcher temporal
+        // El juego completo está en TypeScript en frontend/src/app/game/
+
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#1a1a2e',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        let player;
+        let cursors;
+        let enemies = [];
+        let projectiles = [];
+        let healthText;
+        let timerText;
+        let gameTime = 0;
+
+        function preload() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function create() {
+            // Instrucciones
+            const title = this.add.text(400, 50, 'NÚVARIS - DEMO', {
+                fontSize: '32px',
+                fill: '#0ff',
+                fontStyle: 'bold'
+            }).setOrigin(0.5);
+
+            const instructions = this.add.text(400, 100,
+                'Este es un DEMO simple\n' +
+                'El juego completo está en TypeScript\n\n' +
+                'Para jugar la versión completa:\n' +
+                '1. Abre PowerShell en este directorio\n' +
+                '2. Ejecuta: npm install -g @ionic/cli\n' +
+                '3. cd frontend/nuvaris-temp (cuando termine)\n' +
+                '4. npm install phaser\n' +
+                '5. ionic serve\n\n' +
+                'Características MVP completo:\n' +
+                '• 6 armas únicas\n' +
+                '• 3 tipos de enemigos + Boss\n' +
+                '• Sistema de level-up con 13+ habilidades\n' +
+                '• Mobile support\n' +
+                '• Object pooling optimizado\n\n' +
+                'Ver MVP_COMPLETE.md para más detalles',
+                {
+                    fontSize: '14px',
+                    fill: '#fff',
+                    align: 'center',
+                    lineSpacing: 5
+                }
+            ).setOrigin(0.5);
+
+            // Player simple
+            player = this.add.rectangle(400, 450, 20, 20, 0x00ff00);
+
+            // Controles
+            cursors = this.input.keyboard.createCursorKeys();
+            this.wasd = {
+                up: this.input.keyboard.addKey('W'),
+                down: this.input.keyboard.addKey('S'),
+                left: this.input.keyboard.addKey('A'),
+                right: this.input.keyboard.addKey('D')
+            };
+
+            // UI
+            healthText = this.add.text(10, 10, 'HP: 100', {
+                fontSize: '16px',
+                fill: '#0f0'
+            });
+
+            timerText = this.add.text(10, 30, 'Tiempo: 0s', {
+                fontSize: '16px',
+                fill: '#fff'
+            });
+
+            this.add.text(400, 550,
+                'WASD o Flechas para mover (Demo básico)',
+                { fontSize: '12px', fill: '#888' }
+            ).setOrigin(0.5);
+        }
+
+        function update(time, delta) {
+            gameTime += delta;
+            timerText.setText('Tiempo: ' + Math.floor(gameTime / 1000) + 's');
+
+            // Movimiento simple
+            const speed = 3;
+            if (cursors.left.isDown || this.wasd.left.isDown) {
+                player.x -= speed;
+            }
+            if (cursors.right.isDown || this.wasd.right.isDown) {
+                player.x += speed;
+            }
+            if (cursors.up.isDown || this.wasd.up.isDown) {
+                player.y -= speed;
+            }
+            if (cursors.down.isDown || this.wasd.down.isDown) {
+                player.y += speed;
+            }
+
+            // Mantener en pantalla
+            player.x = Phaser.Math.Clamp(player.x, 10, 790);
+            player.y = Phaser.Math.Clamp(player.y, 150, 590);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+<div class="editor-container">
+  <!-- TOOLBAR (arriba) -->
+  <div class="editor-toolbar">
+    <!-- Menú Archivo -->
+    <div class="menu-container">
+      <button class="menu-btn" (click)="toggleMenu('file'); $event.stopPropagation()">
+        Archivo ▼
+      </button>
+      <div class="dropdown-menu" *ngIf="showFileMenu">
+        <button (click)="newMap()">📄 Nuevo Mapa</button>
+        <button (click)="loadMap()">📂 Cargar Mapa (JSON)</button>
+        <button (click)="saveMap()">💾 Guardar Mapa</button>
+        <div class="menu-divider"></div>
+        <button (click)="loadTemplate()">🗺️ Cargar Plantilla Base</button>
+      </div>
+    </div>
+
+    <!-- Menú Editar -->
+    <div class="menu-container">
+      <button class="menu-btn" (click)="toggleMenu('edit'); $event.stopPropagation()">
+        Editar ▼
+      </button>
+      <div class="dropdown-menu" *ngIf="showEditMenu">
+        <button (click)="duplicateSelected()" [disabled]="!selectedObject">📋 Duplicar (Ctrl+D)</button>
+        <button (click)="deleteSelected()" [disabled]="!selectedObject">🗑️ Eliminar (Delete)</button>
+        <div class="menu-divider"></div>
+        <button (click)="deselectObject()">❌ Deseleccionar (Esc)</button>
+      </div>
+    </div>
+
+    <!-- Menú Vista -->
+    <div class="menu-container">
+      <button class="menu-btn" (click)="toggleMenu('view'); $event.stopPropagation()">
+        Vista ▼
+      </button>
+      <div class="dropdown-menu" *ngIf="showViewMenu">
+        <button (click)="setView('top'); closeAllMenus()">⬇️ Vista Superior</button>
+        <button (click)="setView('front'); closeAllMenus()">➡️ Vista Frontal</button>
+        <button (click)="setView('side'); closeAllMenus()">⬆️ Vista Lateral</button>
+        <button (click)="setView('isometric'); closeAllMenus()">◇ Vista Isométrica</button>
+        <div class="menu-divider"></div>
+        <button (click)="toggleGrid(); closeAllMenus()">
+          {{ showGrid ? '✅' : '⬜' }} Mostrar Grid
+        </button>
+        <button (click)="toggleRanges(); closeAllMenus()">
+          {{ showRanges ? '✅' : '⬜' }} Mostrar Rangos
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Transform Tools -->
+    <div class="tool-group">
+      <button
+        class="tool-btn"
+        [class.active]="currentMode === 'translate'"
+        (click)="setMode('translate')"
+        title="Mover (W)">
+        <span class="icon">⬌</span>
+        <span class="label">W</span>
+      </button>
+      <button
+        class="tool-btn"
+        [class.active]="currentMode === 'rotate'"
+        (click)="setMode('rotate')"
+        title="Rotar (E)">
+        <span class="icon">↻</span>
+        <span class="label">E</span>
+      </button>
+      <button
+        class="tool-btn"
+        [class.active]="currentMode === 'scale'"
+        (click)="setMode('scale')"
+        title="Escalar (R)">
+        <span class="icon">⤢</span>
+        <span class="label">R</span>
+      </button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Snap Toggle -->
+    <button
+      class="tool-btn"
+      [class.active]="isSnapEnabled"
+      (click)="toggleSnap()"
+      title="Snap al Grid (Shift)">
+      <span class="icon">⊞</span>
+      <span class="label">Snap</span>
+    </button>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Procedural Generation Button -->
+    <button
+      class="tool-btn procedural-btn"
+      [class.active]="showProceduralPanel"
+      (click)="toggleProceduralPanel()"
+      title="Generador Procedural de Mapas">
+      <span class="icon">🎲</span>
+      <span class="label">Procedural</span>
+    </button>
+  </div>
+
+  <!-- PROCEDURAL GENERATION PANEL (floating) -->
+  <div class="procedural-panel" *ngIf="showProceduralPanel">
+    <div class="procedural-header">
+      <span class="procedural-title">🎲 GENERADOR PROCEDURAL</span>
+      <button class="close-btn" (click)="toggleProceduralPanel()">✕</button>
+    </div>
+
+    <div class="procedural-content">
+      <!-- Seed -->
+      <div class="procedural-section">
+        <div class="section-label">SEED</div>
+        <div class="seed-row">
+          <input
+            type="text"
+            [(ngModel)]="proceduralConfig.seed"
+            class="seed-input"
+            placeholder="Seed del mapa">
+          <button class="seed-refresh" (click)="generateRandomSeed()" title="Generar nuevo seed">
+            🔄
+          </button>
+        </div>
+      </div>
+
+      <!-- Map Size -->
+      <div class="procedural-section">
+        <div class="section-label">TAMAÑO DEL MAPA</div>
+        <div class="config-row">
+          <label>Ancho:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.mapWidth" min="100" max="400" step="20">
+        </div>
+        <div class="config-row">
+          <label>Profundidad:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.mapDepth" min="100" max="400" step="20">
+        </div>
+      </div>
+
+      <!-- Room Settings -->
+      <div class="procedural-section">
+        <div class="section-label">HABITACIONES</div>
+        <div class="config-row">
+          <label>Tamaño Mínimo:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.minRoomSize" min="10" max="30" step="5">
+        </div>
+        <div class="config-row">
+          <label>Tamaño Máximo:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.maxRoomSize" min="20" max="60" step="5">
+        </div>
+        <div class="config-row">
+          <label>Complejidad:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.maxDepth" min="3" max="8" step="1">
+          <span class="hint">(más = más habitaciones)</span>
+        </div>
+      </div>
+
+      <!-- Corridor Settings -->
+      <div class="procedural-section">
+        <div class="section-label">PASILLOS</div>
+        <div class="config-row">
+          <label>Ancho:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.corridorWidth" min="3" max="12" step="1">
+        </div>
+      </div>
+
+      <!-- Portals -->
+      <div class="procedural-section">
+        <div class="section-label">PORTALES</div>
+        <div class="config-row">
+          <label>Cantidad:</label>
+          <input type="number" [(ngModel)]="proceduralConfig.portalCount" min="1" max="8" step="1">
+        </div>
+      </div>
+
+      <!-- Doors -->
+      <div class="procedural-section">
+        <div class="section-label">PUERTAS</div>
+        <div class="config-row checkbox-row">
+          <label>Generar Puertas:</label>
+          <input type="checkbox" [(ngModel)]="proceduralConfig.generateDoors">
+        </div>
+        <div class="config-row" *ngIf="proceduralConfig.generateDoors">
+          <label>Probabilidad:</label>
+          <input type="range" [(ngModel)]="proceduralConfig.doorChance" min="0" max="1" step="0.1">
+          <span class="range-value">{{ (proceduralConfig.doorChance * 100).toFixed(0) }}%</span>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <div class="procedural-actions">
+        <button
+          class="generate-btn"
+          (click)="generateProceduralMap()"
+          [disabled]="isGenerating">
+          <span *ngIf="!isGenerating">🎮 GENERAR MAPA</span>
+          <span *ngIf="isGenerating">⏳ Generando...</span>
+        </button>
+        <button
+          class="export-btn"
+          (click)="exportProceduralMapAsJSON()"
+          title="Exportar como JSON para el juego">
+          💾 Exportar JSON
+        </button>
+      </div>
+
+      <!-- Info -->
+      <div class="procedural-info">
+        <p>El generador usa BSP (Binary Space Partitioning) para crear mapas tipo dungeon con habitaciones conectadas por pasillos.</p>
+        <p>Usa el mismo seed para regenerar el mismo mapa.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="editor-main">
+    <!-- PANEL IZQUIERDO - Catálogo de Objetos -->
+    <div class="left-panel">
+      <div class="panel-header">
+        <span class="panel-title">📦 OBJETOS</span>
+      </div>
+      <div class="catalog-content">
+        <div class="catalog-category" *ngFor="let category of objectCatalog">
+          <div class="category-header" (click)="toggleCategory(category)">
+            <span class="category-icon">{{ category.icon }}</span>
+            <span class="category-name">{{ category.name }}</span>
+            <span class="category-arrow">{{ category.expanded ? '▼' : '▶' }}</span>
+          </div>
+          <div class="category-items" *ngIf="category.expanded">
+            <div
+              class="catalog-item"
+              *ngFor="let item of category.items"
+              (click)="onCatalogItemClick(item)"
+              title="Click para colocar">
+              <span class="item-icon">{{ item.icon }}</span>
+              <span class="item-name">{{ item.name }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEWPORT 3D -->
+    <div class="viewport-container">
+      <canvas #editorCanvas></canvas>
+    </div>
+
+    <!-- PANEL DERECHO - Propiedades -->
+    <div class="right-panel">
+      <div class="panel-header">
+        <span class="panel-title">⚙️ PROPIEDADES</span>
+      </div>
+
+      <div class="properties-content" *ngIf="selectedObject; else noSelection">
+        <!-- Información básica -->
+        <div class="property-section">
+          <div class="section-title">INFORMACIÓN</div>
+          <div class="property-row">
+            <label>ID:</label>
+            <span class="property-value">{{ selectedObject.id }}</span>
+          </div>
+          <div class="property-row">
+            <label>Tipo:</label>
+            <span class="property-value type-badge" [attr.data-type]="selectedObject.type">
+              {{ selectedObject.type | uppercase }}
+            </span>
+          </div>
+          <div class="property-row" *ngIf="selectedObject.subtype">
+            <label>Subtipo:</label>
+            <span class="property-value">{{ selectedObject.subtype }}</span>
+          </div>
+        </div>
+
+        <!-- Posición -->
+        <div class="property-section">
+          <div class="section-title">POSICIÓN</div>
+          <div class="property-row">
+            <label>X:</label>
+            <input
+              type="number"
+              [value]="selectedObject.mesh.position.x | number:'1.1-1'"
+              (change)="updateObjectPosition('x', $any($event.target).valueAsNumber)"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Z:</label>
+            <input
+              type="number"
+              [value]="selectedObject.mesh.position.z | number:'1.1-1'"
+              (change)="updateObjectPosition('z', $any($event.target).valueAsNumber)"
+              step="1">
+          </div>
+        </div>
+
+        <!-- Configuración de Portal -->
+        <div class="property-section" *ngIf="selectedObject.type === 'portal'">
+          <div class="section-title">CONFIGURACIÓN PORTAL</div>
+          <div class="property-row">
+            <label>Home Range:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.homeRange"
+              (change)="updatePortalConfig('homeRange', $any($event.target).valueAsNumber)"
+              min="5"
+              max="50"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Detection Range:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.detectionRange"
+              (change)="updatePortalConfig('detectionRange', $any($event.target).valueAsNumber)"
+              min="10"
+              max="100"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Max Enemies:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.maxEnemies"
+              (change)="updatePortalConfig('maxEnemies', $any($event.target).valueAsNumber)"
+              min="1"
+              max="50"
+              step="1">
+          </div>
+          <div class="property-row">
+            <label>Spawn Rate:</label>
+            <input
+              type="number"
+              [value]="selectedObject.config.spawnRate"
+              (change)="updatePortalConfig('spawnRate', $any($event.target).valueAsNumber)"
+              min="0.5"
+              max="10"
+              step="0.5">
+          </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="property-section actions">
+          <button class="action-btn duplicate" (click)="duplicateSelected()">
+            📋 Duplicar
+          </button>
+          <button class="action-btn delete" (click)="deleteSelected()">
+            🗑️ Eliminar
+          </button>
+        </div>
+      </div>
+
+      <ng-template #noSelection>
+        <div class="no-selection">
+          <div class="no-selection-icon">🎯</div>
+          <div class="no-selection-text">Selecciona un objeto para ver sus propiedades</div>
+          <div class="no-selection-hint">Click en un objeto del viewport o del catálogo</div>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="status-label">Cursor:</span>
+      <span class="status-value">X: {{ cursorPosition.x }} | Z: {{ cursorPosition.z }}</span>
+    </div>
+    <div class="status-item" *ngIf="selectedObject">
+      <span class="status-label">Seleccionado:</span>
+      <span class="status-value">{{ selectedObject.id }}</span>
+    </div>
+    <div class="status-item help">
+      <span>LMB: Pan | RMB: Rotar | Scroll: Zoom | W/E/R: Transform | G: Grid | Delete: Eliminar</span>
+    </div>
+  </div>
+</div>

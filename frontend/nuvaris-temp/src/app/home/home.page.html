@@ -1,0 +1,4 @@
+<ion-content [fullscreen]="true">
+  <app-main-menu *ngIf="!gameStarted" (characterSelected)="startGame($event)"></app-main-menu>
+  <app-three-game *ngIf="gameStarted" [characterId]="selectedCharacterId" (quitGame)="onQuitGame()"></app-three-game>
+</ion-content>
