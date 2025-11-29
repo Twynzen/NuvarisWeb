@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 // ============================================
-// MAP DATA INTERFACES
+// MAP DATA INTERFACES (Normalized Format)
 // ============================================
 
 export interface PortalConfig {
@@ -27,9 +27,48 @@ export interface MapObject {
 export interface MapData {
     name: string;
     version: string;
-    gridSize: number;
+    gridSize?: number;
+    size?: { width: number; height: number };
     playerSpawn?: { x: number; z: number };
     objects: MapObject[];
+}
+
+// ============================================
+// LEGACY/PROCEDURAL FORMAT INTERFACES
+// (Format from procedural generator)
+// ============================================
+
+interface LegacyWall {
+    id: string;
+    position: [number, number];  // [x, z] array
+    size: [number, number];      // [width, depth] array
+    type: string;
+}
+
+interface LegacyPortal {
+    id: string;
+    position: [number, number];  // [x, z] array
+    type: 'spider' | 'worm';
+    homeRange: number;
+    detectionRange: number;
+    maxEnemies: number;
+    spawnRate: number;
+}
+
+interface LegacySpawnPoint {
+    id: string;
+    position: [number, number];  // [x, z] array
+    type: string;
+}
+
+interface LegacyMapData {
+    id?: string;
+    name: string;
+    version: string;
+    size?: { width: number; height: number };
+    walls: LegacyWall[];
+    portals: LegacyPortal[];
+    spawnPoints: LegacySpawnPoint[];
 }
 
 // ============================================
@@ -42,7 +81,7 @@ export interface MapData {
 export class MapLoaderService {
     // Available maps - hardcoded list for now
     // In production, this could be fetched from a server
-    private readonly AVAILABLE_MAPS = ['default', 'small-arena'];
+    private readonly AVAILABLE_MAPS = ['default', 'small-arena', 'sector-omega'];
 
     private currentMapName: string = '';
     private currentMapData: MapData | null = null;
@@ -77,9 +116,12 @@ export class MapLoaderService {
         const url = `assets/maps/${mapName}.json`;
 
         try {
-            const mapData = await firstValueFrom(
-                this.http.get<MapData>(url)
+            const rawData = await firstValueFrom(
+                this.http.get<any>(url)
             );
+
+            // Normalize the map data (handles both formats)
+            const mapData = this.normalizeMapFormat(rawData);
 
             this.currentMapName = mapName;
             this.currentMapData = mapData;
@@ -95,11 +137,114 @@ export class MapLoaderService {
     /**
      * Load map from raw JSON data (for editor integration)
      */
-    loadFromData(mapData: MapData): MapData {
+    loadFromData(rawData: any): MapData {
+        const mapData = this.normalizeMapFormat(rawData);
         this.currentMapName = mapData.name || 'custom';
         this.currentMapData = mapData;
         console.log(`[MapLoader] Loaded custom map: ${this.currentMapName}`);
         return mapData;
+    }
+
+    /**
+     * Detect and normalize map format
+     * Supports both:
+     * - New format: { objects: [...] }
+     * - Legacy format: { walls: [...], portals: [...], spawnPoints: [...] }
+     */
+    private normalizeMapFormat(rawData: any): MapData {
+        // Check if it's already in the new format (has 'objects' array)
+        if (rawData.objects && Array.isArray(rawData.objects)) {
+            console.log('[MapLoader] Detected new format (objects array)');
+            return rawData as MapData;
+        }
+
+        // Check if it's legacy format (has 'walls', 'portals', 'spawnPoints')
+        if (rawData.walls || rawData.portals || rawData.spawnPoints) {
+            console.log('[MapLoader] Detected legacy format, converting...');
+            return this.convertLegacyFormat(rawData as LegacyMapData);
+        }
+
+        // Unknown format, return as-is with empty objects
+        console.warn('[MapLoader] Unknown map format, returning empty objects');
+        return {
+            name: rawData.name || 'unknown',
+            version: rawData.version || '1.0',
+            objects: []
+        };
+    }
+
+    /**
+     * Convert legacy format to normalized format
+     */
+    private convertLegacyFormat(legacy: LegacyMapData): MapData {
+        const objects: MapObject[] = [];
+
+        // Convert walls
+        if (legacy.walls) {
+            for (const wall of legacy.walls) {
+                objects.push({
+                    id: wall.id,
+                    type: 'wall',
+                    subtype: wall.type || 'normal',
+                    position: {
+                        x: wall.position[0],
+                        z: wall.position[1]
+                    },
+                    scale: {
+                        x: wall.size[0],
+                        z: wall.size[1]
+                    }
+                });
+            }
+        }
+
+        // Convert portals
+        if (legacy.portals) {
+            for (const portal of legacy.portals) {
+                objects.push({
+                    id: portal.id,
+                    type: 'portal',
+                    subtype: portal.type,
+                    position: {
+                        x: portal.position[0],
+                        z: portal.position[1]
+                    },
+                    config: {
+                        homeRange: portal.homeRange,
+                        detectionRange: portal.detectionRange,
+                        returnThreshold: portal.detectionRange + 10, // Default offset
+                        maxEnemies: portal.maxEnemies,
+                        spawnRate: portal.spawnRate
+                    }
+                });
+            }
+        }
+
+        // Convert spawn points
+        if (legacy.spawnPoints) {
+            for (const spawn of legacy.spawnPoints) {
+                objects.push({
+                    id: spawn.id,
+                    type: 'spawn',
+                    subtype: spawn.type,
+                    position: {
+                        x: spawn.position[0],
+                        z: spawn.position[1]
+                    }
+                });
+            }
+        }
+
+        const normalized: MapData = {
+            name: legacy.name,
+            version: legacy.version,
+            size: legacy.size,
+            objects
+        };
+
+        console.log(`[MapLoader] Converted legacy format: ${objects.length} objects (${legacy.walls?.length || 0} walls, ${legacy.portals?.length || 0} portals, ${legacy.spawnPoints?.length || 0} spawns)`);
+
+        return normalized;
     }
 
     /**
