@@ -15,7 +15,8 @@ import { LarsAbilityThree } from '../abilities/lars-ability-three';
 import { YuranyAbilityThree } from '../abilities/yurany-ability-three';
 import { MapLoaderService, MapData, MapObject, DoorMapConfig } from '../services/map-loader.service';
 import { RoomVisibilityManager } from '../world/room-visibility.manager';
-import { RoomTemplateLoader } from '../world/room-factory';
+import { RoomTemplateLoader, RoomFactory } from '../world/room-factory';
+import { TemplateMapGenerator, TemplateMapConfig, GeneratedTemplateMap } from '../world/template-map-generator';
 import { SimpleTween } from '../utils/simple-tween';
 
 // Default map to load on game start
@@ -48,6 +49,11 @@ export class ThreeEngineService implements OnDestroy {
 
     // Room Visibility System (limited vision per room)
     private roomVisibilityManager!: RoomVisibilityManager;
+
+    // Template-based map generator
+    private roomFactory!: RoomFactory;
+    private templateMapGenerator!: TemplateMapGenerator;
+    private currentGeneratedMap: GeneratedTemplateMap | null = null;
 
     // Map system
     private mapWalls: THREE.Mesh[] = [];
@@ -368,6 +374,100 @@ export class ThreeEngineService implements OnDestroy {
             health: this.gameState.health,
             timeScale: this.timeScale
         };
+    }
+
+    // --- Procedural Map Generation with Templates ---
+
+    /**
+     * Generate a procedural map using room templates
+     */
+    public async generateProceduralMap(config?: Partial<TemplateMapConfig>): Promise<void> {
+        // Clear current map
+        this.clearCurrentMap();
+
+        // Dispose previous generated map
+        if (this.currentGeneratedMap) {
+            this.templateMapGenerator.dispose();
+            this.currentGeneratedMap = null;
+        }
+
+        // Initialize factory and generator if needed
+        if (!this.roomFactory) {
+            this.roomFactory = new RoomFactory(this.scene);
+        }
+        if (!this.templateMapGenerator) {
+            this.templateMapGenerator = new TemplateMapGenerator(
+                this.scene,
+                this.roomTemplateLoader,
+                this.roomFactory
+            );
+        }
+
+        // Default configuration
+        const fullConfig: TemplateMapConfig = {
+            seed: config?.seed || `map_${Date.now()}`,
+            startTemplate: config?.startTemplate || 'hub_large',
+            minRooms: config?.minRooms || 8,
+            maxRooms: config?.maxRooms || 15,
+            biomeWeights: config?.biomeWeights || {
+                'hub': 0.1,
+                'corridor': 0.4,
+                'prison': 0.3,
+                'laboratory': 0.3
+            },
+            difficultyProgression: config?.difficultyProgression ?? true,
+            maxDifficulty: config?.maxDifficulty || 5,
+            branchingFactor: config?.branchingFactor || 0.7
+        };
+
+        try {
+            // Generate the map
+            this.currentGeneratedMap = await this.templateMapGenerator.generate(fullConfig);
+
+            // Register walls for collision
+            for (const room of this.currentGeneratedMap.rooms) {
+                for (const wall of room.walls) {
+                    this.mapWalls.push(wall);
+                }
+            }
+
+            // Update room visibility manager with generated rooms
+            if (this.roomVisibilityManager) {
+                for (const room of this.currentGeneratedMap.rooms) {
+                    this.roomVisibilityManager.registerRoom(room);
+                }
+            }
+
+            // Set player position to start room
+            if (this.player && this.currentGeneratedMap.rooms.length > 0) {
+                const startRoom = this.currentGeneratedMap.rooms.find(
+                    r => r.id === this.currentGeneratedMap!.startRoomId
+                );
+                if (startRoom) {
+                    this.player.mesh.position.set(
+                        startRoom.worldPosition.x,
+                        0,
+                        startRoom.worldPosition.z
+                    );
+                }
+            }
+
+            // Kill all enemies
+            this.killAllEnemies();
+
+            this.currentMapName = `procedural_${fullConfig.seed}`;
+            console.log(`[Game] Generated procedural map: ${this.currentGeneratedMap.rooms.length} rooms`);
+        } catch (error) {
+            console.error('[Game] Failed to generate procedural map:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get list of available room templates
+     */
+    public getAvailableTemplates(): string[] {
+        return this.roomTemplateLoader.getAllTemplates().map(t => t.id);
     }
 
     // Create debug visuals for all existing entities

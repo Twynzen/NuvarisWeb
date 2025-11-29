@@ -205,9 +205,10 @@ export class RoomFactory {
         const floor = this.createFloor(template, layer);
         group.add(floor);
 
-        // Create walls
+        // Create walls with automatic door cuts
         const walls: THREE.Mesh[] = [];
-        for (const wallDef of template.walls) {
+        const processedWalls = this.cutWallsForDoors(template.walls, template.doorSockets);
+        for (const wallDef of processedWalls) {
             const wall = this.createWall(wallDef, template.height, layer);
             walls.push(wall);
             group.add(wall);
@@ -257,6 +258,203 @@ export class RoomFactory {
         };
 
         return instance;
+    }
+
+    /**
+     * Cut walls where doors are positioned
+     * This automatically creates gaps in walls for doorways
+     */
+    private cutWallsForDoors(
+        walls: Array<{ id: string; localPosition: { x: number; z: number }; width: number; depth: number; height?: number; wallType: string }>,
+        doorSockets: Array<{ id: string; localPosition: { x: number; z: number }; direction: string; width: number; socketType: string }>
+    ): Array<{ id: string; localPosition: { x: number; z: number }; width: number; depth: number; height?: number; wallType: string }> {
+        const result: Array<{ id: string; localPosition: { x: number; z: number }; width: number; depth: number; height?: number; wallType: string }> = [];
+
+        for (const wall of walls) {
+            // Find doors that intersect this wall
+            const intersectingDoors: Array<{ door: typeof doorSockets[0]; overlap: { start: number; end: number } }> = [];
+
+            for (const door of doorSockets) {
+                const overlap = this.getDoorWallOverlap(wall, door);
+                if (overlap) {
+                    intersectingDoors.push({ door, overlap });
+                }
+            }
+
+            if (intersectingDoors.length === 0) {
+                // No doors intersect this wall, keep it as is
+                result.push(wall);
+            } else {
+                // Cut wall into segments around the doors
+                const segments = this.cutWallIntoSegments(wall, intersectingDoors.map(d => d.overlap));
+                result.push(...segments);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Check if a door intersects a wall and return the overlap range
+     */
+    private getDoorWallOverlap(
+        wall: { localPosition: { x: number; z: number }; width: number; depth: number },
+        door: { localPosition: { x: number; z: number }; direction: string; width: number }
+    ): { start: number; end: number } | null {
+        const tolerance = 0.5; // Allow small misalignment
+        const halfDoorWidth = door.width / 2;
+
+        // Determine if wall is horizontal (along X) or vertical (along Z)
+        const isHorizontalWall = wall.width > wall.depth;
+
+        if (isHorizontalWall) {
+            // Wall runs along X axis
+            // Door must have N or S direction and be at same Z position
+            if (door.direction !== 'N' && door.direction !== 'S') return null;
+            if (Math.abs(door.localPosition.z - wall.localPosition.z) > tolerance) return null;
+
+            // Calculate wall X range
+            const wallStart = wall.localPosition.x - wall.width / 2;
+            const wallEnd = wall.localPosition.x + wall.width / 2;
+
+            // Calculate door X range
+            const doorStart = door.localPosition.x - halfDoorWidth;
+            const doorEnd = door.localPosition.x + halfDoorWidth;
+
+            // Check if door is within wall range
+            if (doorEnd < wallStart || doorStart > wallEnd) return null;
+
+            // Return overlap in wall-local coordinates (0 = wall start, width = wall end)
+            return {
+                start: Math.max(0, doorStart - wallStart),
+                end: Math.min(wall.width, doorEnd - wallStart)
+            };
+        } else {
+            // Wall runs along Z axis
+            // Door must have E or W direction and be at same X position
+            if (door.direction !== 'E' && door.direction !== 'W') return null;
+            if (Math.abs(door.localPosition.x - wall.localPosition.x) > tolerance) return null;
+
+            // Calculate wall Z range
+            const wallStart = wall.localPosition.z - wall.depth / 2;
+            const wallEnd = wall.localPosition.z + wall.depth / 2;
+
+            // Calculate door Z range
+            const doorStart = door.localPosition.z - halfDoorWidth;
+            const doorEnd = door.localPosition.z + halfDoorWidth;
+
+            // Check if door is within wall range
+            if (doorEnd < wallStart || doorStart > wallEnd) return null;
+
+            // Return overlap in wall-local coordinates
+            return {
+                start: Math.max(0, doorStart - wallStart),
+                end: Math.min(wall.depth, doorEnd - wallStart)
+            };
+        }
+    }
+
+    /**
+     * Cut a wall into segments, removing the door areas
+     */
+    private cutWallIntoSegments(
+        wall: { id: string; localPosition: { x: number; z: number }; width: number; depth: number; height?: number; wallType: string },
+        doorOverlaps: Array<{ start: number; end: number }>
+    ): Array<{ id: string; localPosition: { x: number; z: number }; width: number; depth: number; height?: number; wallType: string }> {
+        const result: typeof wall[] = [];
+        const isHorizontalWall = wall.width > wall.depth;
+        const wallLength = isHorizontalWall ? wall.width : wall.depth;
+
+        // Sort overlaps by start position
+        const sortedOverlaps = [...doorOverlaps].sort((a, b) => a.start - b.start);
+
+        // Merge overlapping door regions
+        const mergedOverlaps: Array<{ start: number; end: number }> = [];
+        for (const overlap of sortedOverlaps) {
+            if (mergedOverlaps.length === 0 || mergedOverlaps[mergedOverlaps.length - 1].end < overlap.start) {
+                mergedOverlaps.push({ ...overlap });
+            } else {
+                mergedOverlaps[mergedOverlaps.length - 1].end = Math.max(mergedOverlaps[mergedOverlaps.length - 1].end, overlap.end);
+            }
+        }
+
+        // Create wall segments between door openings
+        let currentPos = 0;
+        let segmentIndex = 0;
+
+        for (const overlap of mergedOverlaps) {
+            // Add segment before this door (if there's space)
+            if (overlap.start > currentPos + 0.1) {
+                const segmentLength = overlap.start - currentPos;
+                const segmentCenter = currentPos + segmentLength / 2;
+
+                if (isHorizontalWall) {
+                    const wallStartX = wall.localPosition.x - wall.width / 2;
+                    result.push({
+                        id: `${wall.id}_seg${segmentIndex}`,
+                        localPosition: {
+                            x: wallStartX + segmentCenter,
+                            z: wall.localPosition.z
+                        },
+                        width: segmentLength,
+                        depth: wall.depth,
+                        height: wall.height,
+                        wallType: wall.wallType
+                    });
+                } else {
+                    const wallStartZ = wall.localPosition.z - wall.depth / 2;
+                    result.push({
+                        id: `${wall.id}_seg${segmentIndex}`,
+                        localPosition: {
+                            x: wall.localPosition.x,
+                            z: wallStartZ + segmentCenter
+                        },
+                        width: wall.width,
+                        depth: segmentLength,
+                        height: wall.height,
+                        wallType: wall.wallType
+                    });
+                }
+                segmentIndex++;
+            }
+            currentPos = overlap.end;
+        }
+
+        // Add final segment after last door (if there's space)
+        if (wallLength > currentPos + 0.1) {
+            const segmentLength = wallLength - currentPos;
+            const segmentCenter = currentPos + segmentLength / 2;
+
+            if (isHorizontalWall) {
+                const wallStartX = wall.localPosition.x - wall.width / 2;
+                result.push({
+                    id: `${wall.id}_seg${segmentIndex}`,
+                    localPosition: {
+                        x: wallStartX + segmentCenter,
+                        z: wall.localPosition.z
+                    },
+                    width: segmentLength,
+                    depth: wall.depth,
+                    height: wall.height,
+                    wallType: wall.wallType
+                });
+            } else {
+                const wallStartZ = wall.localPosition.z - wall.depth / 2;
+                result.push({
+                    id: `${wall.id}_seg${segmentIndex}`,
+                    localPosition: {
+                        x: wall.localPosition.x,
+                        z: wallStartZ + segmentCenter
+                    },
+                    width: wall.width,
+                    depth: segmentLength,
+                    height: wall.height,
+                    wallType: wall.wallType
+                });
+            }
+        }
+
+        return result;
     }
 
     /**

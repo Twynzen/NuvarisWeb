@@ -69,3 +69,10 @@ export {
 
 // Main visibility manager (recommended entry point)
 export { RoomVisibilityManager } from './room-visibility.manager';
+
+// Template-based procedural map generator
+export {
+    TemplateMapGenerator,
+    TemplateMapConfig,
+    GeneratedTemplateMap
+} from './template-map-generator';

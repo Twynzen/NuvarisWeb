@@ -232,6 +232,9 @@ export class DevConsoleComponent implements AfterViewInit {
                 case 'nebline':
                     this.handleFog(args);
                     break;
+                case 'genmap':
+                    this.handleGenerateMap(args);
+                    break;
                 default:
                     this.addLog('error', `Unknown command: "${cmd}". Type "help" for available commands.`);
             }
@@ -263,7 +266,8 @@ export class DevConsoleComponent implements AfterViewInit {
             { cmd: 'loadmap <name>', desc: 'Load a map by name' },
             { cmd: 'maps', desc: 'List available maps' },
             { cmd: 'mapinfo', desc: 'Show current map info' },
-            { cmd: 'nebline <true/false>', desc: 'Toggle fog/nebline on or off' }
+            { cmd: 'nebline <true/false>', desc: 'Toggle fog/nebline on or off' },
+            { cmd: 'genmap [min] [max]', desc: 'Generate procedural map (default 5-10 rooms)' }
         ];
 
         this.addLog('info', '--- Available Commands ---');
@@ -466,5 +470,34 @@ export class DevConsoleComponent implements AfterViewInit {
         } else {
             throw new Error('Invalid argument. Use: nebline true/false or nebline on/off');
         }
+    }
+
+    // --- Procedural Map Generation ---
+
+    private handleGenerateMap(args: string[]) {
+        const minRooms = args.length > 0 ? parseInt(args[0], 10) : 5;
+        const maxRooms = args.length > 1 ? parseInt(args[1], 10) : 10;
+
+        if (isNaN(minRooms) || isNaN(maxRooms)) {
+            throw new Error('Invalid arguments. Usage: genmap [minRooms] [maxRooms]');
+        }
+
+        if (minRooms < 1 || maxRooms < minRooms) {
+            throw new Error('Invalid range. minRooms must be >= 1 and maxRooms >= minRooms');
+        }
+
+        this.addLog('info', `Generating procedural map with ${minRooms}-${maxRooms} rooms...`);
+
+        this.engineService.generateProceduralMap({
+            minRooms,
+            maxRooms,
+            seed: Date.now().toString()
+        }).then(() => {
+            this.addLog('success', 'Procedural map generated successfully!');
+            const info = this.engineService.getMapInfo();
+            this.addLog('info', `  Walls: ${info.walls} | Portals: ${info.portals}`);
+        }).catch((err: Error) => {
+            this.addLog('error', `Failed to generate map: ${err.message}`);
+        });
     }
 }
