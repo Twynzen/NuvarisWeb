@@ -8,11 +8,12 @@ import { ProjectileThree } from '../entities/projectile.three';
 import { DebugVisualizer } from './debug-visualizer';
 import { PortalSystem, MapPortalData } from '../world/portal-system';
 import { LabStructures } from '../world/lab-structures';
+import { DoorSystem, DoorConfig } from '../world/door-system';
 import { CharacterAbilityThree } from '../abilities/character-ability-three';
 import { ArcadioAbilityThree } from '../abilities/arcadio-ability-three';
 import { LarsAbilityThree } from '../abilities/lars-ability-three';
 import { YuranyAbilityThree } from '../abilities/yurany-ability-three';
-import { MapLoaderService, MapData, MapObject } from '../services/map-loader.service';
+import { MapLoaderService, MapData, MapObject, DoorMapConfig } from '../services/map-loader.service';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'default';
@@ -38,6 +39,7 @@ export class ThreeEngineService implements OnDestroy {
     private lastSpawnTime = 0;
     private lastShootTime = 0;
     private portalSystem!: PortalSystem;
+    private doorSystem!: DoorSystem;
     private labStructures!: LabStructures;
     private autoSpawningEnabled = true;
 
@@ -118,9 +120,30 @@ export class ThreeEngineService implements OnDestroy {
                 this.togglePause();
             }
 
+            // E - Interact with nearby door
+            if (e.key.toLowerCase() === 'e' && !e.ctrlKey && this.player) {
+                this.interactWithNearbyDoor();
+            }
+
             // NOTE: Ctrl+D disabled - debug mode now controlled via Ctrl+K console 'debug toggle' command
         });
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
+    }
+
+    /**
+     * Interact with nearby door (toggle open/close)
+     */
+    private interactWithNearbyDoor(): void {
+        if (!this.doorSystem || !this.player) return;
+
+        const playerX = this.player.mesh.position.x;
+        const playerZ = this.player.mesh.position.z;
+        const interactRange = 6; // Units - player must be within this range to interact
+
+        const nearestDoor = this.doorSystem.getNearestDoor(playerX, playerZ, interactRange);
+        if (nearestDoor) {
+            this.doorSystem.toggleDoor(nearestDoor.id);
+        }
     }
 
     // Toggle debug visualization mode
@@ -425,6 +448,9 @@ export class ThreeEngineService implements OnDestroy {
         // Initialize Portal System (will be populated by map loader)
         this.portalSystem = new PortalSystem(this.scene);
 
+        // Initialize Door System (will be populated by map loader)
+        this.doorSystem = new DoorSystem(this.scene);
+
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
 
@@ -490,6 +516,29 @@ export class ThreeEngineService implements OnDestroy {
         const portals = this.mapLoader.getPortalConfigs(mapData);
         this.portalSystem.initializeFromConfig(portals as MapPortalData[]);
 
+        // Initialize doors from map data
+        const doorObjects = this.mapLoader.getDoorConfigs(mapData);
+        const doorConfigs: DoorConfig[] = doorObjects.map(obj => {
+            // Get default values from door presets
+            const defaults = { small: { height: 8, depth: 2 }, large: { height: 8, depth: 2 }, garage: { height: 10, depth: 3 } };
+            const preset = defaults[obj.config.type] || defaults.small;
+
+            return {
+                id: obj.id,
+                position: obj.position,
+                width: obj.config.width,
+                height: obj.config.height ?? preset.height,
+                depth: obj.config.depth ?? preset.depth,
+                rotation: obj.rotation ? THREE.MathUtils.degToRad(obj.rotation) : 0,
+                type: obj.config.type,
+                isOpen: obj.config.isOpen,
+                autoClose: obj.config.autoClose,
+                autoCloseDelay: obj.config.autoCloseDelay,
+                linkedTo: obj.config.linkedTo
+            };
+        });
+        this.doorSystem.initializeFromConfig(doorConfigs);
+
         // Update player position if player exists
         if (this.player) {
             const spawnPos = this.mapLoader.getPlayerSpawnPosition(mapData);
@@ -499,7 +548,7 @@ export class ThreeEngineService implements OnDestroy {
         // Kill all existing enemies when map changes
         this.killAllEnemies();
 
-        console.log(`[Game] Applied map: ${mapData.name} (${mapData.objects.length} objects)`);
+        console.log(`[Game] Applied map: ${mapData.name} (${mapData.objects.length} objects, ${doorConfigs.length} doors)`);
     }
 
     /**
@@ -538,7 +587,7 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     /**
-     * Clear current map (walls and portals)
+     * Clear current map (walls, portals, and doors)
      */
     private clearCurrentMap(): void {
         // Remove all walls
@@ -553,6 +602,11 @@ export class ThreeEngineService implements OnDestroy {
 
         // Clear portals
         this.portalSystem.clear();
+
+        // Clear doors
+        if (this.doorSystem) {
+            this.doorSystem.clear();
+        }
 
         console.log('[Game] Cleared current map');
     }
@@ -684,6 +738,32 @@ export class ThreeEngineService implements OnDestroy {
             // Update portal system
             if (this.portalSystem) {
                 this.portalSystem.update(delta);
+            }
+
+            // Update door system (animations)
+            if (this.doorSystem) {
+                this.doorSystem.update(delta);
+
+                // Check door collision - prevent player from walking through closed doors
+                const playerX = this.player.mesh.position.x;
+                const playerZ = this.player.mesh.position.z;
+                const collidingDoor = this.doorSystem.checkCollision(
+                    playerX,
+                    playerZ,
+                    PlayerThree.COLLISION_RADIUS
+                );
+                if (collidingDoor) {
+                    // Push player away from closed door
+                    const doorPos = collidingDoor.config.position;
+                    const dx = playerX - doorPos.x;
+                    const dz = playerZ - doorPos.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+                    if (dist > 0.1) {
+                        const pushStrength = 0.5;
+                        this.player.mesh.position.x += (dx / dist) * pushStrength;
+                        this.player.mesh.position.z += (dz / dist) * pushStrength;
+                    }
+                }
             }
 
             // Spawn enemies

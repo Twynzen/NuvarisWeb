@@ -14,14 +14,25 @@ export interface PortalConfig {
     spawnRate: number;
 }
 
+export interface DoorMapConfig {
+    width: number;
+    height?: number;
+    depth?: number;
+    type: 'small' | 'large' | 'garage';
+    isOpen: boolean;
+    autoClose?: boolean;
+    autoCloseDelay?: number;
+    linkedTo?: string;
+}
+
 export interface MapObject {
     id: string;
-    type: 'wall' | 'portal' | 'spawn';
+    type: 'wall' | 'portal' | 'spawn' | 'door';
     subtype?: string;
     position: { x: number; z: number };
     rotation?: number;
     scale?: { x: number; z: number };
-    config?: PortalConfig;
+    config?: PortalConfig | DoorMapConfig;
 }
 
 export interface MapData {
@@ -308,5 +319,40 @@ export class MapLoaderService {
      */
     getWallConfigs(mapData: MapData): MapObject[] {
         return mapData.objects.filter(o => o.type === 'wall');
+    }
+
+    /**
+     * Extract door configurations from map data
+     */
+    getDoorConfigs(mapData: MapData): Array<MapObject & { config: DoorMapConfig }> {
+        return mapData.objects.filter(
+            o => o.type === 'door' && o.config
+        ) as Array<MapObject & { config: DoorMapConfig }>;
+    }
+
+    /**
+     * Get map info summary (updated with doors)
+     */
+    getMapInfoExtended(): {
+        name: string;
+        objects: number;
+        portals: number;
+        walls: number;
+        spawns: number;
+        doors: number;
+    } {
+        if (!this.currentMapData) {
+            return { name: 'none', objects: 0, portals: 0, walls: 0, spawns: 0, doors: 0 };
+        }
+
+        const objects = this.currentMapData.objects;
+        return {
+            name: this.currentMapName,
+            objects: objects.length,
+            portals: objects.filter(o => o.type === 'portal').length,
+            walls: objects.filter(o => o.type === 'wall').length,
+            spawns: objects.filter(o => o.type === 'spawn').length,
+            doors: objects.filter(o => o.type === 'door').length
+        };
     }
 }

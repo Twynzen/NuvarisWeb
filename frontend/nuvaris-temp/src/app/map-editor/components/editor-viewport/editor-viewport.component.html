@@ -175,6 +175,20 @@
         </div>
       </div>
 
+      <!-- Doors -->
+      <div class="procedural-section">
+        <div class="section-label">PUERTAS</div>
+        <div class="config-row checkbox-row">
+          <label>Generar Puertas:</label>
+          <input type="checkbox" [(ngModel)]="proceduralConfig.generateDoors">
+        </div>
+        <div class="config-row" *ngIf="proceduralConfig.generateDoors">
+          <label>Probabilidad:</label>
+          <input type="range" [(ngModel)]="proceduralConfig.doorChance" min="0" max="1" step="0.1">
+          <span class="range-value">{{ (proceduralConfig.doorChance * 100).toFixed(0) }}%</span>
+        </div>
+      </div>
+
       <!-- Generate Button -->
       <div class="procedural-actions">
         <button

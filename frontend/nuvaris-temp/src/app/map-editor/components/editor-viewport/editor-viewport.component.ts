@@ -9,7 +9,8 @@ import {
     ProceduralMapConfig,
     GeneratedMapData,
     Room,
-    Corridor
+    Corridor,
+    DoorData
 } from '../../services/procedural-map-generator';
 
 // Object types for the catalog
@@ -17,7 +18,7 @@ interface CatalogItem {
   id: string;
   name: string;
   icon: string;
-  type: 'wall' | 'portal' | 'spawn' | 'decoration' | 'biome';
+  type: 'wall' | 'portal' | 'spawn' | 'decoration' | 'biome' | 'door';
   subtype?: string;
 }
 
@@ -83,6 +84,16 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       ]
     },
     {
+      name: 'PUERTAS',
+      icon: '🚪',
+      expanded: true,
+      items: [
+        { id: 'door_small', name: 'Puerta Pequena', icon: '🚪', type: 'door', subtype: 'small' },
+        { id: 'door_large', name: 'Puerta Grande', icon: '🚪', type: 'door', subtype: 'large' },
+        { id: 'door_garage', name: 'Puerta Garaje', icon: '🏭', type: 'door', subtype: 'garage' }
+      ]
+    },
+    {
       name: 'PORTALES',
       icon: '🌀',
       expanded: true,
@@ -127,7 +138,9 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
     maxRoomSize: 40,
     corridorWidth: 6,
     maxDepth: 5,
-    portalCount: 4
+    portalCount: 4,
+    generateDoors: true,
+    doorChance: 0.6
   };
 
   constructor(private cdr: ChangeDetectorRef) {}
@@ -382,6 +395,96 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       subtype: type,
       mesh: group,
       config: { x, z, type, radius: 3 }
+    });
+  }
+
+  private createDoor(id: string, x: number, z: number, type: 'small' | 'large' | 'garage', rotation: number = 0, isOpen: boolean = false): void {
+    // Door dimensions based on type
+    const doorSizes = {
+      small: { width: 5, height: 8, depth: 2, color: 0x4a5568 },
+      large: { width: 8, height: 8, depth: 2, color: 0x5a6578 },
+      garage: { width: 15, height: 10, depth: 3, color: 0x3a4558 }
+    };
+
+    const size = doorSizes[type];
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    group.rotation.y = rotation;
+    group.name = id;
+    group.userData['type'] = 'door';
+    group.userData['doorType'] = type;
+
+    // Door frame (static)
+    const frameThickness = 0.5;
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: 0x2a2a3a,
+      roughness: 0.7,
+      metalness: 0.3
+    });
+
+    // Left frame
+    const leftGeo = new THREE.BoxGeometry(frameThickness, size.height + 1, size.depth + 0.5);
+    const leftFrame = new THREE.Mesh(leftGeo, frameMat);
+    leftFrame.position.set(-size.width / 2 - frameThickness / 2, size.height / 2, 0);
+    leftFrame.castShadow = true;
+    group.add(leftFrame);
+
+    // Right frame
+    const rightFrame = leftFrame.clone();
+    rightFrame.position.set(size.width / 2 + frameThickness / 2, size.height / 2, 0);
+    group.add(rightFrame);
+
+    // Top frame
+    const topGeo = new THREE.BoxGeometry(size.width + frameThickness * 2, frameThickness, size.depth + 0.5);
+    const topFrame = new THREE.Mesh(topGeo, frameMat);
+    topFrame.position.set(0, size.height + frameThickness / 2, 0);
+    topFrame.castShadow = true;
+    group.add(topFrame);
+
+    // Door panel
+    const doorGeo = new THREE.BoxGeometry(size.width, size.height, size.depth);
+    const doorMat = new THREE.MeshStandardMaterial({
+      color: size.color,
+      roughness: 0.5,
+      metalness: 0.4
+    });
+    const doorPanel = new THREE.Mesh(doorGeo, doorMat);
+    doorPanel.position.y = isOpen ? -size.height / 2 - 0.5 : size.height / 2;
+    doorPanel.castShadow = true;
+    doorPanel.receiveShadow = true;
+    doorPanel.name = 'door_panel';
+    group.add(doorPanel);
+
+    // Add horizontal lines for visual detail
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0x1a1a2a });
+    const lineCount = Math.floor(size.height / 2);
+    for (let i = 1; i < lineCount; i++) {
+      const lineGeo = new THREE.BoxGeometry(size.width - 0.5, 0.1, size.depth + 0.1);
+      const line = new THREE.Mesh(lineGeo, lineMat);
+      line.position.set(0, -size.height / 2 + i * 2, 0);
+      doorPanel.add(line);
+    }
+
+    // Floor track
+    const trackGeo = new THREE.BoxGeometry(size.width + 1, 0.1, size.depth + 1);
+    const trackMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.9 });
+    const track = new THREE.Mesh(trackGeo, trackMat);
+    track.position.set(0, 0.05, 0);
+    group.add(track);
+
+    this.scene.add(group);
+
+    this.mapObjects.push({
+      id,
+      type: 'door',
+      subtype: type,
+      mesh: group,
+      config: {
+        x, z, type, rotation, isOpen,
+        width: size.width,
+        height: size.height,
+        depth: size.depth
+      }
     });
   }
 
@@ -661,6 +764,9 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       case 'wall':
         this.createWall(id, 0, 0, 20, 4, false);
         break;
+      case 'door':
+        this.createDoor(id, 0, 0, item.subtype as 'small' | 'large' | 'garage');
+        break;
       case 'portal':
         this.createPortal(id, 0, 0, item.subtype as 'spider' | 'worm');
         break;
@@ -671,7 +777,9 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
 
     // Select the newly created object
     const newObj = this.mapObjects[this.mapObjects.length - 1];
-    this.selectObject(newObj);
+    if (newObj) {
+      this.selectObject(newObj);
+    }
     this.cdr.detectChanges();
   }
 
@@ -706,6 +814,14 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
           false
         );
         break;
+      case 'door':
+        this.createDoor(
+          newId,
+          obj.mesh.position.x + offset,
+          obj.mesh.position.z + offset,
+          obj.subtype as 'small' | 'large' | 'garage'
+        );
+        break;
       case 'portal':
         this.createPortal(
           newId,
@@ -726,7 +842,9 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
 
     // Select the new object
     const newObj = this.mapObjects[this.mapObjects.length - 1];
-    this.selectObject(newObj);
+    if (newObj) {
+      this.selectObject(newObj);
+    }
     this.cdr.detectChanges();
   }
 
@@ -922,7 +1040,9 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
           portalCount: this.proceduralConfig.portalCount,
           roomPadding: 3,
           splitChance: 0.9,
-          wallThickness: 2
+          wallThickness: 2,
+          generateDoors: this.proceduralConfig.generateDoors,
+          doorChance: this.proceduralConfig.doorChance
         });
 
         // Generate the map
@@ -975,6 +1095,18 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       );
     });
 
+    // Create doors
+    data.doors.forEach(door => {
+      this.createDoor(
+        door.id,
+        door.x,
+        door.z,
+        door.type,
+        door.rotation,
+        door.isOpen
+      );
+    });
+
     // Create portals
     data.portals.forEach(portal => {
       this.createPortal(
@@ -999,7 +1131,7 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
     // Set view to top for better overview
     this.setView('top');
 
-    console.log(`[MapEditor] Applied procedural map: ${data.rooms.length} rooms, ${data.walls.length} walls, ${data.portals.length} portals`);
+    console.log(`[MapEditor] Applied procedural map: ${data.rooms.length} rooms, ${data.walls.length} walls, ${data.doors.length} doors, ${data.portals.length} portals`);
   }
 
   private createRoomVisualizations(rooms: Room[], corridors: Corridor[]): void {
@@ -1112,6 +1244,21 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
           subtype: w.isPerimeter ? 'perimeter' : 'normal',
           position: { x: w.x, z: w.z },
           scale: { x: w.width, z: w.depth }
+        })),
+        // Doors
+        ...this.lastGeneratedData.doors.map(d => ({
+          id: d.id,
+          type: 'door' as const,
+          subtype: d.type,
+          position: { x: d.x, z: d.z },
+          rotation: d.rotation,
+          config: {
+            width: d.width,
+            height: d.height,
+            depth: d.depth,
+            type: d.type,
+            isOpen: d.isOpen
+          }
         })),
         // Portals
         ...this.lastGeneratedData.portals.map(p => ({

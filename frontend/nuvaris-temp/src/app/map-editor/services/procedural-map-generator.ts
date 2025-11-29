@@ -46,6 +46,8 @@ export interface ProceduralMapConfig {
     splitChance: number;
     portalCount: number;
     wallThickness: number;
+    generateDoors: boolean;
+    doorChance: number; // 0-1, chance to place door at corridor entrance
 }
 
 export interface GeneratedMapData {
@@ -53,6 +55,7 @@ export interface GeneratedMapData {
     corridors: Corridor[];
     walls: WallData[];
     portals: PortalData[];
+    doors: DoorData[];
     playerSpawn: { x: number; z: number };
     config: ProceduralMapConfig;
 }
@@ -75,6 +78,18 @@ export interface PortalData {
     detectionRange: number;
     maxEnemies: number;
     spawnRate: number;
+}
+
+export interface DoorData {
+    id: string;
+    x: number;
+    z: number;
+    width: number;
+    height: number;
+    depth: number;
+    rotation: number;
+    type: 'small' | 'large' | 'garage';
+    isOpen: boolean;
 }
 
 /**
@@ -129,9 +144,11 @@ export class ProceduralMapGenerator {
     private rooms: Room[] = [];
     private corridors: Corridor[] = [];
     private walls: WallData[] = [];
+    private doors: DoorData[] = [];
     private roomIdCounter = 0;
     private corridorIdCounter = 0;
     private wallIdCounter = 0;
+    private doorIdCounter = 0;
 
     constructor(config?: Partial<ProceduralMapConfig>) {
         this.config = {
@@ -146,6 +163,8 @@ export class ProceduralMapGenerator {
             splitChance: 0.9,
             portalCount: 4,
             wallThickness: 2,
+            generateDoors: true,
+            doorChance: 0.6,
             ...config
         };
         this.random = new SeededRandom(this.config.seed);
@@ -183,18 +202,24 @@ export class ProceduralMapGenerator {
         // Place portals in large rooms
         const portals = this.placePortals();
 
+        // Place doors at corridor entrances
+        if (this.config.generateDoors) {
+            this.placeDoors();
+        }
+
         // Determine player spawn (center of first room)
         const playerSpawn = this.rooms.length > 0
             ? { x: this.rooms[0].centerX, z: this.rooms[0].centerZ }
             : { x: 0, z: 0 };
 
-        console.log(`[ProceduralMapGenerator] Generated map with ${this.rooms.length} rooms, ${this.corridors.length} corridors, ${this.walls.length} walls`);
+        console.log(`[ProceduralMapGenerator] Generated map with ${this.rooms.length} rooms, ${this.corridors.length} corridors, ${this.walls.length} walls, ${this.doors.length} doors`);
 
         return {
             rooms: this.rooms,
             corridors: this.corridors,
             walls: this.walls,
             portals,
+            doors: this.doors,
             playerSpawn,
             config: this.config
         };
@@ -207,9 +232,11 @@ export class ProceduralMapGenerator {
         this.rooms = [];
         this.corridors = [];
         this.walls = [];
+        this.doors = [];
         this.roomIdCounter = 0;
         this.corridorIdCounter = 0;
         this.wallIdCounter = 0;
+        this.doorIdCounter = 0;
         this.random = new SeededRandom(this.config.seed);
     }
 
@@ -609,6 +636,96 @@ export class ProceduralMapGenerator {
      */
     getConfig(): ProceduralMapConfig {
         return { ...this.config };
+    }
+
+    /**
+     * Place doors at corridor-room intersections
+     */
+    private placeDoors(): void {
+        const doorHeight = 8;
+        const doorDepth = 2;
+
+        // For each corridor, check if we should place a door
+        for (const corridor of this.corridors) {
+            // Random chance to place door
+            if (this.random.next() > this.config.doorChance) continue;
+
+            // Determine door type based on corridor width
+            let doorType: 'small' | 'large' | 'garage';
+            let doorWidth: number;
+
+            if (corridor.width >= 12) {
+                doorType = 'garage';
+                doorWidth = 15;
+            } else if (corridor.width >= 7) {
+                doorType = 'large';
+                doorWidth = 8;
+            } else {
+                doorType = 'small';
+                doorWidth = 5;
+            }
+
+            // Ensure door fits in corridor
+            doorWidth = Math.min(doorWidth, corridor.width - 1);
+
+            // Place door at start of corridor (entrance)
+            if (corridor.horizontal) {
+                // Horizontal corridor - door faces Z axis
+                this.doors.push({
+                    id: `door_${this.doorIdCounter++}`,
+                    x: corridor.startX,
+                    z: corridor.startZ,
+                    width: doorWidth,
+                    height: doorHeight,
+                    depth: doorDepth,
+                    rotation: 0,
+                    type: doorType,
+                    isOpen: false
+                });
+            } else {
+                // Vertical corridor - door faces X axis
+                this.doors.push({
+                    id: `door_${this.doorIdCounter++}`,
+                    x: corridor.startX,
+                    z: corridor.startZ,
+                    width: doorWidth,
+                    height: doorHeight,
+                    depth: doorDepth,
+                    rotation: Math.PI / 2,
+                    type: doorType,
+                    isOpen: false
+                });
+            }
+
+            // Sometimes add door at end too (for larger corridors)
+            if (corridor.width >= 8 && this.random.next() > 0.5) {
+                if (corridor.horizontal) {
+                    this.doors.push({
+                        id: `door_${this.doorIdCounter++}`,
+                        x: corridor.endX,
+                        z: corridor.endZ,
+                        width: doorWidth,
+                        height: doorHeight,
+                        depth: doorDepth,
+                        rotation: 0,
+                        type: doorType,
+                        isOpen: false
+                    });
+                } else {
+                    this.doors.push({
+                        id: `door_${this.doorIdCounter++}`,
+                        x: corridor.endX,
+                        z: corridor.endZ,
+                        width: doorWidth,
+                        height: doorHeight,
+                        depth: doorDepth,
+                        rotation: Math.PI / 2,
+                        type: doorType,
+                        isOpen: false
+                    });
+                }
+            }
+        }
     }
 
     /**
