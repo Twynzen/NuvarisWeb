@@ -14,6 +14,9 @@ import { ArcadioAbilityThree } from '../abilities/arcadio-ability-three';
 import { LarsAbilityThree } from '../abilities/lars-ability-three';
 import { YuranyAbilityThree } from '../abilities/yurany-ability-three';
 import { MapLoaderService, MapData, MapObject, DoorMapConfig } from '../services/map-loader.service';
+import { RoomVisibilityManager } from '../world/room-visibility.manager';
+import { RoomTemplateLoader } from '../world/room-factory';
+import { SimpleTween } from '../utils/simple-tween';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'default';
@@ -42,6 +45,9 @@ export class ThreeEngineService implements OnDestroy {
     private doorSystem!: DoorSystem;
     private labStructures!: LabStructures;
     private autoSpawningEnabled = true;
+
+    // Room Visibility System (limited vision per room)
+    private roomVisibilityManager!: RoomVisibilityManager;
 
     // Map system
     private mapWalls: THREE.Mesh[] = [];
@@ -106,9 +112,12 @@ export class ThreeEngineService implements OnDestroy {
 
     constructor(
         private ngZone: NgZone,
-        private mapLoader: MapLoaderService
+        private mapLoader: MapLoaderService,
+        private roomTemplateLoader: RoomTemplateLoader
     ) {
         this.setupInput();
+        // Create RoomVisibilityManager (will be initialized in createScene)
+        this.roomVisibilityManager = new RoomVisibilityManager(this.roomTemplateLoader);
     }
 
     private setupInput() {
@@ -158,6 +167,18 @@ export class ThreeEngineService implements OnDestroy {
         }
 
         return this.gameState.debugMode;
+    }
+
+    // Toggle room collision debug visualization
+    public toggleRoomDebug(): boolean {
+        if (!this.roomVisibilityManager) return false;
+        return this.roomVisibilityManager.toggleDebug();
+    }
+
+    // Get room visibility stats
+    public getRoomStats(): { roomCount: number; wallCount: number; visibleRoomCount: number; currentRoomId: string | null } | null {
+        if (!this.roomVisibilityManager) return null;
+        return this.roomVisibilityManager.getStats();
     }
 
     // --- Developer Mode Commands ---
@@ -454,6 +475,13 @@ export class ThreeEngineService implements OnDestroy {
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
 
+        // Initialize Room Visibility System
+        this.roomVisibilityManager.initialize(this.scene, this.camera).then(() => {
+            console.log('[Game] Room visibility system initialized');
+        }).catch((err) => {
+            console.warn('[Game] Room visibility system initialization failed', err);
+        });
+
         // Load default map asynchronously
         this.loadMapByName(DEFAULT_MAP_NAME).then(() => {
             // Player - created after map loads to use correct spawn position
@@ -614,6 +642,11 @@ export class ThreeEngineService implements OnDestroy {
             this.doorSystem.clear();
         }
 
+        // Clear room visibility system
+        if (this.roomVisibilityManager) {
+            this.roomVisibilityManager.dispose();
+        }
+
         console.log('[Game] Cleared current map');
     }
 
@@ -711,6 +744,9 @@ export class ThreeEngineService implements OnDestroy {
 
         let delta = this.clock.getDelta();
 
+        // Update SimpleTween animations (for room lighting transitions)
+        SimpleTween.update(delta);
+
         // Apply time scale (debug speed control)
         delta *= this.timeScale;
 
@@ -723,6 +759,11 @@ export class ThreeEngineService implements OnDestroy {
 
         if (this.player) {
             this.player.update(delta, this.keys);
+
+            // Update room visibility system (room detection, lighting)
+            if (this.roomVisibilityManager) {
+                this.roomVisibilityManager.update(this.player.mesh.position, delta);
+            }
 
             // Skip game logic if player is dead
             if (this.player.isDead) {
@@ -773,6 +814,21 @@ export class ThreeEngineService implements OnDestroy {
                 }
             }
 
+            // Wall collision for player (using room visibility system)
+            if (this.roomVisibilityManager) {
+                const collision = this.roomVisibilityManager.resolvePlayerCollision(
+                    this.player.mesh.position,
+                    0, 0,  // No velocity tracking yet, use position-based collision
+                    PlayerThree.COLLISION_RADIUS,
+                    delta
+                );
+                // Apply push-back if collision detected (non-zero delta returned)
+                if (collision.x !== 0 || collision.z !== 0) {
+                    this.player.mesh.position.x += collision.x;
+                    this.player.mesh.position.z += collision.z;
+                }
+            }
+
             // Spawn enemies
             if (this.autoSpawningEnabled && currentTime - this.lastSpawnTime > 2) {
                 this.spawnEnemy(Math.random() < 0.6 ? 'spider' : 'worm');
@@ -806,6 +862,23 @@ export class ThreeEngineService implements OnDestroy {
                             enemy.mesh.position.z += (dz / dist) * pushStrength;
                         }
                     }
+                });
+            }
+
+            // Wall collision for enemies (using room visibility system)
+            if (this.roomVisibilityManager) {
+                this.enemies.forEach(enemy => {
+                    if (enemy.isDead) return;
+                    const targetPos = this.player.mesh.position;
+                    const resolvedPos = this.roomVisibilityManager.resolveEnemyCollision(
+                        enemy.mesh.position,
+                        targetPos,
+                        0,  // Speed not needed for position-based resolution
+                        EnemyThree.COLLISION_RADIUS,
+                        delta
+                    );
+                    // Update enemy position if collision resolved
+                    enemy.mesh.position.copy(resolvedPos);
                 });
             }
 
