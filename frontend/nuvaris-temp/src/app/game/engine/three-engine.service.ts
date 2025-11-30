@@ -470,6 +470,116 @@ export class ThreeEngineService implements OnDestroy {
         return this.roomTemplateLoader.getAllTemplates().map(t => t.id);
     }
 
+    /**
+     * Create a test map with multiple rooms to verify lighting system
+     * Creates: Hub (center) + Lab (north) + Prison (east) connected by corridors
+     */
+    public async createTestLightingMap(): Promise<{ roomCount: number; biomes: string[] }> {
+        // Clear current map
+        this.clearCurrentMap();
+
+        // Ensure templates are loaded
+        if (!this.roomTemplateLoader.isLoaded()) {
+            console.log('[Game] Loading room templates...');
+            await this.roomTemplateLoader.loadAllTemplates();
+        }
+
+        const templates = this.roomTemplateLoader.getAllTemplates();
+        console.log(`[Game] Templates loaded: ${templates.length}`);
+        templates.forEach(t => console.log(`  - ${t.id} (${t.type}) [${t.biome}]`));
+
+        if (templates.length === 0) {
+            throw new Error('No room templates loaded! Check assets/room-templates/ folder.');
+        }
+
+        // Initialize room visibility manager
+        if (!this.roomVisibilityManager) {
+            throw new Error('Room visibility manager not initialized');
+        }
+
+        const biomes: string[] = [];
+        let roomCount = 0;
+
+        // Create Hub room at center (player starts here)
+        const hubTemplate = this.roomTemplateLoader.getTemplate('hub_large') ||
+                          this.roomTemplateLoader.getTemplate('hub_central_01');
+        if (hubTemplate) {
+            const hubRoom = this.roomVisibilityManager.createRoom(
+                hubTemplate.id,
+                new THREE.Vector3(0, 0, 0),
+                0
+            );
+            if (hubRoom) {
+                roomCount++;
+                biomes.push(hubTemplate.biome);
+                console.log(`[Game] Created hub room: ${hubRoom.id}`);
+            }
+        } else {
+            console.warn('[Game] Hub template not found, using lab_large');
+        }
+
+        // Create Lab room to the north
+        const labTemplate = this.roomTemplateLoader.getTemplate('lab_large') ||
+                           this.roomTemplateLoader.getTemplate('lab_small');
+        if (labTemplate) {
+            const labRoom = this.roomVisibilityManager.createRoom(
+                labTemplate.id,
+                new THREE.Vector3(0, 0, 40),  // North of hub
+                0
+            );
+            if (labRoom) {
+                roomCount++;
+                biomes.push(labTemplate.biome);
+                console.log(`[Game] Created lab room: ${labRoom.id}`);
+            }
+        }
+
+        // Create Prison room to the east
+        const prisonTemplate = this.roomTemplateLoader.getTemplate('prison_medium') ||
+                              this.roomTemplateLoader.getTemplate('prison_small');
+        if (prisonTemplate) {
+            const prisonRoom = this.roomVisibilityManager.createRoom(
+                prisonTemplate.id,
+                new THREE.Vector3(40, 0, 0),  // East of hub
+                0
+            );
+            if (prisonRoom) {
+                roomCount++;
+                biomes.push(prisonTemplate.biome);
+                console.log(`[Game] Created prison room: ${prisonRoom.id}`);
+            }
+        }
+
+        // Create a corridor connecting hub to lab
+        const corridorTemplate = this.roomTemplateLoader.getTemplate('corridor_vertical') ||
+                                this.roomTemplateLoader.getTemplate('corridor_horizontal');
+        if (corridorTemplate) {
+            const corridorRoom = this.roomVisibilityManager.createRoom(
+                corridorTemplate.id,
+                new THREE.Vector3(0, 0, 20),  // Between hub and lab
+                0
+            );
+            if (corridorRoom) {
+                roomCount++;
+                biomes.push(corridorTemplate.biome);
+                console.log(`[Game] Created corridor: ${corridorRoom.id}`);
+            }
+        }
+
+        // Move player to center of hub
+        if (this.player) {
+            this.player.mesh.position.set(0, 0, 0);
+        }
+
+        // Kill all enemies
+        this.killAllEnemies();
+
+        this.currentMapName = 'test_lighting';
+        console.log(`[Game] Test lighting map created: ${roomCount} rooms`);
+
+        return { roomCount, biomes: [...new Set(biomes)] };
+    }
+
     // Create debug visuals for all existing entities
     private createDebugVisualsForAll() {
         if (!this.debugVisualizer?.enabled) return;

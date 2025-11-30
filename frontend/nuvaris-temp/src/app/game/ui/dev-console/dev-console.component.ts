@@ -235,6 +235,12 @@ export class DevConsoleComponent implements AfterViewInit {
                 case 'genmap':
                     this.handleGenerateMap(args);
                     break;
+                case 'testlight':
+                    this.handleTestLighting();
+                    break;
+                case 'roomstats':
+                    this.handleRoomStats();
+                    break;
                 default:
                     this.addLog('error', `Unknown command: "${cmd}". Type "help" for available commands.`);
             }
@@ -267,7 +273,9 @@ export class DevConsoleComponent implements AfterViewInit {
             { cmd: 'maps', desc: 'List available maps' },
             { cmd: 'mapinfo', desc: 'Show current map info' },
             { cmd: 'nebline <true/false>', desc: 'Toggle fog/nebline on or off' },
-            { cmd: 'genmap [min] [max]', desc: 'Generate procedural map (default 5-10 rooms)' }
+            { cmd: 'genmap [min] [max]', desc: 'Generate procedural map (default 5-10 rooms)' },
+            { cmd: 'testlight', desc: 'Create test rooms to verify lighting system' },
+            { cmd: 'roomstats', desc: 'Show room visibility system stats' }
         ];
 
         this.addLog('info', '--- Available Commands ---');
@@ -488,16 +496,53 @@ export class DevConsoleComponent implements AfterViewInit {
 
         this.addLog('info', `Generating procedural map with ${minRooms}-${maxRooms} rooms...`);
 
+        // Check templates first
+        const templates = this.engineService.getAvailableTemplates();
+        this.addLog('info', `  Available templates: ${templates.length > 0 ? templates.join(', ') : 'NONE (templates not loaded!)'}`);
+
         this.engineService.generateProceduralMap({
             minRooms,
             maxRooms,
             seed: Date.now().toString()
         }).then(() => {
             this.addLog('success', 'Procedural map generated successfully!');
-            const info = this.engineService.getMapInfo();
-            this.addLog('info', `  Walls: ${info.walls} | Portals: ${info.portals}`);
+            const stats = this.engineService.getRoomStats();
+            if (stats) {
+                this.addLog('info', `  Rooms: ${stats.roomCount} | Walls: ${stats.wallCount} | Current: ${stats.currentRoomId || 'none'}`);
+            }
         }).catch((err: Error) => {
             this.addLog('error', `Failed to generate map: ${err.message}`);
         });
+    }
+
+    // --- Test Lighting System ---
+
+    private handleTestLighting() {
+        this.addLog('info', 'Creating test lighting scenario...');
+
+        this.engineService.createTestLightingMap().then((result) => {
+            this.addLog('success', `Test map created: ${result.roomCount} rooms`);
+            this.addLog('info', `  Biomes: ${result.biomes.join(', ')}`);
+            this.addLog('info', '  Walk between rooms to test lighting transitions!');
+            this.addLog('info', '  Use "roomstats" to see current room info.');
+        }).catch((err: Error) => {
+            this.addLog('error', `Failed to create test map: ${err.message}`);
+        });
+    }
+
+    // --- Room Stats ---
+
+    private handleRoomStats() {
+        const stats = this.engineService.getRoomStats();
+        if (!stats) {
+            this.addLog('warning', 'Room visibility system not initialized');
+            return;
+        }
+
+        this.addLog('info', '--- Room Stats ---');
+        this.addLog('info', `  Total Rooms: ${stats.roomCount}`);
+        this.addLog('info', `  Visible Rooms: ${stats.visibleRoomCount}`);
+        this.addLog('info', `  Wall Segments: ${stats.wallCount}`);
+        this.addLog('info', `  Current Room: ${stats.currentRoomId || 'none (outside all rooms)'}`);
     }
 }
