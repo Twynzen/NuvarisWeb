@@ -408,6 +408,85 @@ export class RoomVisibilityManager {
     }
 
     /**
+     * Check if the manager is initialized
+     */
+    isInitialized(): boolean {
+        return this.initialized;
+    }
+
+    /**
+     * Get all walls for minimap display
+     * Combines walls from WallCollisionSystem
+     */
+    getAllWallsForMinimap(): Array<{
+        x: number;
+        z: number;
+        width: number;
+        depth: number;
+        rotation?: number;
+    }> {
+        if (!this.wallCollisionSystem) return [];
+        return this.wallCollisionSystem.getWallsForMinimap();
+    }
+
+    /**
+     * Register a wall mesh for collision (external walls from BSP converter)
+     */
+    registerWallMesh(mesh: THREE.Mesh): void {
+        if (!this.wallCollisionSystem) return;
+        this.wallCollisionSystem.registerWallMesh(mesh);
+    }
+
+    /**
+     * Register multiple wall meshes at once
+     */
+    registerWallMeshes(meshes: THREE.Mesh[]): void {
+        if (!this.wallCollisionSystem) return;
+        this.wallCollisionSystem.registerWalls(meshes);
+    }
+
+    /**
+     * Clear all rooms without disposing the manager
+     * Used for loading a new map
+     */
+    clearAllRooms(): void {
+        const rooms = this.detectionSystem.getAllRooms();
+        for (const room of rooms) {
+            // Remove from scene
+            if (room.group.parent) {
+                room.group.parent.remove(room.group);
+            }
+            // Dispose geometries and materials
+            if (room.floor) {
+                room.floor.geometry?.dispose();
+                if (room.floor.material instanceof THREE.Material) {
+                    room.floor.material.dispose();
+                }
+            }
+            // Dispose wall geometries
+            for (const wall of room.walls) {
+                wall.geometry?.dispose();
+                if (wall.material instanceof THREE.Material) {
+                    wall.material.dispose();
+                }
+            }
+        }
+        this.detectionSystem.clear();
+        this.wallCollisionSystem?.clear();
+        this.lightingSystem?.clearAllLights();
+        this.currentRoom = null;
+        this.visibleRooms = [];
+        console.log('[RoomVisibilityManager] Cleared all rooms');
+    }
+
+    /**
+     * Get the wall collision system (for advanced usage)
+     */
+    getWallCollisionSystem(): WallCollisionSystem | null {
+        return this.wallCollisionSystem || null;
+    }
+
+    /**
      * Clean up all resources
      */
     dispose(): void {

@@ -476,27 +476,30 @@ export class RoomDetectionSystem {
 export const LIGHTING_PRESETS: Record<RoomBiome, LightingPreset> = {
     prison: {
         ambient: { color: 0x1a1a2e, intensity: 0.2 },
-        fog: { color: 0x0a0a15, near: 10, far: 25 }
+        // Fog starts OUTSIDE the room (near > room diagonal ~18 for 25x25)
+        fog: { color: 0x0a0a15, near: 25, far: 55 }
     },
     laboratory: {
         ambient: { color: 0x2a3a4a, intensity: 0.4 },
-        fog: { color: 0x1a2a3a, near: 15, far: 35 }
+        fog: { color: 0x1a2a3a, near: 28, far: 60 }
     },
     medical: {
         ambient: { color: 0x3a3a4a, intensity: 0.5 },
-        fog: { color: 0x2a2a3a, near: 12, far: 30 }
+        fog: { color: 0x2a2a3a, near: 25, far: 55 }
     },
     corridor: {
         ambient: { color: 0x1a1a1a, intensity: 0.15 },
-        fog: { color: 0x0a0a0a, near: 8, far: 20 }
+        // Corridors are narrow, but we still want clear view inside
+        fog: { color: 0x0a0a0a, near: 15, far: 40 }
     },
     hub: {
         ambient: { color: 0x2a2a3a, intensity: 0.35 },
-        fog: { color: 0x1a1a2a, near: 20, far: 50 }
+        // Hub is largest (30x30), diagonal ~21, so near > 25
+        fog: { color: 0x1a1a2a, near: 30, far: 70 }
     },
     garden: {
         ambient: { color: 0x1a2a1a, intensity: 0.3 },
-        fog: { color: 0x0a1a0a, near: 25, far: 60 }
+        fog: { color: 0x0a1a0a, near: 35, far: 80 }
     }
 };
 

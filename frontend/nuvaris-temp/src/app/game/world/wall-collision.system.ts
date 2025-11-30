@@ -305,6 +305,33 @@ export class WallCollisionSystem {
     }
 
     /**
+     * Get all wall data for minimap rendering
+     * Returns simplified wall data without Three.js dependencies
+     */
+    getWallsForMinimap(): Array<{
+        x: number;
+        z: number;
+        width: number;
+        depth: number;
+        rotation: number;
+    }> {
+        return this.wallMeshes.map(mesh => ({
+            x: mesh.position.x,
+            z: mesh.position.z,
+            width: mesh.userData['wallWidth'] || mesh.scale.x || 10,
+            depth: mesh.userData['wallDepth'] || mesh.scale.z || 2,
+            rotation: mesh.rotation.y
+        }));
+    }
+
+    /**
+     * Get all wall meshes (for external systems)
+     */
+    getWallMeshes(): THREE.Mesh[] {
+        return [...this.wallMeshes];
+    }
+
+    /**
      * Toggle debug visualization
      */
     toggleDebug(): boolean {

@@ -18,6 +18,7 @@ import { RoomVisibilityManager } from '../world/room-visibility.manager';
 import { RoomTemplateLoader, RoomFactory } from '../world/room-factory';
 import { TemplateMapGenerator, TemplateMapConfig, GeneratedTemplateMap } from '../world/template-map-generator';
 import { SimpleTween } from '../utils/simple-tween';
+import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.converter';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'default';
@@ -54,6 +55,10 @@ export class ThreeEngineService implements OnDestroy {
     private roomFactory!: RoomFactory;
     private templateMapGenerator!: TemplateMapGenerator;
     private currentGeneratedMap: GeneratedTemplateMap | null = null;
+
+    // BSP to Room converter (unified map system)
+    private bspConverter!: BSPToRoomConverter;
+    private currentUnifiedMap: UnifiedMapData | null = null;
 
     // Map system
     private mapWalls: THREE.Mesh[] = [];
@@ -233,13 +238,26 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     public getMapWallsForMinimap(): Array<{ x: number; z: number; width: number; depth: number; rotation?: number }> {
-        return this.mapWalls.map(wall => ({
-            x: wall.position.x,
-            z: wall.position.z,
-            width: wall.userData['wallWidth'] || 10,
-            depth: wall.userData['wallDepth'] || 2,
-            rotation: wall.rotation.y
-        }));
+        const walls: Array<{ x: number; z: number; width: number; depth: number; rotation?: number }> = [];
+
+        // 1. Walls from legacy JSON maps (this.mapWalls)
+        for (const wall of this.mapWalls) {
+            walls.push({
+                x: wall.position.x,
+                z: wall.position.z,
+                width: wall.userData['wallWidth'] || wall.scale.x || 10,
+                depth: wall.userData['wallDepth'] || wall.scale.z || 2,
+                rotation: wall.rotation.y
+            });
+        }
+
+        // 2. Walls from Room Visibility System (BSP/Template rooms)
+        if (this.roomVisibilityManager?.isInitialized()) {
+            const roomWalls = this.roomVisibilityManager.getAllWallsForMinimap();
+            walls.push(...roomWalls);
+        }
+
+        return walls;
     }
 
     public getEnemiesForMinimap(): Array<{ x: number; z: number; type: string }> {
@@ -473,111 +491,400 @@ export class ThreeEngineService implements OnDestroy {
     /**
      * Create a test map with multiple rooms to verify lighting system
      * Creates: Hub (center) + Lab (north) + Prison (east) connected by corridors
+     * Uses the unified system with synthetic BSP data
      */
     public async createTestLightingMap(): Promise<{ roomCount: number; biomes: string[] }> {
-        // Clear current map
-        this.clearCurrentMap();
+        console.log('[Game] Creating test lighting map with unified system...');
 
-        // Ensure templates are loaded
-        if (!this.roomTemplateLoader.isLoaded()) {
-            console.log('[Game] Loading room templates...');
-            await this.roomTemplateLoader.loadAllTemplates();
-        }
+        // Define room sizes
+        const hubSize = 30;
+        const labSize = 25;
+        const prisonSize = 25;
+        const wallThickness = 2;
+        const corridorWidth = 5;
+        const corridorLength = 10;  // Distance between rooms (must match generateTestMapWalls)
 
-        const templates = this.roomTemplateLoader.getAllTemplates();
-        console.log(`[Game] Templates loaded: ${templates.length}`);
-        templates.forEach(t => console.log(`  - ${t.id} (${t.type}) [${t.biome}]`));
+        // Calculate room positions
+        const hubHalf = hubSize / 2;
+        const labHalf = labSize / 2;
+        const prisonHalf = prisonSize / 2;
+        const labCenterZ = hubHalf + corridorLength + labHalf;
+        const prisonCenterX = hubHalf + corridorLength + prisonHalf;
 
-        if (templates.length === 0) {
-            throw new Error('No room templates loaded! Check assets/room-templates/ folder.');
-        }
-
-        // Initialize room visibility manager
-        if (!this.roomVisibilityManager) {
-            throw new Error('Room visibility manager not initialized');
-        }
-
-        const biomes: string[] = [];
-        let roomCount = 0;
-
-        // Create Hub room at center (player starts here)
-        const hubTemplate = this.roomTemplateLoader.getTemplate('hub_large') ||
-                          this.roomTemplateLoader.getTemplate('hub_central_01');
-        if (hubTemplate) {
-            const hubRoom = this.roomVisibilityManager.createRoom(
-                hubTemplate.id,
-                new THREE.Vector3(0, 0, 0),
-                0
-            );
-            if (hubRoom) {
-                roomCount++;
-                biomes.push(hubTemplate.biome);
-                console.log(`[Game] Created hub room: ${hubRoom.id}`);
+        // Create synthetic BSP data for test map
+        const syntheticBSPData = {
+            rooms: [
+                // Hub room at center (0, 0)
+                {
+                    id: 'hub_center',
+                    x: -hubHalf,
+                    z: -hubHalf,
+                    width: hubSize,
+                    depth: hubSize,
+                    centerX: 0,
+                    centerZ: 0,
+                    connected: true
+                },
+                // Lab room to the north
+                {
+                    id: 'lab_north',
+                    x: -labHalf,
+                    z: labCenterZ - labHalf,
+                    width: labSize,
+                    depth: labSize,
+                    centerX: 0,
+                    centerZ: labCenterZ,
+                    connected: true
+                },
+                // Prison room to the east
+                {
+                    id: 'prison_east',
+                    x: prisonCenterX - prisonHalf,
+                    z: -prisonHalf,
+                    width: prisonSize,
+                    depth: prisonSize,
+                    centerX: prisonCenterX,
+                    centerZ: 0,
+                    connected: true
+                }
+            ],
+            corridors: [
+                // Corridor from hub to lab (vertical - along Z axis)
+                {
+                    id: 'corridor_hub_lab',
+                    startX: 0,
+                    startZ: hubHalf,
+                    endX: 0,
+                    endZ: labCenterZ - labHalf,
+                    width: corridorWidth,
+                    horizontal: false
+                },
+                // Corridor from hub to prison (horizontal - along X axis)
+                {
+                    id: 'corridor_hub_prison',
+                    startX: hubHalf,
+                    startZ: 0,
+                    endX: prisonCenterX - prisonHalf,
+                    endZ: 0,
+                    width: corridorWidth,
+                    horizontal: true
+                }
+            ],
+            walls: this.generateTestMapWalls(hubSize, labSize, prisonSize, corridorWidth, wallThickness),
+            portals: [],
+            doors: [],
+            playerSpawn: { x: 0, z: 0 },
+            config: {
+                seed: 'test_lighting',
+                mapWidth: 150,
+                mapDepth: 150,
+                minRoomSize: 20,
+                maxRoomSize: 35,
+                roomPadding: 5,
+                corridorWidth: corridorWidth,
+                maxDepth: 4,
+                splitChance: 0.5,
+                portalCount: 0,
+                wallThickness: wallThickness,
+                generateDoors: false,
+                doorChance: 0
             }
-        } else {
-            console.warn('[Game] Hub template not found, using lab_large');
-        }
+        };
 
-        // Create Lab room to the north
-        const labTemplate = this.roomTemplateLoader.getTemplate('lab_large') ||
-                           this.roomTemplateLoader.getTemplate('lab_small');
-        if (labTemplate) {
-            const labRoom = this.roomVisibilityManager.createRoom(
-                labTemplate.id,
-                new THREE.Vector3(0, 0, 40),  // North of hub
-                0
-            );
-            if (labRoom) {
-                roomCount++;
-                biomes.push(labTemplate.biome);
-                console.log(`[Game] Created lab room: ${labRoom.id}`);
-            }
-        }
-
-        // Create Prison room to the east
-        const prisonTemplate = this.roomTemplateLoader.getTemplate('prison_medium') ||
-                              this.roomTemplateLoader.getTemplate('prison_small');
-        if (prisonTemplate) {
-            const prisonRoom = this.roomVisibilityManager.createRoom(
-                prisonTemplate.id,
-                new THREE.Vector3(40, 0, 0),  // East of hub
-                0
-            );
-            if (prisonRoom) {
-                roomCount++;
-                biomes.push(prisonTemplate.biome);
-                console.log(`[Game] Created prison room: ${prisonRoom.id}`);
-            }
-        }
-
-        // Create a corridor connecting hub to lab
-        const corridorTemplate = this.roomTemplateLoader.getTemplate('corridor_vertical') ||
-                                this.roomTemplateLoader.getTemplate('corridor_horizontal');
-        if (corridorTemplate) {
-            const corridorRoom = this.roomVisibilityManager.createRoom(
-                corridorTemplate.id,
-                new THREE.Vector3(0, 0, 20),  // Between hub and lab
-                0
-            );
-            if (corridorRoom) {
-                roomCount++;
-                biomes.push(corridorTemplate.biome);
-                console.log(`[Game] Created corridor: ${corridorRoom.id}`);
-            }
-        }
-
-        // Move player to center of hub
-        if (this.player) {
-            this.player.mesh.position.set(0, 0, 0);
-        }
-
-        // Kill all enemies
-        this.killAllEnemies();
+        // Load using unified system
+        await this.loadUnifiedMap(syntheticBSPData);
 
         this.currentMapName = 'test_lighting';
-        console.log(`[Game] Test lighting map created: ${roomCount} rooms`);
 
-        return { roomCount, biomes: [...new Set(biomes)] };
+        // Get biomes from unified map
+        const biomes: string[] = [];
+        if (this.currentUnifiedMap) {
+            this.currentUnifiedMap.rooms.forEach(room => {
+                if (room.template?.biome) {
+                    biomes.push(room.template.biome);
+                }
+            });
+        }
+
+        const roomCount = this.currentUnifiedMap?.rooms.length || 0;
+        const corridorCount = this.currentUnifiedMap?.corridors.length || 0;
+
+        console.log(`[Game] ═══════════════════════════════════════════`);
+        console.log(`[Game] Test lighting map created: ${roomCount} rooms, ${corridorCount} corridors`);
+        console.log(`[Game] Biomes: ${[...new Set(biomes)].join(', ')}`);
+        console.log(`[Game] ═══════════════════════════════════════════`);
+
+        // Log room stats
+        const stats = this.roomVisibilityManager.getStats();
+        console.log(`[Game] Room Stats: ${stats.roomCount} rooms, ${stats.wallCount} walls`);
+
+        return { roomCount: roomCount + corridorCount, biomes: [...new Set(biomes)] };
+    }
+
+    /**
+     * Generate wall data for test lighting map
+     *
+     * IMPORTANT: Wall positions (x, z) represent the CENTER of the wall mesh.
+     * Three.js BoxGeometry is centered at its position.
+     *
+     * For a room centered at (cx, cz) with size (w, d):
+     * - North wall center: (cx, cz + d/2)
+     * - South wall center: (cx, cz - d/2)
+     * - East wall center:  (cx + w/2, cz)
+     * - West wall center:  (cx - w/2, cz)
+     */
+    private generateTestMapWalls(hubSize: number, labSize: number, prisonSize: number, corridorWidth: number, wallThickness: number): any[] {
+        const walls: any[] = [];
+        let wallId = 0;
+
+        // Helper to add wall with CENTER position
+        const addWall = (centerX: number, centerZ: number, width: number, depth: number, isPerimeter = true) => {
+            walls.push({
+                id: `wall_${wallId++}`,
+                x: centerX,
+                z: centerZ,
+                width,
+                depth,
+                isPerimeter
+            });
+        };
+
+        const hubHalf = hubSize / 2;
+        const gapHalf = corridorWidth / 2;
+
+        // ========== HUB ROOM (center at 0,0) ==========
+        // Hub size: 30x30, from (-15,-15) to (15,15)
+
+        // Hub North wall - with gap for corridor to Lab
+        // Left segment: from (-15, 15) to (-gapHalf, 15)
+        const hubNorthLeftWidth = hubHalf - gapHalf;
+        addWall(
+            -hubHalf + hubNorthLeftWidth / 2,  // center X
+            hubHalf,                            // center Z
+            hubNorthLeftWidth,                  // width
+            wallThickness                       // depth
+        );
+        // Right segment: from (gapHalf, 15) to (15, 15)
+        addWall(
+            hubHalf - hubNorthLeftWidth / 2,
+            hubHalf,
+            hubNorthLeftWidth,
+            wallThickness
+        );
+
+        // Hub South wall - solid
+        addWall(0, -hubHalf, hubSize, wallThickness);
+
+        // Hub East wall - with gap for corridor to Prison
+        // Bottom segment: from (15, -15) to (15, -gapHalf)
+        const hubEastBottomDepth = hubHalf - gapHalf;
+        addWall(
+            hubHalf,
+            -hubHalf + hubEastBottomDepth / 2,
+            wallThickness,
+            hubEastBottomDepth
+        );
+        // Top segment: from (15, gapHalf) to (15, 15)
+        addWall(
+            hubHalf,
+            hubHalf - hubEastBottomDepth / 2,
+            wallThickness,
+            hubEastBottomDepth
+        );
+
+        // Hub West wall - solid
+        addWall(-hubHalf, 0, wallThickness, hubSize);
+
+        // ========== LAB ROOM (north of hub) ==========
+        // Lab center: (0, hubHalf + corridorLength + labHalf)
+        const corridorLength = 10;  // Distance between rooms
+        const labCenterZ = hubHalf + corridorLength + labSize / 2;
+        const labHalf = labSize / 2;
+
+        // Lab North wall - solid
+        addWall(0, labCenterZ + labHalf, labSize, wallThickness);
+
+        // Lab South wall - with gap for corridor
+        const labSouthLeftWidth = labHalf - gapHalf;
+        addWall(
+            -labHalf + labSouthLeftWidth / 2,
+            labCenterZ - labHalf,
+            labSouthLeftWidth,
+            wallThickness
+        );
+        addWall(
+            labHalf - labSouthLeftWidth / 2,
+            labCenterZ - labHalf,
+            labSouthLeftWidth,
+            wallThickness
+        );
+
+        // Lab East wall - solid
+        addWall(labHalf, labCenterZ, wallThickness, labSize);
+
+        // Lab West wall - solid
+        addWall(-labHalf, labCenterZ, wallThickness, labSize);
+
+        // ========== PRISON ROOM (east of hub) ==========
+        // Prison center: (hubHalf + corridorLength + prisonHalf, 0)
+        const prisonCenterX = hubHalf + corridorLength + prisonSize / 2;
+        const prisonHalf = prisonSize / 2;
+
+        // Prison North wall - solid
+        addWall(prisonCenterX, prisonHalf, prisonSize, wallThickness);
+
+        // Prison South wall - solid
+        addWall(prisonCenterX, -prisonHalf, prisonSize, wallThickness);
+
+        // Prison East wall - solid
+        addWall(prisonCenterX + prisonHalf, 0, wallThickness, prisonSize);
+
+        // Prison West wall - with gap for corridor
+        const prisonWestBottomDepth = prisonHalf - gapHalf;
+        addWall(
+            prisonCenterX - prisonHalf,
+            -prisonHalf + prisonWestBottomDepth / 2,
+            wallThickness,
+            prisonWestBottomDepth
+        );
+        addWall(
+            prisonCenterX - prisonHalf,
+            prisonHalf - prisonWestBottomDepth / 2,
+            wallThickness,
+            prisonWestBottomDepth
+        );
+
+        // ========== CORRIDOR: HUB to LAB (vertical) ==========
+        // From hub north (z=15) to lab south (z=labCenterZ-labHalf)
+        const corridorHubLabLength = labCenterZ - labHalf - hubHalf;
+        const corridorHubLabCenterZ = hubHalf + corridorHubLabLength / 2;
+
+        // Left wall of corridor
+        addWall(-gapHalf, corridorHubLabCenterZ, wallThickness, corridorHubLabLength, false);
+        // Right wall of corridor
+        addWall(gapHalf, corridorHubLabCenterZ, wallThickness, corridorHubLabLength, false);
+
+        // ========== CORRIDOR: HUB to PRISON (horizontal) ==========
+        // From hub east (x=15) to prison west (x=prisonCenterX-prisonHalf)
+        const corridorHubPrisonLength = prisonCenterX - prisonHalf - hubHalf;
+        const corridorHubPrisonCenterX = hubHalf + corridorHubPrisonLength / 2;
+
+        // Top wall of corridor
+        addWall(corridorHubPrisonCenterX, gapHalf, corridorHubPrisonLength, wallThickness, false);
+        // Bottom wall of corridor
+        addWall(corridorHubPrisonCenterX, -gapHalf, corridorHubPrisonLength, wallThickness, false);
+
+        return walls;
+    }
+
+    /**
+     * Load a unified map from BSP data or UnifiedMapData
+     * This is the main entry point for loading maps from the editor
+     */
+    public async loadUnifiedMap(data: UnifiedMapData | any): Promise<void> {
+        console.log('[Game] Loading unified map...');
+
+        // Clear current map without full disposal
+        this.clearCurrentMapForUnified();
+
+        // Reinitialize room visibility system
+        if (!this.roomVisibilityManager.isInitialized()) {
+            await this.roomVisibilityManager.initialize(this.scene, this.camera);
+        }
+
+        // Initialize BSP converter if needed
+        if (!this.bspConverter) {
+            this.bspConverter = new BSPToRoomConverter(this.scene);
+        }
+
+        // Convert BSP data to unified format if needed
+        let unifiedData: UnifiedMapData;
+        if (this.isBSPMapData(data)) {
+            console.log('[Game] Converting BSP data to unified format...');
+            unifiedData = this.bspConverter.convert(data);
+        } else {
+            unifiedData = data as UnifiedMapData;
+        }
+
+        this.currentUnifiedMap = unifiedData;
+        this.currentMapName = unifiedData.name;
+
+        // Register all rooms with the visibility system
+        for (const room of unifiedData.rooms) {
+            this.roomVisibilityManager.registerRoom(room);
+        }
+
+        // Register corridors as rooms too
+        for (const corridor of unifiedData.corridors) {
+            this.roomVisibilityManager.registerRoom(corridor);
+        }
+
+        // Register all wall meshes with collision system AND mapWalls for minimap
+        for (const wallMesh of unifiedData.wallMeshes) {
+            this.scene.add(wallMesh);
+            this.mapWalls.push(wallMesh);  // For legacy minimap support
+            this.roomVisibilityManager.registerWallMesh(wallMesh);
+        }
+
+        // Move player to spawn point
+        if (this.player) {
+            this.player.mesh.position.copy(unifiedData.playerSpawn);
+            console.log(`[Game] Player moved to spawn: (${unifiedData.playerSpawn.x}, ${unifiedData.playerSpawn.z})`);
+        }
+
+        // Kill all enemies for fresh start
+        this.killAllEnemies();
+
+        // Log stats
+        const roomCount = unifiedData.rooms.length + unifiedData.corridors.length;
+        console.log(`[Game] ═══════════════════════════════════════════`);
+        console.log(`[Game] Unified map loaded: ${unifiedData.name}`);
+        console.log(`[Game] ${unifiedData.rooms.length} rooms, ${unifiedData.corridors.length} corridors`);
+        console.log(`[Game] ${unifiedData.wallMeshes.length} wall meshes`);
+        console.log(`[Game] ═══════════════════════════════════════════`);
+    }
+
+    /**
+     * Check if data is BSP map format (from procedural generator)
+     */
+    private isBSPMapData(data: any): boolean {
+        // BSP data has 'rooms', 'corridors', 'walls', and 'config' properties
+        // UnifiedMapData has 'name', 'rooms' (RoomInstance[]), 'wallMeshes'
+        return data && 'rooms' in data && 'corridors' in data && 'config' in data && !('wallMeshes' in data);
+    }
+
+    /**
+     * Clear current map without disposing room visibility manager
+     * Used for loading new maps in unified system
+     */
+    private clearCurrentMapForUnified(): void {
+        // Remove legacy walls
+        for (const wall of this.mapWalls) {
+            this.scene.remove(wall);
+            wall.geometry.dispose();
+            if (wall.material instanceof THREE.Material) {
+                wall.material.dispose();
+            }
+        }
+        this.mapWalls = [];
+
+        // Clear portals
+        this.portalSystem.clear();
+
+        // Clear doors
+        if (this.doorSystem) {
+            this.doorSystem.clear();
+        }
+
+        // Clear rooms without disposing the manager
+        if (this.roomVisibilityManager?.isInitialized()) {
+            this.roomVisibilityManager.clearAllRooms();
+        }
+
+        // Clear unified map reference
+        this.currentUnifiedMap = null;
+
+        console.log('[Game] Cleared current map (unified mode)');
     }
 
     // Create debug visuals for all existing entities

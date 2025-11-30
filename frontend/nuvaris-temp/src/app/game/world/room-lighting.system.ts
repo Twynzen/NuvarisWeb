@@ -186,8 +186,8 @@ export class RoomLightingSystem {
         // Update active set
         this.activeLights = shouldBeActive;
 
-        // Update ambient light and fog based on biome
-        this.updateBiomeLighting(currentRoom.template.biome);
+        // Update ambient light and fog based on biome AND room size
+        this.updateBiomeLighting(currentRoom.template.biome, currentRoom);
 
         // Update camera layers
         this.updateCameraLayers(visibleRooms);
@@ -224,52 +224,79 @@ export class RoomLightingSystem {
     }
 
     /**
-     * Update ambient light and fog based on room biome
+     * Update ambient light and fog based on room biome and size
+     * Fog is adjusted so the current room is ALWAYS clear (no fog inside)
      */
-    private updateBiomeLighting(biome: RoomBiome): void {
-        if (biome === this.currentBiome) return;
-
+    private updateBiomeLighting(biome: RoomBiome, currentRoom?: RoomInstance): void {
         const preset = LIGHTING_PRESETS[biome];
+        const biomeChanged = biome !== this.currentBiome;
         this.currentBiome = biome;
 
-        // Animate ambient light color transition
-        const targetR = ((preset.ambient.color >> 16) & 255) / 255;
-        const targetG = ((preset.ambient.color >> 8) & 255) / 255;
-        const targetB = (preset.ambient.color & 255) / 255;
+        // Only update ambient if biome changed
+        if (biomeChanged) {
+            // Animate ambient light color transition
+            const targetR = ((preset.ambient.color >> 16) & 255) / 255;
+            const targetG = ((preset.ambient.color >> 8) & 255) / 255;
+            const targetB = (preset.ambient.color & 255) / 255;
 
-        SimpleTween.to(
-            this.ambientLight.color,
-            { r: targetR, g: targetG, b: targetB },
-            this.TRANSITION_DURATION,
-            'easeInOut'
-        );
+            SimpleTween.to(
+                this.ambientLight.color,
+                { r: targetR, g: targetG, b: targetB },
+                this.TRANSITION_DURATION,
+                'easeInOut'
+            );
 
-        SimpleTween.to(
-            this.ambientLight,
-            { intensity: preset.ambient.intensity },
-            this.TRANSITION_DURATION,
-            'easeInOut'
-        );
+            SimpleTween.to(
+                this.ambientLight,
+                { intensity: preset.ambient.intensity },
+                this.TRANSITION_DURATION,
+                'easeInOut'
+            );
+        }
 
-        // Update fog if defined
+        // Update fog - ALWAYS adjust based on current room size
         if (preset.fog && this.scene.fog instanceof THREE.Fog) {
+            // Calculate fog.near based on room size so room is CLEAR
+            let fogNear = preset.fog.near;
+            let fogFar = preset.fog.far;
+
+            if (currentRoom?.bounds) {
+                // Get room diagonal (max distance from center to corner)
+                const size = new THREE.Vector3();
+                currentRoom.bounds.getSize(size);
+                const roomDiagonal = Math.sqrt(size.x * size.x + size.z * size.z) / 2;
+
+                // fog.near should be at least roomDiagonal + buffer
+                // This ensures the entire room is fog-free
+                const buffer = 5; // Extra clear space beyond room edge
+                fogNear = Math.max(preset.fog.near, roomDiagonal + buffer);
+
+                // Adjust far proportionally
+                fogFar = fogNear + (preset.fog.far - preset.fog.near);
+
+                console.log(`[RoomLighting] Room ${currentRoom.id}: diagonal=${roomDiagonal.toFixed(1)}, fogNear=${fogNear.toFixed(1)}, fogFar=${fogFar.toFixed(1)}`);
+            }
+
             SimpleTween.to(
                 this.scene.fog,
-                { near: preset.fog.near, far: preset.fog.far },
+                { near: fogNear, far: fogFar },
                 this.TRANSITION_DURATION,
                 'easeInOut'
             );
 
-            const fogR = ((preset.fog.color >> 16) & 255) / 255;
-            const fogG = ((preset.fog.color >> 8) & 255) / 255;
-            const fogB = (preset.fog.color & 255) / 255;
+            // Update fog color if biome changed
+            if (biomeChanged) {
+                const fogR = ((preset.fog.color >> 16) & 255) / 255;
+                const fogG = ((preset.fog.color >> 8) & 255) / 255;
+                const fogB = (preset.fog.color & 255) / 255;
 
-            SimpleTween.to(
-                this.scene.fog.color,
-                { r: fogR, g: fogG, b: fogB },
-                this.TRANSITION_DURATION,
-                'easeInOut'
-            );
+                SimpleTween.to(
+                    this.scene.fog.color,
+                    { r: fogR, g: fogG, b: fogB },
+                    this.TRANSITION_DURATION,
+                    'easeInOut'
+                );
+            }
         }
     }
 
@@ -400,6 +427,25 @@ export class RoomLightingSystem {
                 preset.fog.far
             );
         }
+    }
+
+    /**
+     * Clear all room lights without disposing shared lights
+     * Used when loading a new map
+     */
+    public clearAllLights(): void {
+        // Kill all tweens and remove room lights
+        for (const [, lights] of this.roomLights) {
+            for (const lightInstance of lights) {
+                SimpleTween.killTweensOf(lightInstance.light);
+                this.scene.remove(lightInstance.light);
+            }
+        }
+
+        this.roomLights.clear();
+        this.activeLights.clear();
+
+        console.log('[RoomLightingSystem] Cleared all room lights');
     }
 
     /**
