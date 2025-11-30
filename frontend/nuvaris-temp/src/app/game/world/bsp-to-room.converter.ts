@@ -193,13 +193,13 @@ export class BSPToRoomConverter {
 
     /**
      * Convert a BSP Room to RoomInstance
+     * Note: Visual elements (floors, lights) are disabled - we only need bounds for fog occlusion
      */
     private convertBSPRoom(bspRoom: BSPRoom, defaultBiome: RoomBiome): RoomInstance {
         const biome = this.assignBiome(bspRoom);
-        const colors = ROOM_COLORS[biome];
         const lighting = LIGHTING_PRESETS[biome];
 
-        // Create bounds
+        // Create bounds (this is what matters for fog occlusion)
         const bounds = new THREE.Box3(
             new THREE.Vector3(bspRoom.x, 0, bspRoom.z),
             new THREE.Vector3(
@@ -209,23 +209,13 @@ export class BSPToRoomConverter {
             )
         );
 
-        // Create visual group
+        // Create empty group (no visual elements needed - map JSON defines walls)
         const group = new THREE.Group();
         group.name = `room_${bspRoom.id}`;
         group.position.set(bspRoom.centerX, 0, bspRoom.centerZ);
 
-        // Create floor
-        const floor = this.createFloorMesh(
-            bspRoom.width,
-            bspRoom.depth,
-            colors.floor
-        );
-        floor.position.set(0, 0.01, 0);
-        group.add(floor);
-
-        // Create room lights
-        const lights = this.createRoomLights(bspRoom, biome);
-        lights.forEach(lightInstance => group.add(lightInstance.light));
+        // NO floor mesh - the game already has a ground plane
+        // NO room lights - we use PlayerFogSystem + RoomLightingSystem
 
         const roomInstance: RoomInstance = {
             id: bspRoom.id,
@@ -236,10 +226,10 @@ export class BSPToRoomConverter {
             bounds,
             expandedBounds: bounds.clone().expandByScalar(3),
             group,
-            floor,
-            walls: [], // Will be filled when wall meshes are created
+            floor: undefined as any, // No floor mesh
+            walls: [],
             doors: [],
-            lights,
+            lights: [], // No extra lights
             layer: (this.roomIdCounter++ % 30) + 1,
             isVisible: true,
             isCurrentRoom: false,
@@ -247,17 +237,15 @@ export class BSPToRoomConverter {
             adjacentRoomIds: new Set()
         };
 
-        this.scene.add(group);
+        // Don't add group to scene - it's empty anyway
         return roomInstance;
     }
 
     /**
      * Convert a Corridor to RoomInstance
+     * Note: Visual elements disabled - we only need bounds for fog occlusion
      */
     private convertCorridor(corridor: BSPCorridor): RoomInstance {
-        const biome: RoomBiome = 'corridor';
-        const colors = ROOM_COLORS[biome];
-
         // Calculate corridor dimensions
         let width: number, depth: number, centerX: number, centerZ: number;
 
@@ -273,18 +261,18 @@ export class BSPToRoomConverter {
             centerZ = corridor.startZ + depth / 2;
         }
 
+        // Bounds are what matter for fog occlusion
         const bounds = new THREE.Box3(
             new THREE.Vector3(centerX - width / 2, 0, centerZ - depth / 2),
             new THREE.Vector3(centerX + width / 2, 8, centerZ + depth / 2)
         );
 
+        // Empty group - no visual elements needed
         const group = new THREE.Group();
         group.name = `corridor_${corridor.id}`;
         group.position.set(centerX, 0, centerZ);
 
-        const floor = this.createFloorMesh(width, depth, colors.floor);
-        floor.position.set(0, 0.005, 0);
-        group.add(floor);
+        // NO floor mesh - map JSON defines corridor walls, game has ground plane
 
         const roomInstance: RoomInstance = {
             id: corridor.id,
@@ -295,7 +283,7 @@ export class BSPToRoomConverter {
             bounds,
             expandedBounds: bounds.clone().expandByScalar(2),
             group,
-            floor,
+            floor: undefined as any, // No floor mesh
             walls: [],
             doors: [],
             lights: [],
@@ -306,7 +294,7 @@ export class BSPToRoomConverter {
             adjacentRoomIds: new Set()
         };
 
-        this.scene.add(group);
+        // Don't add to scene - empty group
         return roomInstance;
     }
 

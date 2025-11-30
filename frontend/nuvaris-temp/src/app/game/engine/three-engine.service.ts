@@ -7,7 +7,8 @@ import { XPOrb } from '../entities/xp-orb.three';
 import { ProjectileThree } from '../entities/projectile.three';
 import { DebugVisualizer } from './debug-visualizer';
 import { PortalSystem, MapPortalData } from '../world/portal-system';
-import { LabStructures } from '../world/lab-structures';
+// LabStructures disabled - now using BSP map format
+// import { LabStructures } from '../world/lab-structures';
 import { DoorSystem, DoorConfig } from '../world/door-system';
 import { CharacterAbilityThree } from '../abilities/character-ability-three';
 import { ArcadioAbilityThree } from '../abilities/arcadio-ability-three';
@@ -46,7 +47,7 @@ export class ThreeEngineService implements OnDestroy {
     private lastShootTime = 0;
     private portalSystem!: PortalSystem;
     private doorSystem!: DoorSystem;
-    private labStructures!: LabStructures;
+    // private labStructures!: LabStructures;  // Disabled - using BSP maps
     private autoSpawningEnabled = true;
 
     // Room Visibility System (limited vision per room)
@@ -966,6 +967,43 @@ export class ThreeEngineService implements OnDestroy {
             }
         }
 
+        // Initialize portals from BSP data
+        if (unifiedData.portals && unifiedData.portals.length > 0) {
+            const portalConfigs: MapPortalData[] = unifiedData.portals.map(p => ({
+                id: p.id,
+                type: 'portal' as const,
+                subtype: p.type,
+                position: { x: p.x, z: p.z },
+                config: {
+                    homeRange: p.homeRange,
+                    detectionRange: p.detectionRange,
+                    returnThreshold: p.detectionRange + 10,
+                    maxEnemies: p.maxEnemies,
+                    spawnRate: p.spawnRate
+                }
+            }));
+            this.portalSystem.initializeFromConfig(portalConfigs);
+            console.log(`[Game] Initialized ${portalConfigs.length} portals`);
+        }
+
+        // Initialize doors from BSP data
+        if (unifiedData.doors && unifiedData.doors.length > 0) {
+            const doorConfigs: DoorConfig[] = unifiedData.doors.map(d => ({
+                id: d.id,
+                position: { x: d.x, z: d.z },
+                width: d.width,
+                height: d.height,
+                depth: d.depth,
+                rotation: d.rotation,
+                type: d.type as 'small' | 'large' | 'garage' | 'custom',
+                isOpen: d.isOpen,
+                locked: false,
+                autoClose: true
+            }));
+            this.doorSystem.initializeFromConfig(doorConfigs);
+            console.log(`[Game] Initialized ${doorConfigs.length} doors`);
+        }
+
         // Move player to spawn point
         if (this.player) {
             this.player.mesh.position.copy(unifiedData.playerSpawn);
@@ -977,10 +1015,12 @@ export class ThreeEngineService implements OnDestroy {
 
         // Log stats
         const roomCount = unifiedData.rooms.length + unifiedData.corridors.length;
+        const portalCount = unifiedData.portals?.length || 0;
+        const doorCount = unifiedData.doors?.length || 0;
         console.log(`[Game] ═══════════════════════════════════════════`);
         console.log(`[Game] Unified map loaded: ${unifiedData.name}`);
         console.log(`[Game] ${unifiedData.rooms.length} rooms, ${unifiedData.corridors.length} corridors`);
-        console.log(`[Game] ${unifiedData.wallMeshes.length} wall meshes`);
+        console.log(`[Game] ${unifiedData.wallMeshes.length} walls, ${portalCount} portals, ${doorCount} doors`);
         console.log(`[Game] ═══════════════════════════════════════════`);
     }
 
@@ -1258,12 +1298,25 @@ export class ThreeEngineService implements OnDestroy {
 
     /**
      * Load a map by name (for Dev Console command)
+     * Supports both BSP format (rooms/corridors) and legacy format (objects array)
      */
     public async loadMapByName(mapName: string): Promise<void> {
         try {
-            const mapData = await this.mapLoader.loadByName(mapName);
-            this.applyMapData(mapData);
-            this.currentMapName = mapName;
+            // First, fetch raw JSON to detect format
+            const rawData = await this.mapLoader.loadRawByName(mapName);
+
+            // Detect format and route to appropriate loader
+            if (this.isBSPMapData(rawData)) {
+                console.log(`[Game] Detected BSP format for map: ${mapName}`);
+                await this.loadUnifiedMap(rawData);
+                this.currentMapName = mapName;
+            } else {
+                // Legacy format - use old loader
+                const mapData = this.mapLoader.loadFromData(rawData);
+                this.applyMapData(mapData);
+                this.currentMapName = mapName;
+            }
+
             console.log(`[Game] Map "${mapName}" loaded successfully`);
         } catch (error) {
             console.error(`[Game] Failed to load map: ${mapName}`, error);
@@ -1483,9 +1536,9 @@ export class ThreeEngineService implements OnDestroy {
         // Use old portal initialization
         this.portalSystem.initialize();
 
-        // Initialize Lab Structures
-        this.labStructures = new LabStructures(this.scene);
-        this.labStructures.generateProcedural();
+        // Lab Structures disabled - now using BSP map format with rooms/corridors
+        // this.labStructures = new LabStructures(this.scene);
+        // this.labStructures.generateProcedural();
 
         this.currentMapName = 'legacy';
         console.log('[Game] Loaded legacy hardcoded map');

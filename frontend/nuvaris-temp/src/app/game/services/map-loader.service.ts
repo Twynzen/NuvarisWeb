@@ -156,6 +156,24 @@ export class MapLoaderService {
     }
 
     /**
+     * Load raw map data without normalization (for format detection)
+     */
+    async loadRawByName(mapName: string): Promise<any> {
+        const url = `assets/maps/${mapName}.json`;
+
+        try {
+            const rawData = await firstValueFrom(
+                this.http.get<any>(url)
+            );
+            console.log(`[MapLoader] Loaded raw map data: ${mapName}`);
+            return rawData;
+        } catch (error) {
+            console.error(`[MapLoader] Failed to load map: ${mapName}`, error);
+            throw new Error(`Map "${mapName}" not found`);
+        }
+    }
+
+    /**
      * Load map from raw JSON data (for editor integration)
      */
     loadFromData(rawData: any): MapData {
