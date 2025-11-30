@@ -19,6 +19,7 @@ import { RoomTemplateLoader, RoomFactory } from '../world/room-factory';
 import { TemplateMapGenerator, TemplateMapConfig, GeneratedTemplateMap } from '../world/template-map-generator';
 import { SimpleTween } from '../utils/simple-tween';
 import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.converter';
+import { PlayerFogSystem } from '../world/player-fog.system';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'default';
@@ -64,6 +65,9 @@ export class ThreeEngineService implements OnDestroy {
     private mapWalls: THREE.Mesh[] = [];
     private currentMapName: string = '';
     private mapFloor: THREE.Mesh | null = null;
+
+    // Player-centered fog system
+    private playerFogSystem!: PlayerFogSystem;
 
     // Character Abilities System
     private characterAbility!: CharacterAbilityThree;
@@ -193,25 +197,22 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     // Toggle fog on/off (nebline command)
-    private savedFog: THREE.Fog | THREE.FogExp2 | null = null;
     public setFog(enabled: boolean): boolean {
         if (!this.scene) return false;
 
+        // Use PlayerFogSystem if available
+        if (this.playerFogSystem) {
+            this.playerFogSystem.setEnabled(enabled);
+            console.log(`[DEV] Player-centered fog: ${enabled ? 'ON' : 'OFF'}`);
+            return enabled;
+        }
+
+        // Fallback to standard fog
         if (enabled) {
-            // Restore saved fog or create default
-            if (this.savedFog) {
-                this.scene.fog = this.savedFog;
-            } else {
-                // Default fog if none was saved
-                this.scene.fog = new THREE.Fog(0x0a0a1a, 20, 80);
-            }
-            console.log('[DEV] Fog: ON');
+            this.scene.fog = new THREE.Fog(0x0a0a0f, 20, 80);
+            console.log('[DEV] Fog: ON (legacy)');
             return true;
         } else {
-            // Save current fog before removing
-            if (this.scene.fog) {
-                this.savedFog = this.scene.fog;
-            }
             this.scene.fog = null;
             console.log('[DEV] Fog: OFF');
             return false;
@@ -220,7 +221,92 @@ export class ThreeEngineService implements OnDestroy {
 
     // Get current fog state
     public isFogEnabled(): boolean {
-        return this.scene?.fog !== null;
+        return this.playerFogSystem?.isActive() ?? (this.scene?.fog !== null);
+    }
+
+    // --- Player Fog System Commands (Dev Console) ---
+
+    /**
+     * Set fog radius (near/far) - creates bubble of clarity around player
+     * @param near - Distance where fog starts (full visibility)
+     * @param far - Distance where fog is 100% opaque
+     */
+    public setFogRadius(near: number, far: number): { near: number; far: number } {
+        if (!this.playerFogSystem) {
+            console.warn('[DEV] PlayerFogSystem not initialized');
+            return { near: 0, far: 0 };
+        }
+        this.playerFogSystem.setFogRadius(near, far);
+        return this.playerFogSystem.getFogRadius();
+    }
+
+    /**
+     * Get current fog radius
+     */
+    public getFogRadius(): { near: number; far: number } {
+        if (!this.playerFogSystem) {
+            return { near: 0, far: 0 };
+        }
+        return this.playerFogSystem.getFogRadius();
+    }
+
+    /**
+     * Set fog color (hex value)
+     * @param colorHex - Color in hex format (0x0a0a0f or '#0a0a0f')
+     */
+    public setFogColor(colorHex: number | string): string {
+        if (!this.playerFogSystem) {
+            console.warn('[DEV] PlayerFogSystem not initialized');
+            return '#000000';
+        }
+        if (typeof colorHex === 'string') {
+            // Parse hex string like '#0a0a0f' or '0a0a0f'
+            const cleanHex = colorHex.replace('#', '');
+            const numericHex = parseInt(cleanHex, 16);
+            this.playerFogSystem.setFogColor(numericHex);
+        } else {
+            this.playerFogSystem.setFogColor(colorHex);
+        }
+        return '#' + this.playerFogSystem.getFogColor().getHexString();
+    }
+
+    /**
+     * Get current fog color as hex string
+     */
+    public getFogColor(): string {
+        if (!this.playerFogSystem) {
+            return '#000000';
+        }
+        return '#' + this.playerFogSystem.getFogColor().getHexString();
+    }
+
+    /**
+     * Get fog system stats (for dev console)
+     */
+    public getFogStats(): { enabled: boolean; near: number; far: number; color: string; materials: number } {
+        if (!this.playerFogSystem) {
+            return { enabled: false, near: 0, far: 0, color: '#000000', materials: 0 };
+        }
+        const radius = this.playerFogSystem.getFogRadius();
+        return {
+            enabled: this.playerFogSystem.isActive(),
+            near: radius.near,
+            far: radius.far,
+            color: '#' + this.playerFogSystem.getFogColor().getHexString(),
+            materials: this.playerFogSystem.getMaterialCount()
+        };
+    }
+
+    /**
+     * Toggle player-centered fog on/off
+     */
+    public togglePlayerFog(enabled?: boolean): boolean {
+        if (!this.playerFogSystem) {
+            return false;
+        }
+        const newState = enabled !== undefined ? enabled : !this.playerFogSystem.isActive();
+        this.playerFogSystem.setEnabled(newState);
+        return newState;
     }
 
     // --- Minimap Data Access ---
@@ -824,6 +910,20 @@ export class ThreeEngineService implements OnDestroy {
             this.scene.add(wallMesh);
             this.mapWalls.push(wallMesh);  // For legacy minimap support
             this.roomVisibilityManager.registerWallMesh(wallMesh);
+
+            // Apply player-centered fog to wall material
+            if (this.playerFogSystem && wallMesh.material instanceof THREE.MeshStandardMaterial) {
+                this.playerFogSystem.applyToMaterial(wallMesh.material);
+            }
+        }
+
+        // Apply fog to room floor materials
+        for (const room of [...unifiedData.rooms, ...unifiedData.corridors]) {
+            if (room.floor?.material instanceof THREE.MeshStandardMaterial) {
+                if (this.playerFogSystem) {
+                    this.playerFogSystem.applyToMaterial(room.floor.material);
+                }
+            }
         }
 
         // Move player to spawn point
@@ -1038,7 +1138,14 @@ export class ThreeEngineService implements OnDestroy {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a0a1a);
+        this.scene.background = new THREE.Color(0x0a0a0f);
+
+        // Initialize player-centered fog system
+        this.playerFogSystem = new PlayerFogSystem(this.scene, {
+            fogColor: new THREE.Color(0x0a0a0f),  // Oscuridad casi negra
+            fogNear: 18,  // Burbuja de claridad: 18 unidades
+            fogFar: 28    // Transición suave hasta 28 unidades
+        });
 
         this.camera = new THREE.PerspectiveCamera(
             60, window.innerWidth / window.innerHeight, 0.1, 1000
@@ -1197,6 +1304,11 @@ export class ThreeEngineService implements OnDestroy {
             roughness: 0.5,
             metalness: 0.3
         });
+
+        // Apply player-centered fog to wall material
+        if (this.playerFogSystem) {
+            this.playerFogSystem.applyToMaterial(wallMat);
+        }
 
         const geo = new THREE.BoxGeometry(scaleX, wallHeight, scaleZ);
         const mesh = new THREE.Mesh(geo, wallMat);
@@ -1369,21 +1481,30 @@ export class ThreeEngineService implements OnDestroy {
             roughness: 0.7,
             metalness: 0.1
         });
+        // Apply player-centered fog to floor material
+        if (this.playerFogSystem) {
+            this.playerFogSystem.applyToMaterial(innerFloorMat);
+        }
         const innerFloor = new THREE.Mesh(innerFloorGeo, innerFloorMat);
         innerFloor.rotation.x = -Math.PI / 2;
         innerFloor.position.y = 0.01;
         innerFloor.receiveShadow = true;
         this.scene.add(innerFloor);
+        this.mapFloor = innerFloor;
 
-        // Outer background (dark)
-        const outerFloorGeo = new THREE.PlaneGeometry(200, 200, 50, 50);
+        // Outer background (dark) - also with fog
+        const outerFloorGeo = new THREE.PlaneGeometry(400, 400, 50, 50);
         const outerFloorMat = new THREE.MeshStandardMaterial({
-            color: 0x0a0a1a,
+            color: 0x1a1a2a,
             roughness: 0.9,
             metalness: 0.1
         });
+        if (this.playerFogSystem) {
+            this.playerFogSystem.applyToMaterial(outerFloorMat);
+        }
         const outerFloor = new THREE.Mesh(outerFloorGeo, outerFloorMat);
         outerFloor.rotation.x = -Math.PI / 2;
+        outerFloor.position.y = -0.01;
         outerFloor.receiveShadow = true;
         this.scene.add(outerFloor);
     }
@@ -1424,6 +1545,11 @@ export class ThreeEngineService implements OnDestroy {
 
         if (this.player) {
             this.player.update(delta, this.keys);
+
+            // Update player-centered fog system
+            if (this.playerFogSystem) {
+                this.playerFogSystem.update(this.player.mesh.position);
+            }
 
             // Update room visibility system (room detection, lighting)
             if (this.roomVisibilityManager) {

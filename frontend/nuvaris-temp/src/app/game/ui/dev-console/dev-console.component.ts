@@ -241,6 +241,16 @@ export class DevConsoleComponent implements AfterViewInit {
                 case 'roomstats':
                     this.handleRoomStats();
                     break;
+                // Player-centered fog commands
+                case 'fogradius':
+                    this.handleFogRadius(args);
+                    break;
+                case 'fogcolor':
+                    this.handleFogColor(args);
+                    break;
+                case 'fogstats':
+                    this.handleFogStats();
+                    break;
                 default:
                     this.addLog('error', `Unknown command: "${cmd}". Type "help" for available commands.`);
             }
@@ -275,7 +285,10 @@ export class DevConsoleComponent implements AfterViewInit {
             { cmd: 'nebline <true/false>', desc: 'Toggle fog/nebline on or off' },
             { cmd: 'genmap [min] [max]', desc: 'Generate procedural map (default 5-10 rooms)' },
             { cmd: 'testlight', desc: 'Create test rooms to verify lighting system' },
-            { cmd: 'roomstats', desc: 'Show room visibility system stats' }
+            { cmd: 'roomstats', desc: 'Show room visibility system stats' },
+            { cmd: 'fogradius <near> <far>', desc: 'Set fog clarity radius (near=full visible, far=full fog)' },
+            { cmd: 'fogcolor <hex>', desc: 'Set fog color (e.g., fogcolor 0a0a0f or #0a0a0f)' },
+            { cmd: 'fogstats', desc: 'Show player fog system stats' }
         ];
 
         this.addLog('info', '--- Available Commands ---');
@@ -544,5 +557,68 @@ export class DevConsoleComponent implements AfterViewInit {
         this.addLog('info', `  Visible Rooms: ${stats.visibleRoomCount}`);
         this.addLog('info', `  Wall Segments: ${stats.wallCount}`);
         this.addLog('info', `  Current Room: ${stats.currentRoomId || 'none (outside all rooms)'}`);
+    }
+
+    // --- Player Fog System Commands ---
+
+    private handleFogRadius(args: string[]) {
+        if (args.length === 0) {
+            // Show current radius
+            const radius = this.engineService.getFogRadius();
+            this.addLog('info', `Current fog radius: near=${radius.near}, far=${radius.far}`);
+            this.addLog('info', 'Usage: fogradius <near> <far>');
+            return;
+        }
+
+        if (args.length < 2) {
+            throw new Error('Missing arguments. Usage: fogradius <near> <far>');
+        }
+
+        const near = parseFloat(args[0]);
+        const far = parseFloat(args[1]);
+
+        if (isNaN(near) || isNaN(far)) {
+            throw new Error('Invalid arguments. near and far must be numbers.');
+        }
+
+        if (near < 0 || far < 0) {
+            throw new Error('Values must be positive.');
+        }
+
+        if (near >= far) {
+            throw new Error('near must be less than far for proper gradient.');
+        }
+
+        const result = this.engineService.setFogRadius(near, far);
+        this.addLog('success', `Fog radius set: near=${result.near}, far=${result.far}`);
+        this.addLog('info', '  near = radius of full visibility around player');
+        this.addLog('info', '  far = radius where fog is 100% opaque');
+    }
+
+    private handleFogColor(args: string[]) {
+        if (args.length === 0) {
+            // Show current color
+            const color = this.engineService.getFogColor();
+            this.addLog('info', `Current fog color: ${color}`);
+            this.addLog('info', 'Usage: fogcolor <hex> (e.g., 0a0a0f or #0a0a0f)');
+            return;
+        }
+
+        const colorArg = args[0];
+        const result = this.engineService.setFogColor(colorArg);
+        this.addLog('success', `Fog color set: ${result}`);
+    }
+
+    private handleFogStats() {
+        const stats = this.engineService.getFogStats();
+
+        this.addLog('info', '--- Player Fog System Stats ---');
+        this.addLog('info', `  Enabled: ${stats.enabled ? 'YES' : 'NO'}`);
+        this.addLog('info', `  Fog Near: ${stats.near} (full clarity radius)`);
+        this.addLog('info', `  Fog Far: ${stats.far} (full fog radius)`);
+        this.addLog('info', `  Color: ${stats.color}`);
+        this.addLog('info', `  Materials with fog: ${stats.materials}`);
+        this.addLog('info', '');
+        this.addLog('info', 'Commands: fogradius <n> <f>, fogcolor <hex>, nebline on/off');
     }
 }
