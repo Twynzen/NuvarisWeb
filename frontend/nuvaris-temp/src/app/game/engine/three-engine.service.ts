@@ -7,8 +7,6 @@ import { XPOrb } from '../entities/xp-orb.three';
 import { ProjectileThree } from '../entities/projectile.three';
 import { DebugVisualizer } from './debug-visualizer';
 import { PortalSystem, MapPortalData } from '../world/portal-system';
-// LabStructures disabled - now using BSP map format
-// import { LabStructures } from '../world/lab-structures';
 import { DoorSystem, DoorConfig } from '../world/door-system';
 import { CharacterAbilityThree } from '../abilities/character-ability-three';
 import { ArcadioAbilityThree } from '../abilities/arcadio-ability-three';
@@ -47,7 +45,6 @@ export class ThreeEngineService implements OnDestroy {
     private lastShootTime = 0;
     private portalSystem!: PortalSystem;
     private doorSystem!: DoorSystem;
-    // private labStructures!: LabStructures;  // Disabled - using BSP maps
     private autoSpawningEnabled = true;
 
     // Room Visibility System (limited vision per room)
@@ -1527,16 +1524,9 @@ export class ThreeEngineService implements OnDestroy {
      * Legacy map loading (fallback when JSON loading fails)
      */
     private loadLegacyMap(): void {
-        // Use old MapGenerator for walls
+        // Fallback: create basic boundary walls only
         const mapGen = new MapGenerator(this.scene);
         mapGen.generate();
-
-        // Portal initialization disabled - clean map without enemies
-        // this.portalSystem.initialize();
-
-        // Lab Structures disabled - now using BSP map format with rooms/corridors
-        // this.labStructures = new LabStructures(this.scene);
-        // this.labStructures.generateProcedural();
 
         this.currentMapName = 'legacy';
         console.log('[Game] Loaded legacy hardcoded map');
