@@ -22,7 +22,7 @@ import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.convert
 import { PlayerFogSystem } from '../world/player-fog.system';
 
 // Default map to load on game start
-const DEFAULT_MAP_NAME = 'default';
+const DEFAULT_MAP_NAME = 'labyrinth';
 
 @Injectable({
     providedIn: 'root'

@@ -1,0 +1,84 @@
+{
+  "name": "The Labyrinth",
+  "version": "1.0",
+  "gridSize": 5,
+  "size": { "width": 200, "height": 200 },
+  "playerSpawn": { "x": 0, "z": 0 },
+  "objects": [
+
+    {"id": "wall_perimeter_north", "type": "wall", "subtype": "perimeter", "position": { "x": 0, "z": 100 }, "scale": { "x": 204, "z": 4 }},
+    {"id": "wall_perimeter_south", "type": "wall", "subtype": "perimeter", "position": { "x": 0, "z": -100 }, "scale": { "x": 204, "z": 4 }},
+    {"id": "wall_perimeter_east", "type": "wall", "subtype": "perimeter", "position": { "x": 100, "z": 0 }, "scale": { "x": 4, "z": 204 }},
+    {"id": "wall_perimeter_west", "type": "wall", "subtype": "perimeter", "position": { "x": -100, "z": 0 }, "scale": { "x": 4, "z": 204 }},
+
+    {"id": "room1_wall_n", "type": "wall", "subtype": "normal", "position": { "x": 0, "z": 25 }, "scale": { "x": 50, "z": 2 }},
+    {"id": "room1_wall_s", "type": "wall", "subtype": "normal", "position": { "x": 0, "z": -25 }, "scale": { "x": 50, "z": 2 }},
+    {"id": "room1_wall_e", "type": "wall", "subtype": "normal", "position": { "x": 25, "z": 0 }, "scale": { "x": 2, "z": 50 }},
+    {"id": "room1_wall_w1", "type": "wall", "subtype": "normal", "position": { "x": -25, "z": -15 }, "scale": { "x": 2, "z": 20 }},
+    {"id": "room1_wall_w2", "type": "wall", "subtype": "normal", "position": { "x": -25, "z": 15 }, "scale": { "x": 2, "z": 20 }},
+
+    {"id": "room2_wall_n", "type": "wall", "subtype": "normal", "position": { "x": -55, "z": 25 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room2_wall_s1", "type": "wall", "subtype": "normal", "position": { "x": -55, "z": -25 }, "scale": { "x": 14, "z": 2 }},
+    {"id": "room2_wall_s2", "type": "wall", "subtype": "normal", "position": { "x": -38, "z": -25 }, "scale": { "x": 10, "z": 2 }},
+    {"id": "room2_wall_w", "type": "wall", "subtype": "normal", "position": { "x": -70, "z": 0 }, "scale": { "x": 2, "z": 50 }},
+
+    {"id": "room3_wall_n", "type": "wall", "subtype": "normal", "position": { "x": 55, "z": 25 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room3_wall_s", "type": "wall", "subtype": "normal", "position": { "x": 55, "z": -10 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room3_wall_e", "type": "wall", "subtype": "normal", "position": { "x": 70, "z": 7.5 }, "scale": { "x": 2, "z": 35 }},
+    {"id": "room3_connector", "type": "wall", "subtype": "normal", "position": { "x": 38, "z": 7.5 }, "scale": { "x": 2, "z": 35 }},
+
+    {"id": "room4_wall_n", "type": "wall", "subtype": "normal", "position": { "x": -55, "z": -50 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room4_wall_s", "type": "wall", "subtype": "normal", "position": { "x": -55, "z": -80 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room4_wall_w", "type": "wall", "subtype": "normal", "position": { "x": -70, "z": -65 }, "scale": { "x": 2, "z": 30 }},
+    {"id": "room4_wall_e1", "type": "wall", "subtype": "normal", "position": { "x": -40, "z": -58 }, "scale": { "x": 2, "z": 14 }},
+    {"id": "room4_wall_e2", "type": "wall", "subtype": "normal", "position": { "x": -40, "z": -73 }, "scale": { "x": 2, "z": 14 }},
+
+    {"id": "corridor_h1_n", "type": "wall", "subtype": "normal", "position": { "x": -10, "z": -50 }, "scale": { "x": 60, "z": 2 }},
+    {"id": "corridor_h1_s", "type": "wall", "subtype": "normal", "position": { "x": -10, "z": -58 }, "scale": { "x": 60, "z": 2 }},
+
+    {"id": "room5_wall_n", "type": "wall", "subtype": "normal", "position": { "x": 55, "z": -35 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room5_wall_s", "type": "wall", "subtype": "normal", "position": { "x": 55, "z": -75 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room5_wall_e", "type": "wall", "subtype": "normal", "position": { "x": 70, "z": -55 }, "scale": { "x": 2, "z": 40 }},
+    {"id": "room5_wall_w1", "type": "wall", "subtype": "normal", "position": { "x": 40, "z": -42 }, "scale": { "x": 2, "z": 14 }},
+    {"id": "room5_wall_w2", "type": "wall", "subtype": "normal", "position": { "x": 40, "z": -68 }, "scale": { "x": 2, "z": 14 }},
+
+    {"id": "corridor_v1_e", "type": "wall", "subtype": "normal", "position": { "x": 20, "z": -37.5 }, "scale": { "x": 2, "z": 25 }},
+    {"id": "corridor_v1_w", "type": "wall", "subtype": "normal", "position": { "x": 12, "z": -37.5 }, "scale": { "x": 2, "z": 25 }},
+
+    {"id": "room6_wall_n1", "type": "wall", "subtype": "normal", "position": { "x": -55, "z": 55 }, "scale": { "x": 14, "z": 2 }},
+    {"id": "room6_wall_n2", "type": "wall", "subtype": "normal", "position": { "x": -38, "z": 55 }, "scale": { "x": 10, "z": 2 }},
+    {"id": "room6_wall_s", "type": "wall", "subtype": "normal", "position": { "x": -55, "z": 35 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room6_wall_w", "type": "wall", "subtype": "normal", "position": { "x": -70, "z": 45 }, "scale": { "x": 2, "z": 20 }},
+    {"id": "room6_wall_e", "type": "wall", "subtype": "normal", "position": { "x": -40, "z": 45 }, "scale": { "x": 2, "z": 20 }},
+
+    {"id": "room7_wall_n", "type": "wall", "subtype": "normal", "position": { "x": -55, "z": 85 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room7_wall_w", "type": "wall", "subtype": "normal", "position": { "x": -70, "z": 70 }, "scale": { "x": 2, "z": 30 }},
+    {"id": "room7_wall_e1", "type": "wall", "subtype": "normal", "position": { "x": -40, "z": 63 }, "scale": { "x": 2, "z": 14 }},
+    {"id": "room7_wall_e2", "type": "wall", "subtype": "normal", "position": { "x": -40, "z": 80 }, "scale": { "x": 2, "z": 10 }},
+
+    {"id": "room8_wall_n", "type": "wall", "subtype": "normal", "position": { "x": 0, "z": 85 }, "scale": { "x": 50, "z": 2 }},
+    {"id": "room8_wall_s1", "type": "wall", "subtype": "normal", "position": { "x": -15, "z": 55 }, "scale": { "x": 20, "z": 2 }},
+    {"id": "room8_wall_s2", "type": "wall", "subtype": "normal", "position": { "x": 15, "z": 55 }, "scale": { "x": 20, "z": 2 }},
+    {"id": "room8_wall_w", "type": "wall", "subtype": "normal", "position": { "x": -25, "z": 70 }, "scale": { "x": 2, "z": 30 }},
+    {"id": "room8_wall_e", "type": "wall", "subtype": "normal", "position": { "x": 25, "z": 70 }, "scale": { "x": 2, "z": 30 }},
+
+    {"id": "corridor_to_r8_w", "type": "wall", "subtype": "normal", "position": { "x": -15, "z": 40 }, "scale": { "x": 2, "z": 30 }},
+    {"id": "corridor_to_r8_e", "type": "wall", "subtype": "normal", "position": { "x": -5, "z": 40 }, "scale": { "x": 2, "z": 30 }},
+
+    {"id": "room9_wall_n", "type": "wall", "subtype": "normal", "position": { "x": 55, "z": 70 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room9_wall_s", "type": "wall", "subtype": "normal", "position": { "x": 55, "z": 40 }, "scale": { "x": 30, "z": 2 }},
+    {"id": "room9_wall_e", "type": "wall", "subtype": "normal", "position": { "x": 70, "z": 55 }, "scale": { "x": 2, "z": 30 }},
+    {"id": "room9_wall_w1", "type": "wall", "subtype": "normal", "position": { "x": 40, "z": 48 }, "scale": { "x": 2, "z": 14 }},
+    {"id": "room9_wall_w2", "type": "wall", "subtype": "normal", "position": { "x": 40, "z": 63 }, "scale": { "x": 2, "z": 14 }},
+
+    {"id": "spawn_player", "type": "spawn", "subtype": "player", "position": { "x": 0, "z": 0 }},
+
+    {"id": "portal_spider_1", "type": "portal", "subtype": "spider", "position": { "x": -55, "z": 0 }, "config": { "homeRange": 15, "detectionRange": 25, "returnThreshold": 35, "maxEnemies": 8, "spawnRate": 3 }},
+    {"id": "portal_worm_1", "type": "portal", "subtype": "worm", "position": { "x": 55, "z": 7 }, "config": { "homeRange": 12, "detectionRange": 22, "returnThreshold": 32, "maxEnemies": 6, "spawnRate": 4 }},
+    {"id": "portal_spider_2", "type": "portal", "subtype": "spider", "position": { "x": -55, "z": -65 }, "config": { "homeRange": 12, "detectionRange": 20, "returnThreshold": 30, "maxEnemies": 8, "spawnRate": 3 }},
+    {"id": "portal_worm_2", "type": "portal", "subtype": "worm", "position": { "x": 55, "z": -55 }, "config": { "homeRange": 15, "detectionRange": 25, "returnThreshold": 35, "maxEnemies": 10, "spawnRate": 2.5 }},
+    {"id": "portal_spider_3", "type": "portal", "subtype": "spider", "position": { "x": -55, "z": 70 }, "config": { "homeRange": 12, "detectionRange": 20, "returnThreshold": 30, "maxEnemies": 6, "spawnRate": 4 }},
+    {"id": "portal_worm_3", "type": "portal", "subtype": "worm", "position": { "x": 0, "z": 70 }, "config": { "homeRange": 15, "detectionRange": 25, "returnThreshold": 35, "maxEnemies": 8, "spawnRate": 3 }},
+    {"id": "portal_spider_4", "type": "portal", "subtype": "spider", "position": { "x": 55, "z": 55 }, "config": { "homeRange": 12, "detectionRange": 22, "returnThreshold": 32, "maxEnemies": 8, "spawnRate": 3 }}
+  ]
+}
