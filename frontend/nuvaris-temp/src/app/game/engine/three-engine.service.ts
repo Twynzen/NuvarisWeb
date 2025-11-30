@@ -967,24 +967,22 @@ export class ThreeEngineService implements OnDestroy {
             }
         }
 
-        // Initialize portals from BSP data
-        if (unifiedData.portals && unifiedData.portals.length > 0) {
-            const portalConfigs: MapPortalData[] = unifiedData.portals.map(p => ({
-                id: p.id,
-                type: 'portal' as const,
-                subtype: p.type,
-                position: { x: p.x, z: p.z },
-                config: {
-                    homeRange: p.homeRange,
-                    detectionRange: p.detectionRange,
-                    returnThreshold: p.detectionRange + 10,
-                    maxEnemies: p.maxEnemies,
-                    spawnRate: p.spawnRate
-                }
-            }));
-            this.portalSystem.initializeFromConfig(portalConfigs);
-            console.log(`[Game] Initialized ${portalConfigs.length} portals`);
-        }
+        // Initialize portals from BSP data (always clear, even if empty)
+        const portalConfigs: MapPortalData[] = (unifiedData.portals || []).map(p => ({
+            id: p.id,
+            type: 'portal' as const,
+            subtype: p.type,
+            position: { x: p.x, z: p.z },
+            config: {
+                homeRange: p.homeRange,
+                detectionRange: p.detectionRange,
+                returnThreshold: p.detectionRange + 10,
+                maxEnemies: p.maxEnemies,
+                spawnRate: p.spawnRate
+            }
+        }));
+        this.portalSystem.initializeFromConfig(portalConfigs);
+        console.log(`[Game] Initialized ${portalConfigs.length} portals`);
 
         // Initialize doors from BSP data
         if (unifiedData.doors && unifiedData.doors.length > 0) {
@@ -1533,8 +1531,8 @@ export class ThreeEngineService implements OnDestroy {
         const mapGen = new MapGenerator(this.scene);
         mapGen.generate();
 
-        // Use old portal initialization
-        this.portalSystem.initialize();
+        // Portal initialization disabled - clean map without enemies
+        // this.portalSystem.initialize();
 
         // Lab Structures disabled - now using BSP map format with rooms/corridors
         // this.labStructures = new LabStructures(this.scene);
@@ -1731,8 +1729,8 @@ export class ThreeEngineService implements OnDestroy {
                 }
             }
 
-            // Spawn enemies
-            if (this.autoSpawningEnabled && currentTime - this.lastSpawnTime > 2) {
+            // Spawn enemies (only if portals exist)
+            if (this.autoSpawningEnabled && this.portalSystem.hasPortals() && currentTime - this.lastSpawnTime > 2) {
                 this.spawnEnemy(Math.random() < 0.6 ? 'spider' : 'worm');
                 this.lastSpawnTime = currentTime;
             }

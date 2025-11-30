@@ -352,6 +352,13 @@ export class PortalSystem {
         return portalList[Math.floor(Math.random() * portalList.length)];
     }
 
+    /**
+     * Check if there are any portals available for spawning
+     */
+    public hasPortals(): boolean {
+        return this.portals.length > 0;
+    }
+
     public toggleSpawning(enabled: boolean) {
         this.spawningEnabled = enabled;
     }

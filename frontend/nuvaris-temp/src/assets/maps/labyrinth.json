@@ -112,14 +112,7 @@
     {"id": "c_ese_w", "x": 47.5, "z": -23.75, "width": 2, "depth": 22.5, "isPerimeter": false}
   ],
 
-  "portals": [
-    {"id": "p_nw", "x": -50, "z": 45, "type": "spider", "homeRange": 12, "detectionRange": 20, "maxEnemies": 6, "spawnRate": 4},
-    {"id": "p_ne", "x": 50, "z": 45, "type": "worm", "homeRange": 12, "detectionRange": 20, "maxEnemies": 6, "spawnRate": 4},
-    {"id": "p_sw", "x": -50, "z": -45, "type": "spider", "homeRange": 12, "detectionRange": 20, "maxEnemies": 8, "spawnRate": 3},
-    {"id": "p_se", "x": 50, "z": -45, "type": "worm", "homeRange": 15, "detectionRange": 25, "maxEnemies": 8, "spawnRate": 3},
-    {"id": "p_w", "x": -47.5, "z": 0, "type": "spider", "homeRange": 10, "detectionRange": 18, "maxEnemies": 5, "spawnRate": 5},
-    {"id": "p_e", "x": 47.5, "z": 0, "type": "worm", "homeRange": 10, "detectionRange": 18, "maxEnemies": 5, "spawnRate": 5}
-  ],
+  "portals": [],
 
   "doors": [
     {"id": "d_hub_w", "x": -15, "z": 0, "width": 5, "height": 8, "depth": 2, "rotation": 1.5708, "type": "large", "isOpen": false},
