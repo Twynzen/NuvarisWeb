@@ -23,7 +23,7 @@ export class RoomLightingSystem {
 
     // Shared lights
     private ambientLight: THREE.AmbientLight;
-    private playerLight: THREE.PointLight;
+    private playerLight: THREE.SpotLight;  // Changed to SpotLight for shadow casting
 
     // Room lights registry
     private roomLights: Map<string, RoomLightInstance[]> = new Map();
@@ -45,15 +45,36 @@ export class RoomLightingSystem {
         this.scene = scene;
         this.camera = camera;
 
-        // Create shared ambient light
-        this.ambientLight = new THREE.AmbientLight(0x222244, 0.3);
+        // Create shared ambient light (reduced for darker areas)
+        this.ambientLight = new THREE.AmbientLight(0x111122, 0.15);
         this.scene.add(this.ambientLight);
 
-        // Create player-following light (torch effect)
-        this.playerLight = new THREE.PointLight(0xffe4c4, 0.8, 18, 2);
-        this.playerLight.position.set(0, 3, 0);
-        this.playerLight.layers.enableAll();  // Visible in all rooms
+        // Create player-following SpotLight with shadow casting
+        // SpotLight(color, intensity, distance, angle, penumbra, decay)
+        this.playerLight = new THREE.SpotLight(
+            0xffe4c4,   // Warm torch color
+            2.5,        // Increased intensity for spotlight
+            35,         // Distance
+            Math.PI / 3, // Angle (60 degrees cone)
+            0.5,        // Penumbra (soft edge)
+            1.5         // Decay
+        );
+        this.playerLight.position.set(0, 12, 0);  // Higher position for top-down
+        this.playerLight.target.position.set(0, 0, 0);  // Point downward
+
+        // Enable shadow casting
+        this.playerLight.castShadow = true;
+        this.playerLight.shadow.mapSize.width = 1024;
+        this.playerLight.shadow.mapSize.height = 1024;
+        this.playerLight.shadow.camera.near = 1;
+        this.playerLight.shadow.camera.far = 40;
+        this.playerLight.shadow.camera.fov = 60;
+        this.playerLight.shadow.bias = -0.001;  // Reduce shadow acne
+        this.playerLight.shadow.radius = 2;     // Soft shadows
+
+        this.playerLight.layers.enableAll();
         this.scene.add(this.playerLight);
+        this.scene.add(this.playerLight.target);  // Important: add target to scene
 
         // Initialize camera layers
         this.camera.layers.enable(this.LAYER_SHARED);
@@ -319,9 +340,17 @@ export class RoomLightingSystem {
      * Update player light position (call each frame)
      */
     public updatePlayerLight(playerPosition: THREE.Vector3): void {
+        // Position light above player
         this.playerLight.position.set(
             playerPosition.x,
-            playerPosition.y + 3,
+            playerPosition.y + 12,  // Higher for better shadow coverage
+            playerPosition.z
+        );
+
+        // Point spotlight at player position (on ground)
+        this.playerLight.target.position.set(
+            playerPosition.x,
+            0,
             playerPosition.z
         );
     }

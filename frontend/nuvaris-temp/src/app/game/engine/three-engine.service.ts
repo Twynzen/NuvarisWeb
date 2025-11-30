@@ -309,6 +309,46 @@ export class ThreeEngineService implements OnDestroy {
         return newState;
     }
 
+    /**
+     * Update fog room bounds based on visible rooms
+     * Called when player changes room
+     */
+    private updateFogRoomBounds(): void {
+        if (!this.playerFogSystem || !this.roomVisibilityManager) return;
+
+        const visibleRooms = this.roomVisibilityManager.getVisibleRooms();
+
+        if (visibleRooms.length === 0) {
+            // No rooms = no bounds restriction
+            this.playerFogSystem.setCurrentRoomBounds(null);
+            return;
+        }
+
+        // Combine bounds of all visible rooms
+        const roomBounds = visibleRooms.map(room => room.bounds);
+        this.playerFogSystem.setVisibleRoomsBounds(roomBounds);
+    }
+
+    /**
+     * Toggle room occlusion for fog
+     */
+    public toggleRoomOcclusion(enabled?: boolean): boolean {
+        if (!this.playerFogSystem) return false;
+
+        const newState = enabled !== undefined ? enabled : !this.playerFogSystem.isRoomOcclusionEnabled();
+        this.playerFogSystem.setRoomOcclusionEnabled(newState);
+        return newState;
+    }
+
+    /**
+     * Set fog factor for areas outside the current room
+     */
+    public setOutsideRoomFogFactor(factor: number): number {
+        if (!this.playerFogSystem) return 0;
+        this.playerFogSystem.setOutsideRoomFogFactor(factor);
+        return factor;
+    }
+
     // --- Minimap Data Access ---
 
     public getPlayerPosition(): { x: number; z: number } | null {
@@ -1177,6 +1217,11 @@ export class ThreeEngineService implements OnDestroy {
         // Initialize Room Visibility System
         this.roomVisibilityManager.initialize(this.scene, this.camera).then(() => {
             console.log('[Game] Room visibility system initialized');
+
+            // Set up callback for room changes to update fog bounds
+            this.roomVisibilityManager.onRoomChange = (newRoom, oldRoom) => {
+                this.updateFogRoomBounds();
+            };
         }).catch((err) => {
             console.warn('[Game] Room visibility system initialization failed', err);
         });

@@ -10,16 +10,17 @@ interface ShaderWithUniforms {
 }
 
 /**
- * PlayerFogSystem - Fog radial centrado en el jugador
+ * PlayerFogSystem - Fog radial centrado en el jugador CON oclusión por paredes
  *
- * Este sistema reemplaza el fog estándar de Three.js (basado en distancia a cámara)
- * con un fog personalizado que calcula la densidad basándose en la distancia al jugador.
+ * Este sistema combina:
+ * 1. Fog basado en distancia al jugador (no a la cámara)
+ * 2. Oclusión por room bounds (lo que está fuera del room actual = oscuro total)
  *
  * Características:
  * - Burbuja de claridad alrededor del jugador
- * - Transición suave de fogNear a fogFar
- * - Calculo en XZ (ignora altura para vista top-down)
- * - Compatible con MeshStandardMaterial
+ * - Fragmentos FUERA del room actual = fog máximo
+ * - Fragmentos DENTRO del room = fog normal basado en distancia
+ * - Rooms adyacentes visibles pueden tener fog intermedio
  * - Actualización de parámetros en runtime sin recompilación
  *
  * Técnica: onBeforeCompile para inyectar shader chunks personalizados
@@ -29,6 +30,8 @@ export interface PlayerFogConfig {
     fogColor: THREE.Color;
     fogNear: number;      // Radio interior de claridad total
     fogFar: number;       // Radio exterior donde fog es 100%
+    roomOcclusionEnabled: boolean;  // Si true, fragmentos fuera del room = oscuro
+    outsideRoomFogFactor: number;   // Factor de fog para fragmentos fuera del room (0.8-1.0)
 }
 
 export class PlayerFogSystem {
@@ -38,41 +41,55 @@ export class PlayerFogSystem {
     private scene: THREE.Scene;
     private isEnabled: boolean = true;
 
+    // Room bounds for occlusion
+    private currentRoomMin: THREE.Vector3 = new THREE.Vector3(-1000, -1000, -1000);
+    private currentRoomMax: THREE.Vector3 = new THREE.Vector3(1000, 1000, 1000);
+    private hasRoomBounds: boolean = false;
+
+    // Visible rooms bounds (for adjacent rooms through doors)
+    private visibleRoomsBounds: THREE.Box3[] = [];
+
     constructor(scene: THREE.Scene, config: Partial<PlayerFogConfig> = {}) {
         this.scene = scene;
         this.config = {
             fogColor: config.fogColor || new THREE.Color(0x0a0a0f),
             fogNear: config.fogNear ?? 18,
-            fogFar: config.fogFar ?? 28
+            fogFar: config.fogFar ?? 28,
+            roomOcclusionEnabled: config.roomOcclusionEnabled ?? true,
+            outsideRoomFogFactor: config.outsideRoomFogFactor ?? 0.95
         };
 
         // CRÍTICO: Scene.fog debe existir para activar USE_FOG define en los shaders
-        // Usamos valores dummy ya que nuestro shader personalizado los reemplaza
         this.scene.fog = new THREE.Fog(this.config.fogColor, 1, 100);
-        // También actualizar background para que coincida con fog color
         this.scene.background = this.config.fogColor.clone();
 
-        console.log(`[PlayerFogSystem] Initialized with fogNear=${this.config.fogNear}, fogFar=${this.config.fogFar}`);
+        console.log(`[PlayerFogSystem] Initialized with fogNear=${this.config.fogNear}, fogFar=${this.config.fogFar}, roomOcclusion=${this.config.roomOcclusionEnabled}`);
     }
 
     /**
      * Aplica fog personalizado a un MeshStandardMaterial
-     * Llamar después de crear el material, antes del primer render
      */
     public applyToMaterial(material: THREE.MeshStandardMaterial): void {
         if (!material) return;
 
-        material.fog = true; // Asegurar que fog esté habilitado
+        material.fog = true;
 
         material.onBeforeCompile = (shader: ShaderWithUniforms) => {
-            // Añadir uniforms personalizados
+            // Uniforms básicos de fog
             shader.uniforms['uPlayerPosition'] = { value: this.playerPosition.clone() };
             shader.uniforms['uFogNear'] = { value: this.config.fogNear };
             shader.uniforms['uFogFar'] = { value: this.config.fogFar };
             shader.uniforms['uCustomFogColor'] = { value: this.config.fogColor.clone() };
             shader.uniforms['uFogEnabled'] = { value: this.isEnabled ? 1.0 : 0.0 };
 
-            // Modificar vertex shader - añadir varying para world position
+            // Uniforms para room occlusion
+            shader.uniforms['uRoomMin'] = { value: this.currentRoomMin.clone() };
+            shader.uniforms['uRoomMax'] = { value: this.currentRoomMax.clone() };
+            shader.uniforms['uRoomOcclusionEnabled'] = { value: this.config.roomOcclusionEnabled ? 1.0 : 0.0 };
+            shader.uniforms['uOutsideRoomFogFactor'] = { value: this.config.outsideRoomFogFactor };
+            shader.uniforms['uHasRoomBounds'] = { value: this.hasRoomBounds ? 1.0 : 0.0 };
+
+            // Vertex shader - calcular world position
             shader.vertexShader = shader.vertexShader.replace(
                 '#include <fog_pars_vertex>',
                 `
@@ -93,7 +110,7 @@ export class PlayerFogSystem {
                 `
             );
 
-            // Modificar fragment shader - reemplazar cálculo de fog
+            // Fragment shader - fog con oclusión por room
             shader.fragmentShader = shader.fragmentShader.replace(
                 '#include <fog_pars_fragment>',
                 `
@@ -104,8 +121,29 @@ export class PlayerFogSystem {
                     uniform float uFogFar;
                     uniform vec3 uCustomFogColor;
                     uniform float uFogEnabled;
+
+                    // Room occlusion uniforms
+                    uniform vec3 uRoomMin;
+                    uniform vec3 uRoomMax;
+                    uniform float uRoomOcclusionEnabled;
+                    uniform float uOutsideRoomFogFactor;
+                    uniform float uHasRoomBounds;
+
                     varying float vFogDepth;
                     varying vec3 vWorldPosition;
+
+                    // Función para verificar si un punto está dentro del room
+                    bool isInsideRoom(vec3 pos) {
+                        return pos.x >= uRoomMin.x && pos.x <= uRoomMax.x &&
+                               pos.z >= uRoomMin.z && pos.z <= uRoomMax.z;
+                    }
+
+                    // Función para calcular distancia al borde del room más cercano
+                    float distanceToRoomEdge(vec3 pos) {
+                        float dx = min(abs(pos.x - uRoomMin.x), abs(pos.x - uRoomMax.x));
+                        float dz = min(abs(pos.z - uRoomMin.z), abs(pos.z - uRoomMax.z));
+                        return min(dx, dz);
+                    }
                 #endif
                 `
             );
@@ -118,36 +156,136 @@ export class PlayerFogSystem {
                         // Calcular distancia desde el jugador (XZ para top-down)
                         float distFromPlayer = length(vWorldPosition.xz - uPlayerPosition.xz);
 
-                        // Fog factor: 0 = sin fog (cerca), 1 = fog completo (lejos)
-                        float fogFactor = smoothstep(uFogNear, uFogFar, distFromPlayer);
+                        // Fog base basado en distancia al jugador
+                        float baseFogFactor = smoothstep(uFogNear, uFogFar, distFromPlayer);
+
+                        float finalFogFactor = baseFogFactor;
+
+                        // Aplicar oclusión por room si está habilitada
+                        if (uRoomOcclusionEnabled > 0.5 && uHasRoomBounds > 0.5) {
+                            bool insideRoom = isInsideRoom(vWorldPosition);
+
+                            if (!insideRoom) {
+                                // Fuera del room actual = fog casi máximo
+                                // Pero con transición suave cerca del borde
+                                float distToRoom = distanceToRoomEdge(vWorldPosition);
+                                float edgeFade = smoothstep(0.0, 3.0, distToRoom);
+
+                                // Mezclar entre fog normal y fog máximo
+                                finalFogFactor = mix(baseFogFactor, uOutsideRoomFogFactor, edgeFade);
+                            }
+                        }
 
                         // Aplicar fog
-                        gl_FragColor.rgb = mix(gl_FragColor.rgb, uCustomFogColor, fogFactor);
+                        gl_FragColor.rgb = mix(gl_FragColor.rgb, uCustomFogColor, finalFogFactor);
                     }
                 #endif
                 `
             );
 
-            // Guardar referencia para actualizar uniforms
             this.materialShaders.set(material, shader);
         };
 
-        // Cache key para evitar problemas de recompilación
-        material.customProgramCacheKey = () => `playerFogMaterial_v2_${this.isEnabled}`;
+        material.customProgramCacheKey = () => `playerFogMaterial_v3_${this.isEnabled}_${this.config.roomOcclusionEnabled}`;
     }
 
     /**
-     * Llamar cada frame antes de render
+     * Actualizar posición del jugador - llamar cada frame
      */
     public update(playerPosition: THREE.Vector3): void {
         this.playerPosition.copy(playerPosition);
 
-        // Actualizar uniforms en todos los materiales
         this.materialShaders.forEach((shader) => {
             if (shader.uniforms['uPlayerPosition']) {
                 shader.uniforms['uPlayerPosition'].value.copy(this.playerPosition);
             }
         });
+    }
+
+    /**
+     * Establecer bounds del room actual para oclusión
+     */
+    public setCurrentRoomBounds(bounds: THREE.Box3 | null): void {
+        if (bounds) {
+            this.currentRoomMin.copy(bounds.min);
+            this.currentRoomMax.copy(bounds.max);
+            this.hasRoomBounds = true;
+
+            // Expandir ligeramente los bounds para evitar artefactos en los bordes
+            const expansion = 0.5;
+            this.currentRoomMin.x -= expansion;
+            this.currentRoomMin.z -= expansion;
+            this.currentRoomMax.x += expansion;
+            this.currentRoomMax.z += expansion;
+        } else {
+            // Sin bounds = todo visible (mapa abierto)
+            this.currentRoomMin.set(-1000, -1000, -1000);
+            this.currentRoomMax.set(1000, 1000, 1000);
+            this.hasRoomBounds = false;
+        }
+
+        // Actualizar uniforms en todos los materiales
+        this.materialShaders.forEach((shader) => {
+            if (shader.uniforms['uRoomMin']) {
+                shader.uniforms['uRoomMin'].value.copy(this.currentRoomMin);
+            }
+            if (shader.uniforms['uRoomMax']) {
+                shader.uniforms['uRoomMax'].value.copy(this.currentRoomMax);
+            }
+            if (shader.uniforms['uHasRoomBounds']) {
+                shader.uniforms['uHasRoomBounds'].value = this.hasRoomBounds ? 1.0 : 0.0;
+            }
+        });
+
+        if (bounds) {
+            console.log(`[PlayerFogSystem] Room bounds set: (${this.currentRoomMin.x.toFixed(1)}, ${this.currentRoomMin.z.toFixed(1)}) to (${this.currentRoomMax.x.toFixed(1)}, ${this.currentRoomMax.z.toFixed(1)})`);
+        }
+    }
+
+    /**
+     * Establecer bounds de múltiples rooms visibles (para rooms adyacentes)
+     */
+    public setVisibleRoomsBounds(roomBounds: THREE.Box3[]): void {
+        this.visibleRoomsBounds = roomBounds;
+
+        // Calcular bounds combinados de todos los rooms visibles
+        if (roomBounds.length > 0) {
+            const combinedBounds = new THREE.Box3();
+            for (const bounds of roomBounds) {
+                combinedBounds.union(bounds);
+            }
+            this.setCurrentRoomBounds(combinedBounds);
+        }
+    }
+
+    /**
+     * Habilitar/deshabilitar oclusión por room
+     */
+    public setRoomOcclusionEnabled(enabled: boolean): void {
+        this.config.roomOcclusionEnabled = enabled;
+
+        this.materialShaders.forEach((shader) => {
+            if (shader.uniforms['uRoomOcclusionEnabled']) {
+                shader.uniforms['uRoomOcclusionEnabled'].value = enabled ? 1.0 : 0.0;
+            }
+        });
+
+        console.log(`[PlayerFogSystem] Room occlusion: ${enabled ? 'ON' : 'OFF'}`);
+    }
+
+    /**
+     * Establecer factor de fog para áreas fuera del room
+     */
+    public setOutsideRoomFogFactor(factor: number): void {
+        this.config.outsideRoomFogFactor = Math.max(0, Math.min(1, factor));
+
+        this.materialShaders.forEach((shader) => {
+            if (shader.uniforms['uOutsideRoomFogFactor']) {
+                shader.uniforms['uOutsideRoomFogFactor'].value = this.config.outsideRoomFogFactor;
+            }
+        });
+
+        console.log(`[PlayerFogSystem] Outside room fog factor: ${this.config.outsideRoomFogFactor}`);
     }
 
     /**
@@ -186,7 +324,6 @@ export class PlayerFogSystem {
             this.config.fogColor.copy(color);
         }
 
-        // Actualizar background para que coincida
         if (this.scene.background instanceof THREE.Color) {
             this.scene.background.copy(this.config.fogColor);
         }
@@ -208,7 +345,7 @@ export class PlayerFogSystem {
     }
 
     /**
-     * Habilitar/deshabilitar el fog
+     * Habilitar/deshabilitar el fog completamente
      */
     public setEnabled(enabled: boolean): void {
         this.isEnabled = enabled;
@@ -219,7 +356,6 @@ export class PlayerFogSystem {
             }
         });
 
-        // También toggle scene.fog para consistencia
         if (enabled) {
             if (!this.scene.fog) {
                 this.scene.fog = new THREE.Fog(this.config.fogColor, 1, 100);
@@ -245,20 +381,10 @@ export class PlayerFogSystem {
         return {
             fogColor: this.config.fogColor.clone(),
             fogNear: this.config.fogNear,
-            fogFar: this.config.fogFar
+            fogFar: this.config.fogFar,
+            roomOcclusionEnabled: this.config.roomOcclusionEnabled,
+            outsideRoomFogFactor: this.config.outsideRoomFogFactor
         };
-    }
-
-    /**
-     * Aplicar preset de configuración
-     */
-    public applyPreset(preset: Partial<PlayerFogConfig>): void {
-        if (preset.fogColor) {
-            this.setFogColor(preset.fogColor);
-        }
-        if (preset.fogNear !== undefined && preset.fogFar !== undefined) {
-            this.setFogRadius(preset.fogNear, preset.fogFar);
-        }
     }
 
     /**
@@ -269,10 +395,21 @@ export class PlayerFogSystem {
     }
 
     /**
-     * Limpiar un material específico (cuando se elimina del escena)
+     * Obtener si room occlusion está habilitada
      */
-    public removeMaterial(material: THREE.Material): void {
-        this.materialShaders.delete(material);
+    public isRoomOcclusionEnabled(): boolean {
+        return this.config.roomOcclusionEnabled;
+    }
+
+    /**
+     * Obtener bounds del room actual
+     */
+    public getCurrentRoomBounds(): { min: THREE.Vector3; max: THREE.Vector3 } | null {
+        if (!this.hasRoomBounds) return null;
+        return {
+            min: this.currentRoomMin.clone(),
+            max: this.currentRoomMax.clone()
+        };
     }
 
     /**
@@ -280,6 +417,7 @@ export class PlayerFogSystem {
      */
     public dispose(): void {
         this.materialShaders.clear();
+        this.visibleRoomsBounds = [];
         console.log('[PlayerFogSystem] Disposed');
     }
 }

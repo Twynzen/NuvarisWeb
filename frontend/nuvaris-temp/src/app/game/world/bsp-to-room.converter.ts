@@ -404,6 +404,8 @@ export class BSPToRoomConverter {
 
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(wall.x, height / 2, wall.z);
+
+        // Enable shadow casting and receiving for wall occlusion effect
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.name = wall.id;

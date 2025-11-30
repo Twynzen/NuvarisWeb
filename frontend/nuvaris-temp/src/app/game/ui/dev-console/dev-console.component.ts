@@ -251,6 +251,13 @@ export class DevConsoleComponent implements AfterViewInit {
                 case 'fogstats':
                     this.handleFogStats();
                     break;
+                case 'roomocclusion':
+                    this.handleRoomOcclusion(args);
+                    break;
+                case 'outsidefoq':
+                case 'outsidefog':
+                    this.handleOutsideFog(args);
+                    break;
                 default:
                     this.addLog('error', `Unknown command: "${cmd}". Type "help" for available commands.`);
             }
@@ -288,7 +295,9 @@ export class DevConsoleComponent implements AfterViewInit {
             { cmd: 'roomstats', desc: 'Show room visibility system stats' },
             { cmd: 'fogradius <near> <far>', desc: 'Set fog clarity radius (near=full visible, far=full fog)' },
             { cmd: 'fogcolor <hex>', desc: 'Set fog color (e.g., fogcolor 0a0a0f or #0a0a0f)' },
-            { cmd: 'fogstats', desc: 'Show player fog system stats' }
+            { cmd: 'fogstats', desc: 'Show player fog system stats' },
+            { cmd: 'roomocclusion <on/off>', desc: 'Toggle room-based fog occlusion (walls block light)' },
+            { cmd: 'outsidefog <0-1>', desc: 'Set fog density outside current room (0.95 = very dark)' }
         ];
 
         this.addLog('info', '--- Available Commands ---');
@@ -620,5 +629,50 @@ export class DevConsoleComponent implements AfterViewInit {
         this.addLog('info', `  Materials with fog: ${stats.materials}`);
         this.addLog('info', '');
         this.addLog('info', 'Commands: fogradius <n> <f>, fogcolor <hex>, nebline on/off');
+        this.addLog('info', 'Room occlusion: roomocclusion on/off, outsidefog <0-1>');
+    }
+
+    private handleRoomOcclusion(args: string[]) {
+        if (args.length === 0) {
+            // Toggle
+            const newState = this.engineService.toggleRoomOcclusion();
+            this.addLog('success', `Room occlusion: ${newState ? 'ON' : 'OFF'}`);
+            return;
+        }
+
+        const arg = args[0].toLowerCase();
+        if (arg === 'on' || arg === 'true') {
+            this.engineService.toggleRoomOcclusion(true);
+            this.addLog('success', 'Room occlusion: ON');
+            this.addLog('info', '  Areas outside current room will be darkened');
+        } else if (arg === 'off' || arg === 'false') {
+            this.engineService.toggleRoomOcclusion(false);
+            this.addLog('success', 'Room occlusion: OFF');
+            this.addLog('info', '  Fog will only be based on distance to player');
+        } else {
+            throw new Error('Invalid argument. Use: roomocclusion on/off');
+        }
+    }
+
+    private handleOutsideFog(args: string[]) {
+        if (args.length === 0) {
+            this.addLog('info', 'Usage: outsidefog <value>');
+            this.addLog('info', '  Value from 0.0 (no fog) to 1.0 (complete blackout)');
+            this.addLog('info', '  Recommended: 0.90-0.98');
+            return;
+        }
+
+        const factor = parseFloat(args[0]);
+        if (isNaN(factor)) {
+            throw new Error('Invalid argument. Value must be a number (0.0 - 1.0)');
+        }
+
+        if (factor < 0 || factor > 1) {
+            throw new Error('Value must be between 0.0 and 1.0');
+        }
+
+        this.engineService.setOutsideRoomFogFactor(factor);
+        this.addLog('success', `Outside room fog factor set to: ${factor.toFixed(2)}`);
+        this.addLog('info', '  This controls how dark areas outside the current room appear');
     }
 }
