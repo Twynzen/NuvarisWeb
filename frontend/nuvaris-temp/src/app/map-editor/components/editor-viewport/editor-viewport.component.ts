@@ -1220,68 +1220,93 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  // Export generated map as JSON (compatible with game)
+  // Export generated map as BSP JSON (full format with rooms/corridors for fog system)
   exportProceduralMapAsJSON(): void {
     if (!this.lastGeneratedData) {
       alert('No hay un mapa procedural generado. Genera uno primero.');
       return;
     }
 
+    // BSP format - includes rooms and corridors for fog occlusion system
     const mapData = {
-      name: `Procedural Map - ${this.proceduralConfig.seed}`,
-      version: '1.0',
-      gridSize: 5,
-      generatedWith: {
-        seed: this.proceduralConfig.seed,
-        config: this.proceduralConfig
-      },
+      name: `BSP Map - ${this.proceduralConfig.seed}`,
+      version: '4.0',
+      format: 'bsp',
+
+      // Room data for fog occlusion
+      rooms: this.lastGeneratedData.rooms.map(r => ({
+        id: r.id,
+        x: r.x,
+        z: r.z,
+        width: r.width,
+        depth: r.depth,
+        centerX: r.x + r.width / 2,
+        centerZ: r.z + r.depth / 2,
+        connected: true
+      })),
+
+      // Corridor data for fog transitions
+      corridors: this.lastGeneratedData.corridors.map(c => ({
+        id: c.id,
+        startX: c.startX,
+        startZ: c.startZ,
+        endX: c.endX,
+        endZ: c.endZ,
+        width: c.width,
+        horizontal: c.horizontal
+      })),
+
+      // Wall segments
+      walls: this.lastGeneratedData.walls.map(w => ({
+        id: w.id,
+        x: w.x,
+        z: w.z,
+        width: w.width,
+        depth: w.depth,
+        isPerimeter: w.isPerimeter
+      })),
+
+      // Portal spawn points
+      portals: this.lastGeneratedData.portals.map(p => ({
+        id: p.id,
+        x: p.x,
+        z: p.z,
+        type: p.type,
+        homeRange: p.homeRange,
+        detectionRange: p.detectionRange,
+        maxEnemies: p.maxEnemies,
+        spawnRate: p.spawnRate
+      })),
+
+      // Doors
+      doors: this.lastGeneratedData.doors.map(d => ({
+        id: d.id,
+        x: d.x,
+        z: d.z,
+        width: d.width,
+        height: d.height,
+        depth: d.depth,
+        rotation: d.rotation,
+        type: d.type,
+        isOpen: d.isOpen
+      })),
+
+      // Player spawn
       playerSpawn: this.lastGeneratedData.playerSpawn,
-      objects: [
-        // Walls
-        ...this.lastGeneratedData.walls.map(w => ({
-          id: w.id,
-          type: 'wall' as const,
-          subtype: w.isPerimeter ? 'perimeter' : 'normal',
-          position: { x: w.x, z: w.z },
-          scale: { x: w.width, z: w.depth }
-        })),
-        // Doors
-        ...this.lastGeneratedData.doors.map(d => ({
-          id: d.id,
-          type: 'door' as const,
-          subtype: d.type,
-          position: { x: d.x, z: d.z },
-          rotation: d.rotation,
-          config: {
-            width: d.width,
-            height: d.height,
-            depth: d.depth,
-            type: d.type,
-            isOpen: d.isOpen
-          }
-        })),
-        // Portals
-        ...this.lastGeneratedData.portals.map(p => ({
-          id: p.id,
-          type: 'portal' as const,
-          subtype: p.type,
-          position: { x: p.x, z: p.z },
-          config: {
-            homeRange: p.homeRange,
-            detectionRange: p.detectionRange,
-            returnThreshold: p.detectionRange + 10,
-            maxEnemies: p.maxEnemies,
-            spawnRate: p.spawnRate
-          }
-        })),
-        // Player spawn
-        {
-          id: 'spawn_player',
-          type: 'spawn' as const,
-          subtype: 'player',
-          position: this.lastGeneratedData.playerSpawn
-        }
-      ]
+
+      // Generation config for reproducibility
+      config: {
+        seed: this.proceduralConfig.seed,
+        mapWidth: this.proceduralConfig.mapWidth,
+        mapDepth: this.proceduralConfig.mapDepth,
+        minRoomSize: this.proceduralConfig.minRoomSize,
+        maxRoomSize: this.proceduralConfig.maxRoomSize,
+        corridorWidth: this.proceduralConfig.corridorWidth,
+        maxDepth: this.proceduralConfig.maxDepth,
+        portalCount: this.proceduralConfig.portalCount,
+        generateDoors: this.proceduralConfig.generateDoors,
+        doorChance: this.proceduralConfig.doorChance
+      }
     };
 
     const json = JSON.stringify(mapData, null, 2);
@@ -1290,11 +1315,11 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `procedural_map_${this.proceduralConfig.seed}.json`;
+    a.download = `bsp_map_${this.proceduralConfig.seed}.json`;
     a.click();
 
     URL.revokeObjectURL(url);
-    console.log('[MapEditor] Procedural map exported:', mapData.name);
+    console.log('[MapEditor] BSP map exported:', mapData.name, `(${mapData.rooms.length} rooms, ${mapData.corridors.length} corridors)`);
   }
 
   ngOnDestroy(): void {
