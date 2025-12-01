@@ -965,6 +965,20 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       this.createSpawnPoint(s.id, s.position[0], s.position[1], s.type);
     });
 
+    // Load doors
+    data.doors?.forEach((d: any) => {
+      // Determine door type from size
+      const width = d.size ? Math.max(d.size[0], d.size[1]) : 5;
+      let doorType: 'small' | 'large' | 'garage' = 'small';
+      if (width >= 10) doorType = 'garage';
+      else if (width >= 6) doorType = 'large';
+
+      // Calculate rotation from size (wider dimension determines orientation)
+      const rotation = d.size && d.size[0] > d.size[1] ? 0 : Math.PI / 2;
+
+      this.createDoor(d.id, d.position[0], d.position[1], doorType, rotation, d.state === 'open');
+    });
+
     this.deselectObject();
   }
 

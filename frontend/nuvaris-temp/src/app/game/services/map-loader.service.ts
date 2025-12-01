@@ -102,7 +102,7 @@ interface LegacyMapData {
 export class MapLoaderService {
     // Available maps - hardcoded list for now
     // In production, this could be fetched from a server
-    private readonly AVAILABLE_MAPS = ['labyrinth', 'default', 'small-arena', 'sector-omega', 'nivel1-lab'];
+    private readonly AVAILABLE_MAPS = ['legacy', 'labyrinth', 'default', 'small-arena', 'sector-omega', 'nivel1-lab'];
 
     private currentMapName: string = '';
     private currentMapData: MapData | null = null;
