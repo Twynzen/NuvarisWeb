@@ -106,7 +106,7 @@
   <!-- PROCEDURAL GENERATION PANEL (floating) -->
   <div class="procedural-panel" *ngIf="showProceduralPanel">
     <div class="procedural-header">
-      <span class="procedural-title">🎲 GENERADOR PROCEDURAL</span>
+      <span class="procedural-title">🎲 GENERADOR RADIAL</span>
       <button class="close-btn" (click)="toggleProceduralPanel()">✕</button>
     </div>
 
@@ -117,7 +117,7 @@
         <div class="seed-row">
           <input
             type="text"
-            [(ngModel)]="proceduralConfig.seed"
+            [(ngModel)]="radialConfig.seed"
             class="seed-input"
             placeholder="Seed del mapa">
           <button class="seed-refresh" (click)="generateRandomSeed()" title="Generar nuevo seed">
@@ -126,52 +126,37 @@
         </div>
       </div>
 
-      <!-- Map Size -->
+      <!-- Room Sizes -->
       <div class="procedural-section">
-        <div class="section-label">TAMAÑO DEL MAPA</div>
+        <div class="section-label">TAMANO HABITACIONES</div>
         <div class="config-row">
-          <label>Ancho:</label>
-          <input type="number" [(ngModel)]="proceduralConfig.mapWidth" min="100" max="400" step="20">
+          <label>Hub Central:</label>
+          <input type="number" [(ngModel)]="radialConfig.hubSize" min="20" max="50" step="5">
         </div>
         <div class="config-row">
-          <label>Profundidad:</label>
-          <input type="number" [(ngModel)]="proceduralConfig.mapDepth" min="100" max="400" step="20">
+          <label>Cardinales (N/S/E/W):</label>
+          <input type="number" [(ngModel)]="radialConfig.cardinalSize" min="15" max="40" step="5">
+        </div>
+        <div class="config-row">
+          <label>Esquinas (NE/NW/SE/SW):</label>
+          <input type="number" [(ngModel)]="radialConfig.cornerSize" min="10" max="30" step="5">
         </div>
       </div>
 
-      <!-- Room Settings -->
+      <!-- Layout -->
       <div class="procedural-section">
-        <div class="section-label">HABITACIONES</div>
+        <div class="section-label">LAYOUT</div>
         <div class="config-row">
-          <label>Tamaño Mínimo:</label>
-          <input type="number" [(ngModel)]="proceduralConfig.minRoomSize" min="10" max="30" step="5">
+          <label>Separacion:</label>
+          <input type="number" [(ngModel)]="radialConfig.spacing" min="10" max="40" step="5">
         </div>
         <div class="config-row">
-          <label>Tamaño Máximo:</label>
-          <input type="number" [(ngModel)]="proceduralConfig.maxRoomSize" min="20" max="60" step="5">
+          <label>Ancho Pasillos:</label>
+          <input type="number" [(ngModel)]="radialConfig.corridorWidth" min="3" max="10" step="1">
         </div>
-        <div class="config-row">
-          <label>Complejidad:</label>
-          <input type="number" [(ngModel)]="proceduralConfig.maxDepth" min="3" max="8" step="1">
-          <span class="hint">(más = más habitaciones)</span>
-        </div>
-      </div>
-
-      <!-- Corridor Settings -->
-      <div class="procedural-section">
-        <div class="section-label">PASILLOS</div>
-        <div class="config-row">
-          <label>Ancho:</label>
-          <input type="number" [(ngModel)]="proceduralConfig.corridorWidth" min="3" max="12" step="1">
-        </div>
-      </div>
-
-      <!-- Portals -->
-      <div class="procedural-section">
-        <div class="section-label">PORTALES</div>
-        <div class="config-row">
-          <label>Cantidad:</label>
-          <input type="number" [(ngModel)]="proceduralConfig.portalCount" min="1" max="8" step="1">
+        <div class="config-row checkbox-row">
+          <label>Incluir Esquinas:</label>
+          <input type="checkbox" [(ngModel)]="radialConfig.addCornerRooms">
         </div>
       </div>
 
@@ -180,12 +165,7 @@
         <div class="section-label">PUERTAS</div>
         <div class="config-row checkbox-row">
           <label>Generar Puertas:</label>
-          <input type="checkbox" [(ngModel)]="proceduralConfig.generateDoors">
-        </div>
-        <div class="config-row" *ngIf="proceduralConfig.generateDoors">
-          <label>Probabilidad:</label>
-          <input type="range" [(ngModel)]="proceduralConfig.doorChance" min="0" max="1" step="0.1">
-          <span class="range-value">{{ (proceduralConfig.doorChance * 100).toFixed(0) }}%</span>
+          <input type="checkbox" [(ngModel)]="radialConfig.generateDoors">
         </div>
       </div>
 
@@ -208,7 +188,8 @@
 
       <!-- Info -->
       <div class="procedural-info">
-        <p>El generador usa BSP (Binary Space Partitioning) para crear mapas tipo dungeon con habitaciones conectadas por pasillos.</p>
+        <p><strong>Radial:</strong> Genera mapas con estructura tipo legacy - hub central conectado a rooms cardinales y esquinas mediante pasillos rectos.</p>
+        <p>Estructura: Hub + 4 Cardinales + 4 Esquinas (9 rooms)</p>
         <p>Usa el mismo seed para regenerar el mismo mapa.</p>
       </div>
     </div>

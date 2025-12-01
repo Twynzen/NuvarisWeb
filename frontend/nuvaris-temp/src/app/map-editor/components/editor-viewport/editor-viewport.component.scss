@@ -712,5 +712,10 @@ $accent-red: #ff4466;
     &:last-child {
       margin-bottom: 0;
     }
+
+    strong {
+      color: $accent-cyan;
+    }
   }
 }
+

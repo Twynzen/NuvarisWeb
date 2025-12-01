@@ -5,13 +5,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import {
-    ProceduralMapGenerator,
-    ProceduralMapConfig,
-    GeneratedMapData,
-    Room,
-    Corridor,
-    DoorData
-} from '../../services/procedural-map-generator';
+    RadialRoomGenerator,
+    RRPConfig,
+    RRPGeneratedData
+} from '../../services/radial-room-generator';
 
 // Object types for the catalog
 interface CatalogItem {
@@ -125,22 +122,20 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
   // Procedural Generation
   showProceduralPanel = false;
   isGenerating = false;
-  private proceduralGenerator: ProceduralMapGenerator | null = null;
-  private lastGeneratedData: GeneratedMapData | null = null;
+  private radialGenerator: RadialRoomGenerator | null = null;
+  private lastRadialData: RRPGeneratedData | null = null;
   private roomVisualization: THREE.Group | null = null;
 
-  // Procedural config (exposed for UI)
-  proceduralConfig = {
-    seed: ProceduralMapGenerator.generateRandomSeed(),
-    mapWidth: 200,
-    mapDepth: 200,
-    minRoomSize: 15,
-    maxRoomSize: 40,
-    corridorWidth: 6,
-    maxDepth: 5,
-    portalCount: 4,
-    generateDoors: true,
-    doorChance: 0.6
+  // Radial config (exposed for UI)
+  radialConfig = {
+    seed: RadialRoomGenerator.generateRandomSeed(),
+    hubSize: 30,
+    cardinalSize: 25,
+    cornerSize: 20,
+    spacing: 20,
+    corridorWidth: 5,
+    addCornerRooms: true,
+    generateDoors: true
   };
 
   constructor(private cdr: ChangeDetectorRef) {}
@@ -1031,45 +1026,47 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
   }
 
   generateRandomSeed(): void {
-    this.proceduralConfig.seed = ProceduralMapGenerator.generateRandomSeed();
+    this.radialConfig.seed = RadialRoomGenerator.generateRandomSeed();
     this.cdr.detectChanges();
   }
 
   generateProceduralMap(): void {
+    this.generateRadialMap();
+  }
+
+  /**
+   * Generate map using the new Radial Room Generator (based on legacy pattern)
+   */
+  generateRadialMap(): void {
     this.isGenerating = true;
     this.closeAllMenus();
 
-    // Small delay to show loading state
     setTimeout(() => {
       try {
-        // Create generator with current config
-        this.proceduralGenerator = new ProceduralMapGenerator({
-          seed: this.proceduralConfig.seed,
-          mapWidth: this.proceduralConfig.mapWidth,
-          mapDepth: this.proceduralConfig.mapDepth,
-          minRoomSize: this.proceduralConfig.minRoomSize,
-          maxRoomSize: this.proceduralConfig.maxRoomSize,
-          corridorWidth: this.proceduralConfig.corridorWidth,
-          maxDepth: this.proceduralConfig.maxDepth,
-          portalCount: this.proceduralConfig.portalCount,
-          roomPadding: 3,
-          splitChance: 0.9,
+        // Create radial generator with current config
+        this.radialGenerator = new RadialRoomGenerator({
+          seed: this.radialConfig.seed,
+          hubSize: this.radialConfig.hubSize,
+          cardinalSize: this.radialConfig.cardinalSize,
+          cornerSize: this.radialConfig.cornerSize,
+          spacing: this.radialConfig.spacing,
+          corridorWidth: this.radialConfig.corridorWidth,
           wallThickness: 2,
-          generateDoors: this.proceduralConfig.generateDoors,
-          doorChance: this.proceduralConfig.doorChance
+          addCornerRooms: this.radialConfig.addCornerRooms,
+          generateDoors: this.radialConfig.generateDoors
         });
 
         // Generate the map
-        this.lastGeneratedData = this.proceduralGenerator.generate();
+        this.lastRadialData = this.radialGenerator.generate();
 
         // Clear current map and apply generated data
         this.clearAllObjects();
-        this.applyGeneratedMap(this.lastGeneratedData);
+        this.applyRadialMap(this.lastRadialData);
 
-        console.log('[MapEditor] Procedural map generated with seed:', this.proceduralConfig.seed);
+        console.log('[MapEditor] Radial map generated with seed:', this.radialConfig.seed);
       } catch (error) {
-        console.error('[MapEditor] Error generating procedural map:', error);
-        alert('Error generating map. Please try again.');
+        console.error('[MapEditor] Error generating radial map:', error);
+        alert('Error generating radial map. Please try again.');
       } finally {
         this.isGenerating = false;
         this.cdr.detectChanges();
@@ -1077,25 +1074,12 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
     }, 100);
   }
 
-  private clearAllObjects(): void {
-    // Remove all map objects from scene
-    this.mapObjects.forEach(obj => {
-      this.scene.remove(obj.mesh);
-    });
-    this.mapObjects = [];
-
-    // Remove room visualization if exists
-    if (this.roomVisualization) {
-      this.scene.remove(this.roomVisualization);
-      this.roomVisualization = null;
-    }
-
-    this.deselectObject();
-  }
-
-  private applyGeneratedMap(data: GeneratedMapData): void {
+  /**
+   * Apply radial generated map data to the scene
+   */
+  private applyRadialMap(data: RRPGeneratedData): void {
     // Create room floor visualizations
-    this.createRoomVisualizations(data.rooms, data.corridors);
+    this.createRadialRoomVisualizations(data.rooms, data.corridors);
 
     // Create walls
     data.walls.forEach(wall => {
@@ -1121,16 +1105,6 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       );
     });
 
-    // Create portals
-    data.portals.forEach(portal => {
-      this.createPortal(
-        portal.id,
-        portal.x,
-        portal.z,
-        portal.type
-      );
-    });
-
     // Create player spawn
     this.createSpawnPoint(
       'player_spawn',
@@ -1139,25 +1113,33 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       'player'
     );
 
-    // Update grid size based on map size
-    this.updateGroundSize(data.config.mapWidth, data.config.mapDepth);
+    // Update grid size based on map bounds
+    this.updateGroundSize(data.mapBounds.width + 40, data.mapBounds.depth + 40);
 
     // Set view to top for better overview
     this.setView('top');
 
-    console.log(`[MapEditor] Applied procedural map: ${data.rooms.length} rooms, ${data.walls.length} walls, ${data.doors.length} doors, ${data.portals.length} portals`);
+    console.log(`[MapEditor] Applied radial map: ${data.rooms.length} rooms, ${data.walls.length} walls, ${data.doors.length} doors`);
   }
 
-  private createRoomVisualizations(rooms: Room[], corridors: Corridor[]): void {
+  /**
+   * Create floor visualizations for radial rooms
+   */
+  private createRadialRoomVisualizations(rooms: any[], corridors: any[]): void {
     this.roomVisualization = new THREE.Group();
     this.roomVisualization.name = 'room_visualization';
 
     // Create floor planes for rooms
     rooms.forEach((room, index) => {
       const floorGeo = new THREE.PlaneGeometry(room.width, room.depth);
-      const hue = (index * 0.15) % 1;
+      // Different colors for different room types
+      let hue = 0.6; // Default blue
+      if (room.type === 'hub') hue = 0.3;        // Green for hub
+      else if (room.type === 'cardinal') hue = 0.55; // Cyan for cardinals
+      else if (room.type === 'corner') hue = 0.7;    // Purple for corners
+
       const floorMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color().setHSL(hue, 0.3, 0.15),
+        color: new THREE.Color().setHSL(hue, 0.4, 0.2),
         roughness: 0.9,
         transparent: true,
         opacity: 0.8
@@ -1168,9 +1150,6 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       floor.receiveShadow = true;
       floor.name = `room_floor_${room.id}`;
       this.roomVisualization!.add(floor);
-
-      // Add room label
-      // Note: For text, we'd need a text geometry or sprite, keeping it simple
     });
 
     // Create floor planes for corridors
@@ -1178,15 +1157,15 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
       let width: number, depth: number, x: number, z: number;
 
       if (corridor.horizontal) {
-        width = corridor.endX - corridor.startX;
+        width = Math.abs(corridor.endX - corridor.startX);
         depth = corridor.width;
-        x = corridor.startX + width / 2;
+        x = (corridor.startX + corridor.endX) / 2;
         z = corridor.startZ;
       } else {
         width = corridor.width;
-        depth = corridor.endZ - corridor.startZ;
+        depth = Math.abs(corridor.endZ - corridor.startZ);
         x = corridor.startX;
-        z = corridor.startZ + depth / 2;
+        z = (corridor.startZ + corridor.endZ) / 2;
       }
 
       const corridorGeo = new THREE.PlaneGeometry(width, depth);
@@ -1205,6 +1184,22 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
     });
 
     this.scene.add(this.roomVisualization);
+  }
+
+  private clearAllObjects(): void {
+    // Remove all map objects from scene
+    this.mapObjects.forEach(obj => {
+      this.scene.remove(obj.mesh);
+    });
+    this.mapObjects = [];
+
+    // Remove room visualization if exists
+    if (this.roomVisualization) {
+      this.scene.remove(this.roomVisualization);
+      this.roomVisualization = null;
+    }
+
+    this.deselectObject();
   }
 
   private updateGroundSize(width: number, depth: number): void {
@@ -1236,23 +1231,23 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
 
   // Export generated map as JSON (compatible with game)
   exportProceduralMapAsJSON(): void {
-    if (!this.lastGeneratedData) {
-      alert('No hay un mapa procedural generado. Genera uno primero.');
+    if (!this.lastRadialData) {
+      alert('No hay un mapa generado. Genera uno primero.');
       return;
     }
 
     const mapData = {
-      name: `Procedural Map - ${this.proceduralConfig.seed}`,
+      name: `Radial Map - ${this.radialConfig.seed}`,
       version: '1.0',
       gridSize: 5,
       generatedWith: {
-        seed: this.proceduralConfig.seed,
-        config: this.proceduralConfig
+        seed: this.radialConfig.seed,
+        config: this.radialConfig
       },
-      playerSpawn: this.lastGeneratedData.playerSpawn,
+      playerSpawn: this.lastRadialData.playerSpawn,
       objects: [
         // Walls
-        ...this.lastGeneratedData.walls.map(w => ({
+        ...this.lastRadialData.walls.map(w => ({
           id: w.id,
           type: 'wall' as const,
           subtype: w.isPerimeter ? 'perimeter' : 'normal',
@@ -1260,7 +1255,7 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
           scale: { x: w.width, z: w.depth }
         })),
         // Doors
-        ...this.lastGeneratedData.doors.map(d => ({
+        ...this.lastRadialData.doors.map(d => ({
           id: d.id,
           type: 'door' as const,
           subtype: d.type,
@@ -1274,26 +1269,12 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
             isOpen: d.isOpen
           }
         })),
-        // Portals
-        ...this.lastGeneratedData.portals.map(p => ({
-          id: p.id,
-          type: 'portal' as const,
-          subtype: p.type,
-          position: { x: p.x, z: p.z },
-          config: {
-            homeRange: p.homeRange,
-            detectionRange: p.detectionRange,
-            returnThreshold: p.detectionRange + 10,
-            maxEnemies: p.maxEnemies,
-            spawnRate: p.spawnRate
-          }
-        })),
         // Player spawn
         {
           id: 'spawn_player',
           type: 'spawn' as const,
           subtype: 'player',
-          position: this.lastGeneratedData.playerSpawn
+          position: this.lastRadialData.playerSpawn
         }
       ]
     };
@@ -1304,11 +1285,11 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `procedural_map_${this.proceduralConfig.seed}.json`;
+    a.download = `radial_map_${this.radialConfig.seed}.json`;
     a.click();
 
     URL.revokeObjectURL(url);
-    console.log('[MapEditor] Procedural map exported:', mapData.name);
+    console.log('[MapEditor] Radial map exported:', mapData.name);
   }
 
   ngOnDestroy(): void {
