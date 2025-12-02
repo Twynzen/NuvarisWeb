@@ -1,0 +1,125 @@
+{
+  "id": "hub_central_01",
+  "name": "Hub Central",
+  "type": "hub_large",
+  "biome": "hub",
+  "width": 24,
+  "depth": 24,
+  "height": 12,
+  "walls": [
+    { "id": "wall_n_w", "localPosition": { "x": -8, "z": 12 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_n_e", "localPosition": { "x": 8, "z": 12 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_s_w", "localPosition": { "x": -8, "z": -12 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_s_e", "localPosition": { "x": 8, "z": -12 }, "width": 6, "depth": 1, "wallType": "reinforced" },
+    { "id": "wall_e_n", "localPosition": { "x": 12, "z": 8 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "wall_e_s", "localPosition": { "x": 12, "z": -8 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "wall_w_n", "localPosition": { "x": -12, "z": 8 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "wall_w_s", "localPosition": { "x": -12, "z": -8 }, "width": 1, "depth": 6, "wallType": "reinforced" },
+    { "id": "pillar_nw", "localPosition": { "x": -6, "z": 6 }, "width": 3, "depth": 3, "height": 12, "wallType": "normal" },
+    { "id": "pillar_ne", "localPosition": { "x": 6, "z": 6 }, "width": 3, "depth": 3, "height": 12, "wallType": "normal" },
+    { "id": "pillar_sw", "localPosition": { "x": -6, "z": -6 }, "width": 3, "depth": 3, "height": 12, "wallType": "normal" },
+    { "id": "pillar_se", "localPosition": { "x": 6, "z": -6 }, "width": 3, "depth": 3, "height": 12, "wallType": "normal" }
+  ],
+  "doorSockets": [
+    {
+      "id": "door_north",
+      "localPosition": { "x": 0, "z": 12 },
+      "direction": "N",
+      "width": 6,
+      "socketType": "garage",
+      "required": false
+    },
+    {
+      "id": "door_south",
+      "localPosition": { "x": 0, "z": -12 },
+      "direction": "S",
+      "width": 6,
+      "socketType": "garage",
+      "required": true
+    },
+    {
+      "id": "door_east",
+      "localPosition": { "x": 12, "z": 0 },
+      "direction": "E",
+      "width": 6,
+      "socketType": "garage",
+      "required": false
+    },
+    {
+      "id": "door_west",
+      "localPosition": { "x": -12, "z": 0 },
+      "direction": "W",
+      "width": 6,
+      "socketType": "garage",
+      "required": false
+    }
+  ],
+  "lights": [
+    {
+      "id": "main_spotlight",
+      "localPosition": { "x": 0, "y": 11, "z": 0 },
+      "type": "spot",
+      "color": 16777215,
+      "intensity": 2.0,
+      "distance": 30,
+      "decay": 2,
+      "angle": 0.785,
+      "penumbra": 0.4,
+      "castShadow": true
+    },
+    {
+      "id": "pillar_nw",
+      "localPosition": { "x": -6, "y": 6, "z": 6 },
+      "type": "point",
+      "color": 16764057,
+      "intensity": 0.5,
+      "distance": 8,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "pillar_ne",
+      "localPosition": { "x": 6, "y": 6, "z": 6 },
+      "type": "point",
+      "color": 16764057,
+      "intensity": 0.5,
+      "distance": 8,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "pillar_sw",
+      "localPosition": { "x": -6, "y": 6, "z": -6 },
+      "type": "point",
+      "color": 16764057,
+      "intensity": 0.5,
+      "distance": 8,
+      "decay": 2,
+      "castShadow": false
+    },
+    {
+      "id": "pillar_se",
+      "localPosition": { "x": 6, "y": 6, "z": -6 },
+      "type": "point",
+      "color": 16764057,
+      "intensity": 0.5,
+      "distance": 8,
+      "decay": 2,
+      "castShadow": false
+    }
+  ],
+  "spawnPoints": [
+    { "id": "player_spawn", "localPosition": { "x": 0, "z": 0 }, "type": "prop", "subtype": "player_start" },
+    { "id": "item_nw", "localPosition": { "x": -8, "z": 8 }, "type": "item", "subtype": "chest" },
+    { "id": "item_ne", "localPosition": { "x": 8, "z": 8 }, "type": "item", "subtype": "chest" }
+  ],
+  "lightingPreset": {
+    "ambient": { "color": 2763322, "intensity": 0.35 },
+    "fog": { "color": 1710634, "near": 20, "far": 50 }
+  },
+  "floorColor": 2763306,
+  "wallColor": 3816251,
+  "difficulty": 1,
+  "tags": ["hub", "large", "safe_zone", "multi_exit", "spawn_point"],
+  "maxExits": 4
+}

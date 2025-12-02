@@ -1,0 +1,13 @@
+<div class="level-up-overlay">
+  <div class="container">
+    <h1 class="title">SYSTEM UPGRADE DETECTED</h1>
+    <div class="cards-container">
+      <div class="card" *ngFor="let upgrade of upgrades" (click)="selectUpgrade(upgrade)" [ngClass]="upgrade.rarity">
+        <div class="icon">{{upgrade.icon}}</div>
+        <h2 class="name">{{upgrade.name}}</h2>
+        <p class="description">{{upgrade.description}}</p>
+        <span class="rarity-badge">{{upgrade.rarity | uppercase}}</span>
+      </div>
+    </div>
+  </div>
+</div>

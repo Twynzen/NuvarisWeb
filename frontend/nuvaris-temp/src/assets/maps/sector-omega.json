@@ -1,0 +1,539 @@
+{
+  "id": "map_1764374867109",
+  "name": "Sector Omega",
+  "version": "1.0",
+  "size": {
+    "width": 200,
+    "height": 200
+  },
+  "walls": [
+    {
+      "id": "wall_1",
+      "position": [
+        -86,
+        -75
+      ],
+      "size": [
+        20,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_3",
+      "position": [
+        -94,
+        -56.78264269338254
+      ],
+      "size": [
+        2,
+        16
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_4",
+      "position": [
+        -76.06828292236507,
+        -38.3
+      ],
+      "size": [
+        20,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_6",
+      "position": [
+        -77.81035866698224,
+        -50.32061970078004
+      ],
+      "size": [
+        2,
+        15
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_8",
+      "position": [
+        -74.72122408362287,
+        86
+      ],
+      "size": [
+        21,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_9",
+      "position": [
+        -77.95261790257317,
+        51
+      ],
+      "size": [
+        21,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_10",
+      "position": [
+        -55.32911821904179,
+        34.16273547590313
+      ],
+      "size": [
+        2,
+        35
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_11",
+      "position": [
+        -94,
+        68.5
+      ],
+      "size": [
+        2,
+        35
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_12",
+      "position": [
+        20.5,
+        6
+      ],
+      "size": [
+        29,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_14",
+      "position": [
+        33,
+        -6
+      ],
+      "size": [
+        2,
+        24
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_15",
+      "position": [
+        8,
+        -25.987679207581415
+      ],
+      "size": [
+        2,
+        24
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_16",
+      "position": [
+        83,
+        -45.75639667764966
+      ],
+      "size": [
+        24,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_17",
+      "position": [
+        83,
+        -85.14812527083122
+      ],
+      "size": [
+        24,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_18",
+      "position": [
+        93,
+        -65.5
+      ],
+      "size": [
+        2,
+        37
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_20",
+      "position": [
+        84,
+        1
+      ],
+      "size": [
+        22,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_21",
+      "position": [
+        84,
+        -25
+      ],
+      "size": [
+        22,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_22",
+      "position": [
+        93,
+        -12
+      ],
+      "size": [
+        2,
+        26
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_27",
+      "position": [
+        -72.2719256841832,
+        42.00646468376483
+      ],
+      "size": [
+        2,
+        20
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_28",
+      "position": [
+        -13.388696614769506,
+        69
+      ],
+      "size": [
+        31,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_29",
+      "position": [
+        -26.302332887875004,
+        39
+      ],
+      "size": [
+        31,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_30",
+      "position": [
+        2,
+        53.18706397987271
+      ],
+      "size": [
+        2,
+        30
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_34",
+      "position": [
+        -93.90367380689631,
+        11.5
+      ],
+      "size": [
+        2,
+        114
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_35",
+      "position": [
+        -85.1713477959025,
+        6.846919155504068
+      ],
+      "size": [
+        2,
+        114
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_40",
+      "position": [
+        83.5,
+        -62.5
+      ],
+      "size": [
+        1,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_41",
+      "position": [
+        83.5,
+        -68.5
+      ],
+      "size": [
+        1,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_44",
+      "position": [
+        32.1345469912685,
+        38.85049160655116
+      ],
+      "size": [
+        62.5,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_45",
+      "position": [
+        17.375910889706063,
+        85.60794898101818
+      ],
+      "size": [
+        62.5,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_50",
+      "position": [
+        -37,
+        85.65528960365486
+      ],
+      "size": [
+        51,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_52",
+      "position": [
+        -7.948900303950182,
+        -18.338010989595062
+      ],
+      "size": [
+        83,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_53",
+      "position": [
+        -25,
+        -38.2739922773804
+      ],
+      "size": [
+        83,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_54",
+      "position": [
+        -71.8897880835832,
+        -3.379281481991484
+      ],
+      "size": [
+        2,
+        52
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_56",
+      "position": [
+        -37.94164892508871,
+        -64
+      ],
+      "size": [
+        106.5,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_57",
+      "position": [
+        -18.195828659519393,
+        -74.8652441160478
+      ],
+      "size": [
+        106.5,
+        2
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_58",
+      "position": [
+        17.5,
+        -81.35538504274446
+      ],
+      "size": [
+        2,
+        61
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_59",
+      "position": [
+        23.5,
+        -36.5
+      ],
+      "size": [
+        2,
+        61
+      ],
+      "type": "normal"
+    },
+    {
+      "id": "wall_perimeter_north",
+      "position": [
+        0,
+        100
+      ],
+      "size": [
+        200,
+        4
+      ],
+      "type": "perimeter"
+    },
+    {
+      "id": "wall_perimeter_south",
+      "position": [
+        0,
+        -100
+      ],
+      "size": [
+        200,
+        4
+      ],
+      "type": "perimeter"
+    },
+    {
+      "id": "wall_perimeter_east",
+      "position": [
+        100,
+        0
+      ],
+      "size": [
+        4,
+        200
+      ],
+      "type": "perimeter"
+    },
+    {
+      "id": "wall_perimeter_west",
+      "position": [
+        -100,
+        0
+      ],
+      "size": [
+        4,
+        200
+      ],
+      "type": "perimeter"
+    }
+  ],
+  "portals": [
+    {
+      "id": "portal_spider_0",
+      "position": [
+        -11.5,
+        54
+      ],
+      "type": "spider",
+      "homeRange": 15,
+      "detectionRange": 30,
+      "maxEnemies": 10,
+      "spawnRate": 2
+    },
+    {
+      "id": "portal_worm_1",
+      "position": [
+        76.32368801663091,
+        -65.5
+      ],
+      "type": "worm",
+      "homeRange": 15,
+      "detectionRange": 30,
+      "maxEnemies": 10,
+      "spawnRate": 2
+    },
+    {
+      "id": "portal_spider_2",
+      "position": [
+        20.5,
+        -6
+      ],
+      "type": "spider",
+      "homeRange": 15,
+      "detectionRange": 30,
+      "maxEnemies": 10,
+      "spawnRate": 2
+    },
+    {
+      "id": "portal_worm_3",
+      "position": [
+        -85.5,
+        68.5
+      ],
+      "type": "worm",
+      "homeRange": 15,
+      "detectionRange": 30,
+      "maxEnemies": 10,
+      "spawnRate": 2
+    }
+  ],
+  "spawnPoints": [
+    {
+      "id": "player_spawn",
+      "position": [
+        -86,
+        -67
+      ],
+      "type": "player"
+    }
+  ]
+}

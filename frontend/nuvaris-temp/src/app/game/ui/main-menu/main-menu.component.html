@@ -1,0 +1,40 @@
+<div class="menu-container">
+  <div class="character-list">
+    <h1 class="title">SELECT SUBJECT</h1>
+    <div class="character-item" *ngFor="let char of characters" (mouseenter)="onHover(char)" (click)="onSelect(char)"
+      [class.active]="selectedCharacter === char">
+      <span class="char-name">{{char.name}}</span>
+      <span class="char-role">{{char.role}}</span>
+    </div>
+  </div>
+
+  <div class="character-preview">
+    <div class="preview-container" *ngIf="hoveredCharacter">
+      <img [src]="currentConceptFrame" class="concept-art">
+      <div class="char-info">
+        <h2>{{hoveredCharacter.name}}</h2>
+        <p>{{hoveredCharacter.description}}</p>
+        <div class="stats">
+          <div class="stat">
+            <span>HP</span>
+            <div class="bar">
+              <div [style.width.%]="hoveredCharacter.stats.hp"></div>
+            </div>
+          </div>
+          <div class="stat">
+            <span>SPD</span>
+            <div class="bar">
+              <div [style.width.%]="hoveredCharacter.stats.speed"></div>
+            </div>
+          </div>
+          <div class="stat">
+            <span>DMG</span>
+            <div class="bar">
+              <div [style.width.%]="hoveredCharacter.stats.damage"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

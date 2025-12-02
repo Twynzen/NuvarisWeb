@@ -1,0 +1,145 @@
+{
+  "name": "The Labyrinth",
+  "version": "4.0",
+  "format": "bsp",
+
+  "rooms": [
+    {"id": "hub", "x": -15, "z": -15, "width": 30, "depth": 30, "centerX": 0, "centerZ": 0, "connected": true},
+    {"id": "west", "x": -60, "z": -12.5, "width": 25, "depth": 25, "centerX": -47.5, "centerZ": 0, "connected": true},
+    {"id": "east", "x": 35, "z": -12.5, "width": 25, "depth": 25, "centerX": 47.5, "centerZ": 0, "connected": true},
+    {"id": "north", "x": -12.5, "z": 35, "width": 25, "depth": 25, "centerX": 0, "centerZ": 47.5, "connected": true},
+    {"id": "south", "x": -12.5, "z": -60, "width": 25, "depth": 25, "centerX": 0, "centerZ": -47.5, "connected": true},
+    {"id": "nw", "x": -60, "z": 35, "width": 20, "depth": 20, "centerX": -50, "centerZ": 45, "connected": true},
+    {"id": "ne", "x": 40, "z": 35, "width": 20, "depth": 20, "centerX": 50, "centerZ": 45, "connected": true},
+    {"id": "sw", "x": -60, "z": -55, "width": 20, "depth": 20, "centerX": -50, "centerZ": -45, "connected": true},
+    {"id": "se", "x": 40, "z": -55, "width": 20, "depth": 20, "centerX": 50, "centerZ": -45, "connected": true}
+  ],
+
+  "corridors": [
+    {"id": "c_hub_w", "startX": -35, "startZ": 0, "endX": -15, "endZ": 0, "width": 5, "horizontal": true},
+    {"id": "c_hub_e", "startX": 15, "startZ": 0, "endX": 35, "endZ": 0, "width": 5, "horizontal": true},
+    {"id": "c_hub_n", "startX": 0, "startZ": 15, "endX": 0, "endZ": 35, "width": 5, "horizontal": false},
+    {"id": "c_hub_s", "startX": 0, "startZ": -35, "endX": 0, "endZ": -15, "width": 5, "horizontal": false},
+    {"id": "c_w_nw", "startX": -50, "startZ": 12.5, "endX": -50, "endZ": 35, "width": 5, "horizontal": false},
+    {"id": "c_w_sw", "startX": -50, "startZ": -35, "endX": -50, "endZ": -12.5, "width": 5, "horizontal": false},
+    {"id": "c_e_ne", "startX": 50, "startZ": 12.5, "endX": 50, "endZ": 35, "width": 5, "horizontal": false},
+    {"id": "c_e_se", "startX": 50, "startZ": -35, "endX": 50, "endZ": -12.5, "width": 5, "horizontal": false}
+  ],
+
+  "walls": [
+    {"id": "per_n", "x": 0, "z": 75, "width": 170, "depth": 4, "isPerimeter": true},
+    {"id": "per_s", "x": 0, "z": -75, "width": 170, "depth": 4, "isPerimeter": true},
+    {"id": "per_e", "x": 83, "z": 0, "width": 4, "depth": 154, "isPerimeter": true},
+    {"id": "per_w", "x": -83, "z": 0, "width": 4, "depth": 154, "isPerimeter": true},
+
+    {"id": "hub_n_l", "x": -8.75, "z": 15, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "hub_n_r", "x": 8.75, "z": 15, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "hub_s_l", "x": -8.75, "z": -15, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "hub_s_r", "x": 8.75, "z": -15, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "hub_e_t", "x": 15, "z": 8.75, "width": 2, "depth": 12.5, "isPerimeter": false},
+    {"id": "hub_e_b", "x": 15, "z": -8.75, "width": 2, "depth": 12.5, "isPerimeter": false},
+    {"id": "hub_w_t", "x": -15, "z": 8.75, "width": 2, "depth": 12.5, "isPerimeter": false},
+    {"id": "hub_w_b", "x": -15, "z": -8.75, "width": 2, "depth": 12.5, "isPerimeter": false},
+
+    {"id": "west_n_l", "x": -56.25, "z": 12.5, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "west_n_r", "x": -41.25, "z": 12.5, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "west_s_l", "x": -56.25, "z": -12.5, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "west_s_r", "x": -41.25, "z": -12.5, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "west_e_t", "x": -35, "z": 7.5, "width": 2, "depth": 10, "isPerimeter": false},
+    {"id": "west_e_b", "x": -35, "z": -7.5, "width": 2, "depth": 10, "isPerimeter": false},
+    {"id": "west_w", "x": -60, "z": 0, "width": 2, "depth": 25, "isPerimeter": false},
+
+    {"id": "east_n_l", "x": 41.25, "z": 12.5, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "east_n_r", "x": 56.25, "z": 12.5, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "east_s_l", "x": 41.25, "z": -12.5, "width": 12.5, "depth": 2, "isPerimeter": false},
+    {"id": "east_s_r", "x": 56.25, "z": -12.5, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "east_w_t", "x": 35, "z": 7.5, "width": 2, "depth": 10, "isPerimeter": false},
+    {"id": "east_w_b", "x": 35, "z": -7.5, "width": 2, "depth": 10, "isPerimeter": false},
+    {"id": "east_e", "x": 60, "z": 0, "width": 2, "depth": 25, "isPerimeter": false},
+
+    {"id": "north_n", "x": 0, "z": 60, "width": 25, "depth": 2, "isPerimeter": false},
+    {"id": "north_s_l", "x": -7.5, "z": 35, "width": 10, "depth": 2, "isPerimeter": false},
+    {"id": "north_s_r", "x": 7.5, "z": 35, "width": 10, "depth": 2, "isPerimeter": false},
+    {"id": "north_e", "x": 12.5, "z": 47.5, "width": 2, "depth": 25, "isPerimeter": false},
+    {"id": "north_w", "x": -12.5, "z": 47.5, "width": 2, "depth": 25, "isPerimeter": false},
+
+    {"id": "south_s", "x": 0, "z": -60, "width": 25, "depth": 2, "isPerimeter": false},
+    {"id": "south_n_l", "x": -7.5, "z": -35, "width": 10, "depth": 2, "isPerimeter": false},
+    {"id": "south_n_r", "x": 7.5, "z": -35, "width": 10, "depth": 2, "isPerimeter": false},
+    {"id": "south_e", "x": 12.5, "z": -47.5, "width": 2, "depth": 25, "isPerimeter": false},
+    {"id": "south_w", "x": -12.5, "z": -47.5, "width": 2, "depth": 25, "isPerimeter": false},
+
+    {"id": "nw_n", "x": -50, "z": 55, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "nw_s_l", "x": -56.25, "z": 35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "nw_s_r", "x": -43.75, "z": 35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "nw_e", "x": -40, "z": 45, "width": 2, "depth": 20, "isPerimeter": false},
+    {"id": "nw_w", "x": -60, "z": 45, "width": 2, "depth": 20, "isPerimeter": false},
+
+    {"id": "ne_n", "x": 50, "z": 55, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "ne_s_l", "x": 43.75, "z": 35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "ne_s_r", "x": 56.25, "z": 35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "ne_w", "x": 40, "z": 45, "width": 2, "depth": 20, "isPerimeter": false},
+    {"id": "ne_e", "x": 60, "z": 45, "width": 2, "depth": 20, "isPerimeter": false},
+
+    {"id": "sw_s", "x": -50, "z": -55, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "sw_n_l", "x": -56.25, "z": -35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "sw_n_r", "x": -43.75, "z": -35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "sw_e", "x": -40, "z": -45, "width": 2, "depth": 20, "isPerimeter": false},
+    {"id": "sw_w", "x": -60, "z": -45, "width": 2, "depth": 20, "isPerimeter": false},
+
+    {"id": "se_s", "x": 50, "z": -55, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "se_n_l", "x": 43.75, "z": -35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "se_n_r", "x": 56.25, "z": -35, "width": 7.5, "depth": 2, "isPerimeter": false},
+    {"id": "se_w", "x": 40, "z": -45, "width": 2, "depth": 20, "isPerimeter": false},
+    {"id": "se_e", "x": 60, "z": -45, "width": 2, "depth": 20, "isPerimeter": false},
+
+    {"id": "c_hw_n", "x": -25, "z": 2.5, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "c_hw_s", "x": -25, "z": -2.5, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "c_he_n", "x": 25, "z": 2.5, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "c_he_s", "x": 25, "z": -2.5, "width": 20, "depth": 2, "isPerimeter": false},
+    {"id": "c_hn_e", "x": 2.5, "z": 25, "width": 2, "depth": 20, "isPerimeter": false},
+    {"id": "c_hn_w", "x": -2.5, "z": 25, "width": 2, "depth": 20, "isPerimeter": false},
+    {"id": "c_hs_e", "x": 2.5, "z": -25, "width": 2, "depth": 20, "isPerimeter": false},
+    {"id": "c_hs_w", "x": -2.5, "z": -25, "width": 2, "depth": 20, "isPerimeter": false},
+
+    {"id": "c_wnw_e", "x": -47.5, "z": 23.75, "width": 2, "depth": 22.5, "isPerimeter": false},
+    {"id": "c_wnw_w", "x": -52.5, "z": 23.75, "width": 2, "depth": 22.5, "isPerimeter": false},
+    {"id": "c_wsw_e", "x": -47.5, "z": -23.75, "width": 2, "depth": 22.5, "isPerimeter": false},
+    {"id": "c_wsw_w", "x": -52.5, "z": -23.75, "width": 2, "depth": 22.5, "isPerimeter": false},
+    {"id": "c_ene_e", "x": 52.5, "z": 23.75, "width": 2, "depth": 22.5, "isPerimeter": false},
+    {"id": "c_ene_w", "x": 47.5, "z": 23.75, "width": 2, "depth": 22.5, "isPerimeter": false},
+    {"id": "c_ese_e", "x": 52.5, "z": -23.75, "width": 2, "depth": 22.5, "isPerimeter": false},
+    {"id": "c_ese_w", "x": 47.5, "z": -23.75, "width": 2, "depth": 22.5, "isPerimeter": false}
+  ],
+
+  "portals": [],
+
+  "doors": [
+    {"id": "d_hub_w", "x": -15, "z": 0, "width": 5, "height": 8, "depth": 2, "rotation": 1.5708, "type": "large", "isOpen": false},
+    {"id": "d_hub_e", "x": 15, "z": 0, "width": 5, "height": 8, "depth": 2, "rotation": 1.5708, "type": "large", "isOpen": false},
+    {"id": "d_hub_n", "x": 0, "z": 15, "width": 5, "height": 8, "depth": 2, "rotation": 0, "type": "large", "isOpen": false},
+    {"id": "d_hub_s", "x": 0, "z": -15, "width": 5, "height": 8, "depth": 2, "rotation": 0, "type": "large", "isOpen": false},
+    {"id": "d_w_nw", "x": -50, "z": 12.5, "width": 5, "height": 8, "depth": 2, "rotation": 0, "type": "small", "isOpen": false},
+    {"id": "d_w_sw", "x": -50, "z": -12.5, "width": 5, "height": 8, "depth": 2, "rotation": 0, "type": "small", "isOpen": false},
+    {"id": "d_e_ne", "x": 50, "z": 12.5, "width": 5, "height": 8, "depth": 2, "rotation": 0, "type": "small", "isOpen": false},
+    {"id": "d_e_se", "x": 50, "z": -12.5, "width": 5, "height": 8, "depth": 2, "rotation": 0, "type": "small", "isOpen": false}
+  ],
+
+  "playerSpawn": {"x": 0, "z": 0},
+
+  "config": {
+    "seed": "labyrinth_v4",
+    "mapWidth": 170,
+    "mapDepth": 154,
+    "minRoomSize": 20,
+    "maxRoomSize": 30,
+    "roomPadding": 5,
+    "corridorWidth": 5,
+    "maxDepth": 4,
+    "splitChance": 0.5,
+    "portalCount": 6,
+    "wallThickness": 2,
+    "generateDoors": true,
+    "doorChance": 0.8
+  }
+}

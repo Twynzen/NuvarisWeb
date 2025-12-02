@@ -1,0 +1,94 @@
+{
+  "name": "Default Arena",
+  "version": "1.0",
+  "gridSize": 5,
+  "playerSpawn": { "x": 0, "z": 0 },
+  "objects": [
+    {
+      "id": "wall_north",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": 0, "z": 50 },
+      "scale": { "x": 100, "z": 2 }
+    },
+    {
+      "id": "wall_south",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": 0, "z": -50 },
+      "scale": { "x": 100, "z": 2 }
+    },
+    {
+      "id": "wall_east",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": 50, "z": 0 },
+      "scale": { "x": 2, "z": 100 }
+    },
+    {
+      "id": "wall_west",
+      "type": "wall",
+      "subtype": "normal",
+      "position": { "x": -50, "z": 0 },
+      "scale": { "x": 2, "z": 100 }
+    },
+    {
+      "id": "portal_spider_ne",
+      "type": "portal",
+      "subtype": "spider",
+      "position": { "x": 40, "z": 40 },
+      "config": {
+        "homeRange": 20,
+        "detectionRange": 30,
+        "returnThreshold": 40,
+        "maxEnemies": 10,
+        "spawnRate": 2
+      }
+    },
+    {
+      "id": "portal_spider_sw",
+      "type": "portal",
+      "subtype": "spider",
+      "position": { "x": -40, "z": -40 },
+      "config": {
+        "homeRange": 20,
+        "detectionRange": 30,
+        "returnThreshold": 40,
+        "maxEnemies": 10,
+        "spawnRate": 2
+      }
+    },
+    {
+      "id": "portal_worm_nw",
+      "type": "portal",
+      "subtype": "worm",
+      "position": { "x": -40, "z": 40 },
+      "config": {
+        "homeRange": 15,
+        "detectionRange": 25,
+        "returnThreshold": 35,
+        "maxEnemies": 10,
+        "spawnRate": 2
+      }
+    },
+    {
+      "id": "portal_worm_se",
+      "type": "portal",
+      "subtype": "worm",
+      "position": { "x": 40, "z": -40 },
+      "config": {
+        "homeRange": 15,
+        "detectionRange": 25,
+        "returnThreshold": 35,
+        "maxEnemies": 10,
+        "spawnRate": 2
+      }
+    },
+    {
+      "id": "spawn_player",
+      "type": "spawn",
+      "subtype": "player",
+      "position": { "x": 0, "z": 0 }
+    }
+  ]
+}

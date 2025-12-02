@@ -1,0 +1,105 @@
+{
+  "id": "legacy",
+  "name": "Legacy Lab",
+  "version": "1.0",
+  "size": { "width": 170, "height": 154 },
+  "walls": [
+    {"id": "per_n", "position": [0, 75], "size": [170, 4], "type": "perimeter"},
+    {"id": "per_s", "position": [0, -75], "size": [170, 4], "type": "perimeter"},
+    {"id": "per_e", "position": [83, 0], "size": [4, 154], "type": "perimeter"},
+    {"id": "per_w", "position": [-83, 0], "size": [4, 154], "type": "perimeter"},
+
+    {"id": "hub_n_l", "position": [-8.75, 15], "size": [12.5, 2], "type": "normal"},
+    {"id": "hub_n_r", "position": [8.75, 15], "size": [12.5, 2], "type": "normal"},
+    {"id": "hub_s_l", "position": [-8.75, -15], "size": [12.5, 2], "type": "normal"},
+    {"id": "hub_s_r", "position": [8.75, -15], "size": [12.5, 2], "type": "normal"},
+    {"id": "hub_e_t", "position": [15, 8.75], "size": [2, 12.5], "type": "normal"},
+    {"id": "hub_e_b", "position": [15, -8.75], "size": [2, 12.5], "type": "normal"},
+    {"id": "hub_w_t", "position": [-15, 8.75], "size": [2, 12.5], "type": "normal"},
+    {"id": "hub_w_b", "position": [-15, -8.75], "size": [2, 12.5], "type": "normal"},
+
+    {"id": "west_n_l", "position": [-56.25, 12.5], "size": [7.5, 2], "type": "normal"},
+    {"id": "west_n_r", "position": [-41.25, 12.5], "size": [12.5, 2], "type": "normal"},
+    {"id": "west_s_l", "position": [-56.25, -12.5], "size": [7.5, 2], "type": "normal"},
+    {"id": "west_s_r", "position": [-41.25, -12.5], "size": [12.5, 2], "type": "normal"},
+    {"id": "west_e_t", "position": [-35, 7.5], "size": [2, 10], "type": "normal"},
+    {"id": "west_e_b", "position": [-35, -7.5], "size": [2, 10], "type": "normal"},
+    {"id": "west_w", "position": [-60, 0], "size": [2, 25], "type": "normal"},
+
+    {"id": "east_n_l", "position": [41.25, 12.5], "size": [12.5, 2], "type": "normal"},
+    {"id": "east_n_r", "position": [56.25, 12.5], "size": [7.5, 2], "type": "normal"},
+    {"id": "east_s_l", "position": [41.25, -12.5], "size": [12.5, 2], "type": "normal"},
+    {"id": "east_s_r", "position": [56.25, -12.5], "size": [7.5, 2], "type": "normal"},
+    {"id": "east_w_t", "position": [35, 7.5], "size": [2, 10], "type": "normal"},
+    {"id": "east_w_b", "position": [35, -7.5], "size": [2, 10], "type": "normal"},
+    {"id": "east_e", "position": [60, 0], "size": [2, 25], "type": "normal"},
+
+    {"id": "north_n", "position": [0, 60], "size": [25, 2], "type": "normal"},
+    {"id": "north_s_l", "position": [-7.5, 35], "size": [10, 2], "type": "normal"},
+    {"id": "north_s_r", "position": [7.5, 35], "size": [10, 2], "type": "normal"},
+    {"id": "north_e", "position": [12.5, 47.5], "size": [2, 25], "type": "normal"},
+    {"id": "north_w", "position": [-12.5, 47.5], "size": [2, 25], "type": "normal"},
+
+    {"id": "south_s", "position": [0, -60], "size": [25, 2], "type": "normal"},
+    {"id": "south_n_l", "position": [-7.5, -35], "size": [10, 2], "type": "normal"},
+    {"id": "south_n_r", "position": [7.5, -35], "size": [10, 2], "type": "normal"},
+    {"id": "south_e", "position": [12.5, -47.5], "size": [2, 25], "type": "normal"},
+    {"id": "south_w", "position": [-12.5, -47.5], "size": [2, 25], "type": "normal"},
+
+    {"id": "nw_n", "position": [-50, 55], "size": [20, 2], "type": "normal"},
+    {"id": "nw_s_l", "position": [-56.25, 35], "size": [7.5, 2], "type": "normal"},
+    {"id": "nw_s_r", "position": [-43.75, 35], "size": [7.5, 2], "type": "normal"},
+    {"id": "nw_e", "position": [-40, 45], "size": [2, 20], "type": "normal"},
+    {"id": "nw_w", "position": [-60, 45], "size": [2, 20], "type": "normal"},
+
+    {"id": "ne_n", "position": [50, 55], "size": [20, 2], "type": "normal"},
+    {"id": "ne_s_l", "position": [43.75, 35], "size": [7.5, 2], "type": "normal"},
+    {"id": "ne_s_r", "position": [56.25, 35], "size": [7.5, 2], "type": "normal"},
+    {"id": "ne_w", "position": [40, 45], "size": [2, 20], "type": "normal"},
+    {"id": "ne_e", "position": [60, 45], "size": [2, 20], "type": "normal"},
+
+    {"id": "sw_s", "position": [-50, -55], "size": [20, 2], "type": "normal"},
+    {"id": "sw_n_l", "position": [-56.25, -35], "size": [7.5, 2], "type": "normal"},
+    {"id": "sw_n_r", "position": [-43.75, -35], "size": [7.5, 2], "type": "normal"},
+    {"id": "sw_e", "position": [-40, -45], "size": [2, 20], "type": "normal"},
+    {"id": "sw_w", "position": [-60, -45], "size": [2, 20], "type": "normal"},
+
+    {"id": "se_s", "position": [50, -55], "size": [20, 2], "type": "normal"},
+    {"id": "se_n_l", "position": [43.75, -35], "size": [7.5, 2], "type": "normal"},
+    {"id": "se_n_r", "position": [56.25, -35], "size": [7.5, 2], "type": "normal"},
+    {"id": "se_w", "position": [40, -45], "size": [2, 20], "type": "normal"},
+    {"id": "se_e", "position": [60, -45], "size": [2, 20], "type": "normal"},
+
+    {"id": "c_hw_n", "position": [-25, 2.5], "size": [20, 2], "type": "normal"},
+    {"id": "c_hw_s", "position": [-25, -2.5], "size": [20, 2], "type": "normal"},
+    {"id": "c_he_n", "position": [25, 2.5], "size": [20, 2], "type": "normal"},
+    {"id": "c_he_s", "position": [25, -2.5], "size": [20, 2], "type": "normal"},
+    {"id": "c_hn_e", "position": [2.5, 25], "size": [2, 20], "type": "normal"},
+    {"id": "c_hn_w", "position": [-2.5, 25], "size": [2, 20], "type": "normal"},
+    {"id": "c_hs_e", "position": [2.5, -25], "size": [2, 20], "type": "normal"},
+    {"id": "c_hs_w", "position": [-2.5, -25], "size": [2, 20], "type": "normal"},
+
+    {"id": "c_wnw_e", "position": [-47.5, 23.75], "size": [2, 22.5], "type": "normal"},
+    {"id": "c_wnw_w", "position": [-52.5, 23.75], "size": [2, 22.5], "type": "normal"},
+    {"id": "c_wsw_e", "position": [-47.5, -23.75], "size": [2, 22.5], "type": "normal"},
+    {"id": "c_wsw_w", "position": [-52.5, -23.75], "size": [2, 22.5], "type": "normal"},
+    {"id": "c_ene_e", "position": [52.5, 23.75], "size": [2, 22.5], "type": "normal"},
+    {"id": "c_ene_w", "position": [47.5, 23.75], "size": [2, 22.5], "type": "normal"},
+    {"id": "c_ese_e", "position": [52.5, -23.75], "size": [2, 22.5], "type": "normal"},
+    {"id": "c_ese_w", "position": [47.5, -23.75], "size": [2, 22.5], "type": "normal"}
+  ],
+  "portals": [],
+  "spawnPoints": [
+    {"id": "player_spawn", "position": [0, 0], "type": "player"}
+  ],
+  "doors": [
+    {"id": "d_hub_w", "position": [-15, 0], "size": [5, 2], "state": "closed"},
+    {"id": "d_hub_e", "position": [15, 0], "size": [5, 2], "state": "closed"},
+    {"id": "d_hub_n", "position": [0, 15], "size": [5, 2], "state": "closed"},
+    {"id": "d_hub_s", "position": [0, -15], "size": [5, 2], "state": "closed"},
+    {"id": "d_w_nw", "position": [-50, 12.5], "size": [5, 2], "state": "closed"},
+    {"id": "d_w_sw", "position": [-50, -12.5], "size": [5, 2], "state": "closed"},
+    {"id": "d_e_ne", "position": [50, 12.5], "size": [5, 2], "state": "closed"},
+    {"id": "d_e_se", "position": [50, -12.5], "size": [5, 2], "state": "closed"}
+  ]
+}

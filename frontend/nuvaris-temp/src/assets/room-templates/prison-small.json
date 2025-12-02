@@ -1,0 +1,49 @@
+{
+  "id": "prison_small_01",
+  "name": "Celda de Prisión Pequeña",
+  "type": "prison_small",
+  "biome": "prison",
+  "width": 8,
+  "depth": 6,
+  "height": 8,
+  "walls": [
+    { "id": "wall_n", "localPosition": { "x": 0, "z": 3 }, "width": 8, "depth": 1, "wallType": "bars" },
+    { "id": "wall_s", "localPosition": { "x": 0, "z": -3 }, "width": 8, "depth": 1, "wallType": "normal" },
+    { "id": "wall_e", "localPosition": { "x": 4, "z": 0 }, "width": 1, "depth": 6, "wallType": "normal" },
+    { "id": "wall_w", "localPosition": { "x": -4, "z": 0 }, "width": 1, "depth": 6, "wallType": "normal" }
+  ],
+  "doorSockets": [
+    {
+      "id": "door_main",
+      "localPosition": { "x": 0, "z": 3 },
+      "direction": "N",
+      "width": 3,
+      "socketType": "small",
+      "required": true
+    }
+  ],
+  "lights": [
+    {
+      "id": "ceiling_light",
+      "localPosition": { "x": 0, "y": 7, "z": 0 },
+      "type": "point",
+      "color": 16750899,
+      "intensity": 0.6,
+      "distance": 10,
+      "decay": 2,
+      "castShadow": false
+    }
+  ],
+  "spawnPoints": [
+    { "id": "spawn_center", "localPosition": { "x": 0, "z": 0 }, "type": "enemy", "subtype": "prisoner" }
+  ],
+  "lightingPreset": {
+    "ambient": { "color": 1710638, "intensity": 0.2 },
+    "fog": { "color": 657941, "near": 8, "far": 18 }
+  },
+  "floorColor": 1710618,
+  "wallColor": 2763306,
+  "difficulty": 1,
+  "tags": ["starter", "small", "single_exit"],
+  "maxExits": 1
+}
