@@ -69,6 +69,7 @@ export class AudioService {
     { key: 'lars-hit', path: 'assets/sounds/lars-hit.mp3', volume: 0.6, loop: false, category: 'sfx' },
     { key: 'lars-mind-control', path: 'assets/sounds/lars-mind-control.wav', volume: 0.7, loop: false, category: 'sfx' },
     { key: 'lars-shoot', path: 'assets/sounds/lars-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
+    { key: 'lars-minion-explode', path: 'assets/sounds/minion-explode.wav', volume: 0.8, loop: false, category: 'sfx' },
 
     // === YURANY ===
     { key: 'yurany-dead', path: 'assets/sounds/yurany-dead.wav', volume: 0.8, loop: false, category: 'sfx' },
@@ -373,6 +374,27 @@ export class AudioService {
         this.play('yurany-dead');
         break;
     }
+  }
+
+  /**
+   * Reproducir sonido de explosión de minion (Lars)
+   */
+  playMinionExplode(): void {
+    this.play('lars-minion-explode');
+  }
+
+  /**
+   * Reproducir sonido de control mental (Lars)
+   */
+  playMindControl(): void {
+    this.play('lars-mind-control');
+  }
+
+  /**
+   * Reproducir sonido de cadena eléctrica (Yurany)
+   */
+  playChainLightning(): void {
+    this.play('yurany-shoot-chain');
   }
 
   /**

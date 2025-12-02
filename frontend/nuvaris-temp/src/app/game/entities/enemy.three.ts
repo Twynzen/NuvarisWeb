@@ -76,6 +76,18 @@ export class EnemyThree {
     public isStunned: boolean = false;
     private stunDuration: number = 0;
 
+    // ========== SLOW SYSTEM (Lars Ability) ==========
+    public isSlowed: boolean = false;
+    private slowDuration: number = 0;
+    private slowAmount: number = 0;
+    private originalSpeed: number = 5;
+
+    // ========== FEAR SYSTEM (Lars Ability) ==========
+    public isFleeing: boolean = false;
+    private fleeDuration: number = 0;
+    private fleeDirection: THREE.Vector3 = new THREE.Vector3();
+    private fearColor: number = 0xff00ff; // Purple for fear
+
     constructor(scene: THREE.Scene, x: number, z: number, type: 'spider' | 'worm' = 'spider') {
         this.enemyType = type;
         this.mesh = new THREE.Group();
@@ -93,6 +105,9 @@ export class EnemyThree {
             this.attackDamage = 20; // Spider damage
             this.originalColor = 0xffaaaa; // Pink/red for spiders
         }
+
+        // Store original speed for slow effect
+        this.originalSpeed = this.speed;
 
         // Material
         const material = new THREE.SpriteMaterial({
@@ -155,6 +170,33 @@ export class EnemyThree {
             // Don't move or attack while stunned, just animate
             this.animator.update(delta);
             return;
+        }
+
+        // ========== SLOW TIMER ==========
+        if (this.isSlowed) {
+            this.slowDuration -= delta;
+            if (this.slowDuration <= 0) {
+                this.removeSlow();
+            }
+        }
+
+        // ========== FEAR/FLEE CHECK ==========
+        if (this.isFleeing) {
+            this.fleeDuration -= delta;
+            if (this.fleeDuration <= 0) {
+                this.removeFear();
+            } else {
+                // Flee behavior - run away from player at 1.5x speed
+                const fleeSpeed = this.speed * 1.5;
+                this.mesh.position.add(this.fleeDirection.clone().multiplyScalar(fleeSpeed * delta));
+
+                // Clamp to map bounds
+                this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+                this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+
+                this.animator.update(delta);
+                return; // Skip normal behavior while fleeing
+            }
         }
 
         // ========== MIND CONTROL TIMER ==========
@@ -838,5 +880,91 @@ export class EnemyThree {
      */
     public getType(): 'spider' | 'worm' {
         return this.enemyType;
+    }
+
+    // ========== SLOW METHODS (Lars Ability) ==========
+
+    /**
+     * Apply slow effect to this enemy
+     * @param amount Slow percentage (0.1 = 10% slower)
+     * @param duration How long the slow lasts
+     */
+    public applySlow(amount: number, duration: number): void {
+        if (this.isMindControlled) return; // Don't slow allies
+
+        this.isSlowed = true;
+        this.slowDuration = duration;
+        this.slowAmount = amount;
+
+        // Apply slow to speed
+        this.speed = this.originalSpeed * (1 - amount);
+
+        // Visual: Cyan tint for slowed
+        const slowColor = 0x00aaff;
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(slowColor);
+    }
+
+    /**
+     * Remove slow effect
+     */
+    private removeSlow(): void {
+        this.isSlowed = false;
+        this.slowDuration = 0;
+        this.slowAmount = 0;
+
+        // Restore original speed
+        this.speed = this.originalSpeed;
+
+        // Restore color (if not mind controlled or other effect)
+        if (!this.isMindControlled && !this.isFleeing) {
+            (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+        }
+    }
+
+    // ========== FEAR METHODS (Lars Ability) ==========
+
+    /**
+     * Apply fear effect - enemy flees from source
+     * @param duration How long the fear lasts
+     * @param sourcePosition Position to flee FROM
+     */
+    public applyFear(duration: number, sourcePosition: THREE.Vector3): void {
+        if (this.isMindControlled) return; // Don't fear allies
+
+        this.isFleeing = true;
+        this.fleeDuration = duration;
+
+        // Calculate flee direction (away from source)
+        this.fleeDirection.subVectors(this.mesh.position, sourcePosition).normalize();
+
+        // Visual: Purple for fear
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.fearColor);
+
+        console.log(`[ENEMY] Fear applied! Fleeing for ${duration}s`);
+    }
+
+    /**
+     * Remove fear effect
+     */
+    private removeFear(): void {
+        this.isFleeing = false;
+        this.fleeDuration = 0;
+
+        // Restore color (if not slowed or mind controlled)
+        if (!this.isMindControlled && !this.isSlowed) {
+            (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+        } else if (this.isMindControlled) {
+            (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.mindControlColor);
+        }
+
+        console.log(`[ENEMY] Fear removed`);
+    }
+
+    /**
+     * Check if this enemy can be targeted by the player
+     * Mind controlled enemies should NOT be targeted
+     */
+    public canBeTargeted(): boolean {
+        return !this.isMindControlled && !this.isDead;
     }
 }

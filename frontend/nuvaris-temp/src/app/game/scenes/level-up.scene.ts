@@ -199,17 +199,18 @@ export class LevelUpScene extends Phaser.Scene {
     const allOptions = this.getAllPossibleOptions();
     const options: AbilityOption[] = [];
 
-    // Roll rarities: 60% basic, 35% epic, 5% legendary
+    // Roll rarities: 60% basic, 30% epic, 5% legendary
+    // NOTA: Cada carta tiene su propia tirada, así que las 3 cartas pueden ser de rareza diferente
     for (let i = 0; i < 3; i++) {
       const roll = Math.random();
       let rarity: 'basica' | 'epica' | 'legendaria';
 
-      if (roll < 0.6) {
-        rarity = 'basica';
+      if (roll < 0.60) {
+        rarity = 'basica';     // 60% probabilidad
       } else if (roll < 0.95) {
-        rarity = 'epica';
+        rarity = 'epica';      // 35% probabilidad (ajustado a 35% para que legendaria sea 5%)
       } else {
-        rarity = 'legendaria';
+        rarity = 'legendaria'; // 5% probabilidad
       }
 
       // Filter by rarity
