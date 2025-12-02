@@ -150,9 +150,54 @@ export class ThreeEngineService implements OnDestroy {
                 this.interactWithNearbyDoor();
             }
 
+            // Q - Character special abilities
+            if (e.key.toLowerCase() === 'q' && !e.ctrlKey && this.player) {
+                this.triggerCharacterSpecialAbility();
+            }
+
             // NOTE: Ctrl+D disabled - debug mode now controlled via Ctrl+K console 'debug toggle' command
         });
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
+    }
+
+    /**
+     * Trigger character special ability (Q key)
+     * Lars: Explode minions
+     * Yurany: Dash
+     * Arcadio: Berserk mode (when ready)
+     */
+    private triggerCharacterSpecialAbility(): void {
+        if (!this.characterAbility || !this.player) return;
+        if (this.gameState.isPaused || this.gameState.isLevelingUp) return;
+
+        // Lars: Explode minions
+        if (this.currentCharacterId === 'lars' && this.characterAbility instanceof LarsAbilityThree) {
+            const larsAbility = this.characterAbility as LarsAbilityThree;
+            larsAbility.triggerExplosion(this.enemies);
+            return;
+        }
+
+        // Yurany: Dash ability
+        if (this.currentCharacterId === 'yurany' && this.characterAbility instanceof YuranyAbilityThree) {
+            const yuranyAbility = this.characterAbility as YuranyAbilityThree;
+
+            // Get movement direction for dash
+            const direction = new THREE.Vector3();
+            if (this.keys['w'] || this.keys['arrowup']) direction.z -= 1;
+            if (this.keys['s'] || this.keys['arrowdown']) direction.z += 1;
+            if (this.keys['a'] || this.keys['arrowleft']) direction.x -= 1;
+            if (this.keys['d'] || this.keys['arrowright']) direction.x += 1;
+
+            yuranyAbility.executeDash(this.player, direction, this.scene);
+            return;
+        }
+
+        // Arcadio: Berserk mode
+        if (this.currentCharacterId === 'arcadio' && this.characterAbility instanceof ArcadioAbilityThree) {
+            const arcadioAbility = this.characterAbility as ArcadioAbilityThree;
+            arcadioAbility.activateBerserk();
+            return;
+        }
     }
 
     /**
@@ -352,6 +397,20 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     // --- Minimap Data Access ---
+
+    /**
+     * Get the player entity (for ability system)
+     */
+    public getPlayer(): any {
+        if (!this.player) return null;
+
+        // Ensure ability reference is attached
+        if (this.characterAbility && !(this.player as any).ability) {
+            (this.player as any).ability = this.characterAbility;
+        }
+
+        return this.player;
+    }
 
     public getPlayerPosition(): { x: number; z: number } | null {
         if (!this.player?.mesh) return null;
@@ -1115,7 +1174,7 @@ export class ThreeEngineService implements OnDestroy {
         });
     }
 
-    // Find the nearest enemy within range
+    // Find the nearest enemy within range (excludes minions)
     private findNearestEnemy(): EnemyThree | null {
         if (this.enemies.length === 0) return null;
 
@@ -1123,7 +1182,8 @@ export class ThreeEngineService implements OnDestroy {
         let nearestDist = this.autoShootRange;
 
         for (const enemy of this.enemies) {
-            if (enemy.isDead) continue;
+            // Skip dead enemies AND mind-controlled minions (allies)
+            if (enemy.isDead || enemy.isMindControlled) continue;
 
             const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
             if (dist < nearestDist) {
@@ -1838,6 +1898,10 @@ export class ThreeEngineService implements OnDestroy {
                 // Collision with Enemies
                 for (let j = this.enemies.length - 1; j >= 0; j--) {
                     const enemy = this.enemies[j];
+
+                    // Skip mind-controlled enemies (minions) - don't damage allies!
+                    if (enemy.isMindControlled) continue;
+
                     if (proj.mesh.position.distanceTo(enemy.mesh.position) < 1.5) {
                         // Apply damage multiplier if set
                         let damage = proj.damage;
@@ -1857,12 +1921,44 @@ export class ThreeEngineService implements OnDestroy {
                         }
 
                         const enemyType = enemy.getType();
-                        const orb = enemy.takeDamage(damage, this.scene);
+
+                        // Apply berserk damage if active (one-hit kill)
+                        let finalDamage = damage;
+                        if (this.characterAbility instanceof ArcadioAbilityThree) {
+                            const arcAbility = this.characterAbility as ArcadioAbilityThree;
+                            if (arcAbility.isBerserkActive()) {
+                                finalDamage = 999999; // One-hit kill during berserk
+                            }
+                            // Apply damage multiplier (fury)
+                            finalDamage *= arcAbility.getDamageMultiplier();
+                        }
+
+                        const orb = enemy.takeDamage(finalDamage, this.scene);
                         if (orb) {
                             this.xpOrbs.push(orb);
                             this.enemies.splice(j, 1);
                             // Play enemy death sound
                             this.audioService.playEnemyDeath(enemyType);
+
+                            // Register kill for Arcadio berserk counter
+                            if (this.characterAbility instanceof ArcadioAbilityThree) {
+                                const arcAbility = this.characterAbility as ArcadioAbilityThree;
+                                arcAbility.registerKill();
+
+                                // Berserk mode: heal on every kill
+                                if (arcAbility.isBerserkActive() && arcAbility.berserkFullLifesteal) {
+                                    const healAmount = Math.ceil(this.gameState.maxHealth * 0.05);
+                                    const actualHeal = Math.min(
+                                        healAmount,
+                                        this.gameState.maxHealth - this.gameState.health
+                                    );
+                                    if (actualHeal > 0) {
+                                        this.gameState.health += actualHeal;
+                                        // Show heal effect
+                                        arcAbility.createHealEffect(actualHeal);
+                                    }
+                                }
+                            }
                         }
 
                         // ARCADIO LIFESTEAL: Robar vida cuando el proyectil golpea
@@ -1985,6 +2081,9 @@ export class ThreeEngineService implements OnDestroy {
 
         for (const enemy of this.enemies) {
             if (enemy.isDead) continue;
+
+            // Skip mind-controlled enemies (minions) - they don't attack the player!
+            if (enemy.isMindControlled) continue;
 
             const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
 
@@ -2335,6 +2434,10 @@ export class ThreeEngineService implements OnDestroy {
             arcadioAbility.onHealCallback = () => {
                 this.audioService.play('arcadio-heal');
             };
+            // Connect berserk activation sound callback
+            arcadioAbility.onBerserkActivateCallback = () => {
+                this.audioService.playBerserk();
+            };
         }
 
         if (characterId === 'lars' && this.characterAbility) {
@@ -2342,6 +2445,10 @@ export class ThreeEngineService implements OnDestroy {
             // Connect mind control sound callback
             larsAbility.onMindControlCallback = () => {
                 this.audioService.play('lars-mind-control');
+            };
+            // Connect minion explosion sound callback
+            larsAbility.onMinionExplodeCallback = () => {
+                this.audioService.playMinionExplode();
             };
         }
 

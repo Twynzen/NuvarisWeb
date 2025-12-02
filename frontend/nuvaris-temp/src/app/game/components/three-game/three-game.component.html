@@ -44,8 +44,11 @@
         </div>
     </div>
 
-    <!-- Level Up Screen -->
-    <app-level-up *ngIf="gameState.isLevelingUp" (upgradeSelected)="onUpgradeSelected($event)"></app-level-up>
+    <!-- Level Up Screen (Roulette System) -->
+    <app-level-up *ngIf="gameState.isLevelingUp"
+        [characterId]="characterId"
+        (upgradeSelected)="onUpgradeSelected($event)">
+    </app-level-up>
 
     <!-- Pause Menu -->
     <app-pause-menu *ngIf="gameState.isPaused" (resume)="onResume()" (quit)="onQuit()"></app-pause-menu>

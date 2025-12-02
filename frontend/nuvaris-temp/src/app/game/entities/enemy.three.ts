@@ -157,13 +157,9 @@ export class EnemyThree {
             return;
         }
 
-        // ========== MIND CONTROL TIMER ==========
-        if (this.isMindControlled) {
-            this.mindControlDuration -= delta;
-            if (this.mindControlDuration <= 0) {
-                this.revertMindControl();
-            }
-        }
+        // ========== MIND CONTROL (PERMANENT) ==========
+        // Mind control is now PERMANENT - minions stay controlled forever
+        // No timer - once controlled, always controlled
 
         const distToPlayer = this.mesh.position.distanceTo(player.mesh.position);
 

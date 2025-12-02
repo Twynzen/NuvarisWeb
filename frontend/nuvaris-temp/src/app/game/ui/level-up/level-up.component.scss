@@ -20,109 +20,292 @@
 .title {
     color: #00f5ff;
     font-size: 3em;
-    margin-bottom: 50px;
+    margin-bottom: 30px;
     text-shadow: 0 0 20px #00f5ff;
     animation: pulse 2s infinite;
 }
 
-.cards-container {
+// ==================== ROULETTE CONTAINER ====================
+
+.roulette-container {
     display: flex;
-    justify-content: center;
-    gap: 30px;
-    padding: 20px;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
 }
 
-.card {
+.spin-indicator {
+    color: #00f5ff;
+    font-size: 1.2em;
+    animation: blink 0.5s infinite;
+    letter-spacing: 3px;
+}
+
+// ==================== ROULETTE CARD ====================
+
+.roulette-card {
     background: rgba(255, 255, 255, 0.05);
-    border: 2px solid #fff;
-    border-radius: 10px;
-    padding: 30px;
-    width: 250px;
-    cursor: pointer;
-    transition: all 0.3s;
+    border: 3px solid #fff;
+    border-radius: 15px;
+    padding: 40px;
+    width: 320px;
     position: relative;
     overflow: hidden;
+    transition: all 0.1s;
 
-    &:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    &.spinning {
+        animation: cardFlash 0.1s infinite;
+    }
+
+    &.winner {
+        animation: winnerReveal 0.5s ease-out;
     }
 
     .icon {
         font-size: 4em;
         margin-bottom: 20px;
+
+        &.winner-icon {
+            animation: iconPulse 1s infinite;
+        }
     }
 
     .name {
-        font-size: 1.5em;
-        margin-bottom: 10px;
+        font-size: 1.8em;
+        margin-bottom: 15px;
         color: #fff;
     }
 
     .description {
-        color: #aaa;
-        font-size: 0.9em;
-        line-height: 1.4;
+        color: #ccc;
+        font-size: 1em;
+        line-height: 1.5;
+        margin-bottom: 20px;
     }
 
     .rarity-badge {
         position: absolute;
-        top: 10px;
-        right: 10px;
-        font-size: 0.7em;
-        padding: 2px 5px;
-        border-radius: 3px;
-        background: rgba(0, 0, 0, 0.5);
+        top: 15px;
+        right: 15px;
+        font-size: 0.8em;
+        padding: 5px 10px;
+        border-radius: 5px;
+        background: rgba(0, 0, 0, 0.6);
+        letter-spacing: 2px;
     }
 
     // Rarity Styles
     &.common {
         border-color: #00f5ff;
-
-        &:hover {
-            box-shadow: 0 0 30px rgba(0, 245, 255, 0.4);
-        }
+        box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
 
         .name {
             color: #00f5ff;
+        }
+
+        .rarity-badge {
+            background: rgba(0, 245, 255, 0.3);
         }
     }
 
     &.rare {
         border-color: #ff00ff;
-
-        &:hover {
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
-        }
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
 
         .name {
             color: #ff00ff;
+        }
+
+        .rarity-badge {
+            background: rgba(255, 0, 255, 0.3);
         }
     }
 
     &.legendary {
         border-color: #ffd700;
-
-        &:hover {
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
-        }
+        box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
 
         .name {
             color: #ffd700;
         }
+
+        .rarity-badge {
+            background: rgba(255, 215, 0, 0.3);
+            color: #ffd700;
+        }
+
+        // Special legendary glow effect
+        &::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent 40%,
+                rgba(255, 215, 0, 0.1) 50%,
+                transparent 60%
+            );
+            animation: legendaryShine 2s infinite;
+        }
     }
 }
+
+// ==================== RESULT CONTAINER ====================
+
+.result-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.result-banner {
+    font-size: 2em;
+    padding: 10px 30px;
+    border-radius: 5px;
+    letter-spacing: 3px;
+    animation: bannerPulse 1s infinite;
+
+    &.common {
+        color: #00f5ff;
+        text-shadow: 0 0 20px #00f5ff;
+    }
+
+    &.rare {
+        color: #ff00ff;
+        text-shadow: 0 0 20px #ff00ff;
+    }
+
+    &.legendary {
+        color: #ffd700;
+        text-shadow: 0 0 30px #ffd700;
+    }
+}
+
+// ==================== ACCEPT BUTTON ====================
+
+.accept-btn {
+    padding: 15px 50px;
+    font-size: 1.3em;
+    font-family: 'Courier New', Courier, monospace;
+    cursor: pointer;
+    border-radius: 10px;
+    letter-spacing: 2px;
+    transition: all 0.3s;
+    margin-top: 20px;
+
+    &.common {
+        background: transparent;
+        border: 2px solid #00f5ff;
+        color: #00f5ff;
+
+        &:hover {
+            background: rgba(0, 245, 255, 0.2);
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+            transform: scale(1.05);
+        }
+    }
+
+    &.rare {
+        background: transparent;
+        border: 2px solid #ff00ff;
+        color: #ff00ff;
+
+        &:hover {
+            background: rgba(255, 0, 255, 0.2);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+            transform: scale(1.05);
+        }
+    }
+
+    &.legendary {
+        background: transparent;
+        border: 2px solid #ffd700;
+        color: #ffd700;
+
+        &:hover {
+            background: rgba(255, 215, 0, 0.2);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+            transform: scale(1.1);
+        }
+    }
+}
+
+// ==================== ANIMATIONS ====================
 
 @keyframes pulse {
     0% {
         text-shadow: 0 0 20px #00f5ff;
     }
-
     50% {
         text-shadow: 0 0 40px #00f5ff, 0 0 10px #fff;
     }
-
     100% {
         text-shadow: 0 0 20px #00f5ff;
+    }
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes cardFlash {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes winnerReveal {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes iconPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+}
+
+@keyframes bannerPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes legendaryShine {
+    0% {
+        transform: translateX(-100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(100%) rotate(45deg);
     }
 }

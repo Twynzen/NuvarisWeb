@@ -11,7 +11,9 @@ import { YuranySkills } from './skills/yurany.skills';
  * - Projectiles chain to nearby enemies after hitting
  * - Each chain does reduced damage
  * - Can stun enemies (upgrade)
- * - Passive dodge chance (20%)
+ * - Passive dodge chance (20% base)
+ * - NEW: Critical hit chance
+ * - NEW: Dash ability
  */
 export class YuranyAbilityThree implements CharacterAbilityThree {
     name = 'Chain Lightning';
@@ -42,19 +44,39 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
     // True damage (ignores armor - upgrade)
     public trueDamage = false;
 
-    // Passive dodge (20% for Yurany)
+    // Passive dodge (20% base for Yurany)
     public dodgeChance = 0.20;
+
+    // NEW: Critical hit system
+    public critChance = 0; // Chance for critical hit
+    public critMultiplier = 1.5; // Crit damage multiplier (base 150%)
+
+    // NEW: Dash system
+    public canDash = false;
+    public dashCooldown = 0;
+    public dashMaxCooldown = 5; // 5 seconds cooldown
+    public dashDistance = 8; // Units
+    public dashInvulnerability = 0.3; // Seconds of invulnerability during dash
 
     // Callback para reproducir sonido de chain lightning
     public onChainLightningCallback: (() => void) | null = null;
 
+    // GameState reference
+    private gameState: any = null;
+
     initialize(scene: THREE.Scene, player: PlayerThree, gameState?: any): void {
         this.scene = scene;
         this.player = player;
+        this.gameState = gameState;
         console.log('[YURANY] Chain Lightning ability initialized');
     }
 
     update(delta: number, scene: THREE.Scene, player: PlayerThree, enemies: EnemyThree[]): void {
+        // ========== DASH COOLDOWN ==========
+        if (this.dashCooldown > 0) {
+            this.dashCooldown -= delta;
+        }
+
         // ========== THUNDERSTORM (Legendaria) ==========
         if (this.hasThunderstorm && enemies.length > 0) {
             this.thunderstormTimer -= delta;
@@ -76,7 +98,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
 
     /**
      * Called when a projectile hits an enemy
-     * Chain lightning to nearby enemies
+     * Chain lightning to nearby enemies + critical hit system
      */
     onProjectileHit(
         projectile: ProjectileThree,
@@ -85,6 +107,17 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
         scene: THREE.Scene,
         allEnemies: EnemyThree[]
     ): void {
+        // Check for critical hit
+        let finalDamage = damage;
+        let isCrit = false;
+
+        if (this.critChance > 0 && Math.random() < this.critChance) {
+            finalDamage = damage * this.critMultiplier;
+            isCrit = true;
+            this.createCritEffect(enemy.mesh.position, scene);
+            console.log(`[YURANY] CRITICAL HIT! ${finalDamage.toFixed(1)} damage`);
+        }
+
         // Initialize chain tracking for this projectile if needed
         if (!this.projectileChains.has(projectile)) {
             this.projectileChains.set(projectile, new Set());
@@ -108,8 +141,8 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
         // Mark as chained
         chainedEnemies.add(closestEnemy);
 
-        // Calculate chain damage
-        const chainDamage = damage * this.chainDamagePercent;
+        // Calculate chain damage (use final damage if crit)
+        const chainDamage = finalDamage * this.chainDamagePercent;
 
         // Apply chain with visual effect
         this.triggerChainLightning(enemy, closestEnemy, chainDamage, scene);
@@ -144,6 +177,47 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
 
     getUpgrades(): any[] {
         return YuranySkills;
+    }
+
+    // ========== DASH ABILITY ==========
+
+    /**
+     * Execute dash ability (called from engine on Q press)
+     */
+    public executeDash(player: PlayerThree, direction: THREE.Vector3, scene: THREE.Scene): boolean {
+        if (!this.canDash) {
+            console.log('[YURANY] Dash not unlocked');
+            return false;
+        }
+
+        if (this.dashCooldown > 0) {
+            console.log('[YURANY] Dash on cooldown');
+            return false;
+        }
+
+        // Normalize direction
+        if (direction.length() > 0) {
+            direction.normalize();
+        } else {
+            // Default to forward if no direction
+            direction.set(0, 0, -1);
+        }
+
+        // Calculate new position
+        const startPos = player.mesh.position.clone();
+        const endPos = startPos.clone().add(direction.multiplyScalar(this.dashDistance));
+
+        // Create dash trail effect
+        this.createDashEffect(startPos, endPos, scene);
+
+        // Move player instantly
+        player.mesh.position.copy(endPos);
+
+        // Set cooldown
+        this.dashCooldown = this.dashMaxCooldown;
+
+        console.log('[YURANY] Dash executed!');
+        return true;
     }
 
     // ========== CHAIN LIGHTNING IMPLEMENTATION ==========
@@ -340,6 +414,79 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
                 scene.remove(flash);
                 flashGeometry.dispose();
                 flashMaterial.dispose();
+                clearInterval(fadeInterval);
+            }
+        }, 30);
+    }
+
+    private createCritEffect(position: THREE.Vector3, scene: THREE.Scene): void {
+        // Create critical hit visual - yellow star burst
+        const starGeometry = new THREE.CircleGeometry(1, 6);
+        const starMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffff00, // Yellow for crit
+            transparent: true,
+            opacity: 1,
+            side: THREE.DoubleSide
+        });
+
+        const star = new THREE.Mesh(starGeometry, starMaterial);
+        star.rotation.x = -Math.PI / 2;
+        star.position.copy(position);
+        star.position.y = 2;
+        scene.add(star);
+
+        // Expand and fade
+        let scale = 1;
+        let opacity = 1;
+        const animInterval = setInterval(() => {
+            scale += 0.3;
+            opacity -= 0.15;
+
+            star.scale.set(scale, scale, 1);
+            starMaterial.opacity = Math.max(0, opacity);
+
+            if (opacity <= 0) {
+                scene.remove(star);
+                starGeometry.dispose();
+                starMaterial.dispose();
+                clearInterval(animInterval);
+            }
+        }, 30);
+    }
+
+    private createDashEffect(from: THREE.Vector3, to: THREE.Vector3, scene: THREE.Scene): void {
+        // Create dash trail
+        const points: THREE.Vector3[] = [];
+        const trailLength = 10;
+
+        for (let i = 0; i <= trailLength; i++) {
+            const t = i / trailLength;
+            const point = new THREE.Vector3().lerpVectors(from, to, t);
+            point.y += 0.5;
+            points.push(point);
+        }
+
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({
+            color: 0x00ffff, // Cyan dash trail
+            linewidth: 5,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const trail = new THREE.Line(geometry, material);
+        scene.add(trail);
+
+        // Fade out
+        let opacity = 0.8;
+        const fadeInterval = setInterval(() => {
+            opacity -= 0.1;
+            material.opacity = Math.max(0, opacity);
+
+            if (opacity <= 0) {
+                scene.remove(trail);
+                geometry.dispose();
+                material.dispose();
                 clearInterval(fadeInterval);
             }
         }, 30);

@@ -1,96 +1,201 @@
 import { AbilityOption } from '../ability-option';
 
 export const ArcadioSkills: AbilityOption[] = [
-    // BASIC
+    // ========== BASICA (63% probabilidad) ==========
     {
         id: 'iron_skin',
-        name: 'Iron Skin',
-        description: '+10% Damage Reduction',
+        name: 'Piel de Hierro',
+        description: '+10% Reduccion de dano',
         rarity: 'basica',
         effect: (scene: any) => {
-            // Assuming player has a damageReduction property or we modify takeDamage logic
-            // For now, we can just buff health as a proxy or add a property
-            if (!scene.player.damageReduction) scene.player.damageReduction = 0;
-            scene.player.damageReduction += 0.1;
+            if (scene.player?.ability) {
+                scene.player.ability.damageReduction += 0.1;
+            }
         }
     },
     {
         id: 'heavy_hand',
-        name: 'Heavy Hand',
-        description: '+20% Knockback Force',
+        name: 'Mano Pesada',
+        description: '+20% Fuerza de empuje',
         rarity: 'basica',
         effect: (scene: any) => {
-            // We need to access the ability to modify knockback
-            // Or just set a flag on player
-            if (!scene.player.knockbackMultiplier) scene.player.knockbackMultiplier = 1;
-            scene.player.knockbackMultiplier += 0.2;
+            if (scene.player?.ability) {
+                scene.player.ability.knockbackMultiplier += 0.2;
+            }
         }
     },
     {
         id: 'vitality',
-        name: 'Vitality',
-        description: '+30 Max HP',
+        name: 'Vitalidad',
+        description: '+30 Vida maxima',
         rarity: 'basica',
         effect: (scene: any) => {
-            scene.player.maxHealth += 30;
-            scene.player.health += 30;
+            if (scene.player) {
+                scene.player.maxHealth += 30;
+                scene.player.health += 30;
+            }
+        }
+    },
+    {
+        id: 'thick_skin',
+        name: 'Piel Gruesa',
+        description: '+5% Reduccion de dano',
+        rarity: 'basica',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.damageReduction += 0.05;
+            }
+        }
+    },
+    {
+        id: 'blood_thirst',
+        name: 'Sed de Sangre',
+        description: '+5% Probabilidad de robo de vida',
+        rarity: 'basica',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.bloodRageBonus += 0.05;
+            }
         }
     },
 
-    // EPIC
+    // ========== EPICA (32% probabilidad) ==========
     {
         id: 'seismic_wave',
-        name: 'Seismic Wave',
-        description: '+25% Attack Area/Range',
+        name: 'Onda Sismica',
+        description: '+25% Area de ataque',
         rarity: 'epica',
         effect: (scene: any) => {
-            scene.player.getWeapons().forEach((w: any) => {
-                if (w.config.name === 'Titan Punch') {
-                    w.config.range *= 1.25;
-                }
-            });
+            if (scene.player?.getWeapons) {
+                scene.player.getWeapons().forEach((w: any) => {
+                    if (w.config.name === 'Titan Punch') {
+                        w.config.range *= 1.25;
+                    }
+                });
+            }
         }
     },
     {
         id: 'retaliation',
-        name: 'Retaliation',
-        description: 'Return 10% damage taken',
+        name: 'Represalia',
+        description: 'Devuelve 10% del dano recibido',
         rarity: 'epica',
         effect: (scene: any) => {
-            if (!scene.player.thorns) scene.player.thorns = 0;
-            scene.player.thorns += 0.1;
+            if (scene.player?.ability) {
+                scene.player.ability.thorns += 0.1;
+            }
         }
     },
     {
         id: 'adrenaline',
-        name: 'Adrenaline',
-        description: '+5% Speed for 2s after hit',
+        name: 'Adrenalina',
+        description: '+5% Velocidad por 2s al recibir dano',
         rarity: 'epica',
         effect: (scene: any) => {
-            scene.player.hasAdrenaline = true;
+            if (scene.player?.ability) {
+                scene.player.ability.hasAdrenaline = true;
+            }
+        }
+    },
+    {
+        id: 'blood_rage',
+        name: 'Furia Sangrienta',
+        description: '+15% Probabilidad de robo de vida',
+        rarity: 'epica',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.bloodRageBonus += 0.15;
+            }
+        }
+    },
+    {
+        id: 'titan_resilience',
+        name: 'Resiliencia Titan',
+        description: 'Regenera 2 HP por segundo',
+        rarity: 'epica',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.hasRegeneration = true;
+                scene.player.ability.regenAmount += 2;
+            }
+        }
+    },
+    {
+        id: 'fury',
+        name: 'Furia',
+        description: '+50% dano cuando vida < 30%',
+        rarity: 'epica',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.hasFury = true;
+            }
+        }
+    },
+    {
+        id: 'vampiric_strikes',
+        name: 'Golpes Vampiricos',
+        description: '+10% Curacion por robo de vida',
+        rarity: 'epica',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.lifestealHealPercent += 0.10;
+            }
         }
     },
 
-    // LEGENDARY
+    // ========== LEGENDARIA (5% probabilidad) ==========
     {
         id: 'titan_form',
-        name: 'Titan Form',
-        description: 'Double size, +50% HP, +50% Damage',
+        name: 'Forma Titan',
+        description: 'Tamano x2, +50% HP, +50% Dano',
         rarity: 'legendaria',
         effect: (scene: any) => {
-            scene.player.setScale(2); // Assuming container scaling works
-            scene.player.maxHealth *= 1.5;
-            scene.player.health = scene.player.maxHealth;
-            scene.player.damage *= 1.5;
+            if (scene.player) {
+                if (scene.player.mesh) {
+                    scene.player.mesh.scale.set(1.5, 1.5, 1.5);
+                }
+                scene.player.maxHealth = Math.ceil(scene.player.maxHealth * 1.5);
+                scene.player.health = scene.player.maxHealth;
+                if (scene.player.ability) {
+                    scene.player.ability.damage = Math.ceil(scene.player.ability.damage * 1.5);
+                }
+            }
         }
     },
     {
         id: 'earthquake',
-        name: 'Earthquake',
-        description: 'Attacks have 20% chance to stun',
+        name: 'Terremoto',
+        description: '20% de aturdir enemigos al golpear',
         rarity: 'legendaria',
         effect: (scene: any) => {
-            scene.player.stunChance = 0.2;
+            if (scene.player?.ability) {
+                scene.player.ability.stunChance = 0.2;
+            }
+        }
+    },
+    {
+        id: 'berserk_mode',
+        name: 'Modo Berserk',
+        description: 'Cada 100 muertes: Q para matar de un golpe y curar',
+        rarity: 'legendaria',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.canBerserk = true;
+                console.log('[ARCADIO] BERSERK MODE UNLOCKED! Kill 100 enemies then press Q!');
+            }
+        }
+    },
+    {
+        id: 'immortal_titan',
+        name: 'Titan Inmortal',
+        description: '+25% Reduccion de dano, +5 HP/s regeneracion',
+        rarity: 'legendaria',
+        effect: (scene: any) => {
+            if (scene.player?.ability) {
+                scene.player.ability.damageReduction += 0.25;
+                scene.player.ability.hasRegeneration = true;
+                scene.player.ability.regenAmount += 5;
+            }
         }
     }
 ];

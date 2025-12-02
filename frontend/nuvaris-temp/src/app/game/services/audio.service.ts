@@ -62,6 +62,7 @@ export class AudioService {
     { key: 'arcadio-heal', path: 'assets/sounds/arcadio-heal.mp3', volume: 0.3, loop: false, category: 'sfx' },
     { key: 'arcadio-hit', path: 'assets/sounds/arcadio-hit.wav', volume: 0.6, loop: false, category: 'sfx' },
     { key: 'arcadio-shoot', path: 'assets/sounds/arcadio-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
+    { key: 'arcadio-berserk', path: 'assets/sounds/arcadio-berserk.wav', volume: 1.0, loop: false, category: 'sfx' },
     { key: 'walk-arcadio', path: 'assets/sounds/walk-arcadio.mp3', volume: 0.3, loop: false, category: 'sfx' },
 
     // === LARS ===
@@ -69,6 +70,7 @@ export class AudioService {
     { key: 'lars-hit', path: 'assets/sounds/lars-hit.mp3', volume: 0.6, loop: false, category: 'sfx' },
     { key: 'lars-mind-control', path: 'assets/sounds/lars-mind-control.wav', volume: 0.7, loop: false, category: 'sfx' },
     { key: 'lars-shoot', path: 'assets/sounds/lars-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
+    { key: 'minion-explode', path: 'assets/sounds/minion-explode.wav', volume: 0.8, loop: false, category: 'sfx' },
 
     // === YURANY ===
     { key: 'yurany-dead', path: 'assets/sounds/yurany-dead.wav', volume: 0.8, loop: false, category: 'sfx' },
@@ -430,6 +432,24 @@ export class AudioService {
    */
   isCurrentlyWalking(): boolean {
     return this.isWalking;
+  }
+
+  // ==================== LARS SPECIAL SOUNDS ====================
+
+  /**
+   * Reproducir sonido de explosión de minions (Lars ability)
+   */
+  playMinionExplode(): void {
+    this.play('minion-explode');
+  }
+
+  // ==================== ARCADIO SPECIAL SOUNDS ====================
+
+  /**
+   * Reproducir sonido de activación de modo berserk (Arcadio ability)
+   */
+  playBerserk(): void {
+    this.play('arcadio-berserk');
   }
 
   // ==================== ENEMY SOUNDS ====================

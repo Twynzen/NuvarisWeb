@@ -10,7 +10,8 @@ import { LarsSkills } from './skills/lars.skills';
  * Passive: Mind Control
  * - Chance to convert enemies into allies on projectile hit
  * - Controlled enemies attack other enemies (blue color)
- * - Minions can explode for AOE damage (upgrade)
+ * - Minions can explode for AOE damage (Q key)
+ * - New mechanics: slow, fear, explode on conversion fail
  */
 export class LarsAbilityThree implements CharacterAbilityThree {
     name = 'Mind Control';
@@ -32,7 +33,20 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     public healAmount = 5;
     public minionsConvert = false; // Hive Mind upgrade
     public canConvertElites = false;
-    public canExplodeMinions = false;
+
+    // NEW: Slow on hit (projectiles slow enemies)
+    public slowChance = 0; // Chance to slow
+    public slowAmount = 0; // % slow (0.1 = 10%)
+    public slowDuration = 3; // seconds
+
+    // NEW: Explode on conversion fail
+    public explodeOnFailChance = 0; // Epic: 25%, Legendary: 50%
+    public explodeOnFailRadius = 8;
+    public explodeOnFailDamage = 40;
+
+    // NEW: Fear on fail (makes enemy flee)
+    public fearChance = 0; // 10% chance to fear if doesn't convert
+    public fearDuration = 3; // seconds
 
     // Mind control duration base (10 seconds)
     private baseDuration = 10;
@@ -40,15 +54,41 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     // Callback para reproducir sonido de control mental
     public onMindControlCallback: (() => void) | null = null;
 
+    // Callback para reproducir sonido de explosión de minions
+    public onMinionExplodeCallback: (() => void) | null = null;
+
+    // GameState reference for healing
+    private gameState: any = null;
+
     initialize(scene: THREE.Scene, player: PlayerThree, gameState?: any): void {
+        this.gameState = gameState;
         this.scene = scene;
         this.player = player;
         console.log('[LARS] Mind Control ability initialized');
     }
 
     update(delta: number, scene: THREE.Scene, player: PlayerThree, enemies: EnemyThree[]): void {
-        // Nothing to update per frame - mind control is handled in onProjectileHit
-        // and duration is handled by enemy itself
+        // Update slow timers on enemies
+        for (const enemy of enemies) {
+            if (enemy.isDead) continue;
+
+            // Update slow effect
+            if ((enemy as any).slowTimer > 0) {
+                (enemy as any).slowTimer -= delta;
+                if ((enemy as any).slowTimer <= 0) {
+                    // Restore speed
+                    (enemy as any).speedMultiplier = 1;
+                }
+            }
+
+            // Update fear effect
+            if ((enemy as any).fearTimer > 0) {
+                (enemy as any).fearTimer -= delta;
+                if ((enemy as any).fearTimer <= 0) {
+                    (enemy as any).isFleeing = false;
+                }
+            }
+        }
     }
 
     /**
@@ -64,6 +104,11 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     ): void {
         // Don't try to convert already controlled enemies
         if (enemy.isMindControlled || enemy.isDead) return;
+
+        // Apply slow effect if unlocked
+        if (this.slowChance > 0 && Math.random() < this.slowChance) {
+            this.applySlowEffect(enemy);
+        }
 
         // Roll for mind control
         if (Math.random() < this.controlChance) {
@@ -94,6 +139,91 @@ export class LarsAbilityThree implements CharacterAbilityThree {
                     this.onMindControlCallback();
                 }
             }
+        } else {
+            // Conversion FAILED - check for fail effects
+
+            // Check for explosion on fail
+            if (this.explodeOnFailChance > 0 && Math.random() < this.explodeOnFailChance) {
+                this.triggerFailExplosion(enemy, allEnemies, scene);
+            }
+            // Check for fear on fail
+            else if (this.fearChance > 0 && Math.random() < this.fearChance) {
+                this.applyFearEffect(enemy);
+            }
+        }
+    }
+
+    /**
+     * Apply slow effect to enemy
+     */
+    private applySlowEffect(enemy: EnemyThree): void {
+        (enemy as any).slowTimer = this.slowDuration;
+        (enemy as any).speedMultiplier = 1 - this.slowAmount;
+
+        // Visual: Purple tint
+        const sprite = enemy.mesh.children[0] as THREE.Sprite;
+        if (sprite && sprite.material) {
+            const originalColor = (sprite.material as THREE.SpriteMaterial).color.getHex();
+            (sprite.material as THREE.SpriteMaterial).color.setHex(0x9900ff);
+
+            setTimeout(() => {
+                if (!enemy.isDead && !enemy.isMindControlled) {
+                    (sprite.material as THREE.SpriteMaterial).color.setHex(originalColor);
+                }
+            }, 300);
+        }
+
+        console.log(`[LARS] Enemy slowed by ${this.slowAmount * 100}%!`);
+    }
+
+    /**
+     * Apply fear effect to enemy (makes them flee)
+     */
+    private applyFearEffect(enemy: EnemyThree): void {
+        (enemy as any).fearTimer = this.fearDuration;
+        (enemy as any).isFleeing = true;
+
+        // Visual: Yellow flash
+        const sprite = enemy.mesh.children[0] as THREE.Sprite;
+        if (sprite && sprite.material) {
+            (sprite.material as THREE.SpriteMaterial).color.setHex(0xffff00);
+
+            setTimeout(() => {
+                if (!enemy.isDead) {
+                    (sprite.material as THREE.SpriteMaterial).color.setHex(0xffaaaa);
+                }
+            }, 200);
+        }
+
+        console.log('[LARS] Enemy feared!');
+    }
+
+    /**
+     * Trigger explosion when conversion fails
+     */
+    private triggerFailExplosion(
+        enemy: EnemyThree,
+        allEnemies: EnemyThree[],
+        scene: THREE.Scene
+    ): void {
+        console.log('[LARS] Conversion failed - EXPLOSION!');
+
+        // Create explosion visual
+        this.createExplosionEffect(enemy.mesh.position, scene, 0xff4400); // Orange for fail explosion
+
+        // Play explosion sound
+        if (this.onMinionExplodeCallback) {
+            this.onMinionExplodeCallback();
+        }
+
+        // Deal AOE damage
+        for (const target of allEnemies) {
+            if (target.isDead || target.isMindControlled) continue;
+
+            const dist = enemy.mesh.position.distanceTo(target.mesh.position);
+            if (dist <= this.explodeOnFailRadius) {
+                target.takeDamage(this.explodeOnFailDamage, scene);
+            }
         }
     }
 
@@ -120,12 +250,10 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     /**
      * Trigger explosion of all mind-controlled minions
      * Deals AOE damage and optionally heals the player
+     * This is always available - press Q to detonate minions!
      */
-    public triggerExplosion(allEnemies: EnemyThree[], scene: THREE.Scene, gameState: any): void {
-        if (!this.canExplodeMinions) {
-            console.log('[LARS] Cannot explode minions - upgrade not unlocked');
-            return;
-        }
+    public triggerExplosion(allEnemies: EnemyThree[], scene?: THREE.Scene): void {
+        const sceneToUse = scene || this.scene;
 
         const explosionRadius = 10;
         const explosionDamage = 50;
@@ -134,11 +262,21 @@ export class LarsAbilityThree implements CharacterAbilityThree {
         // Find all mind-controlled enemies
         const controlledEnemies = allEnemies.filter(e => e.isMindControlled && !e.isDead);
 
+        if (controlledEnemies.length === 0) {
+            console.log('[LARS] No minions to explode!');
+            return;
+        }
+
         console.log(`[LARS] Exploding ${controlledEnemies.length} minions!`);
+
+        // Play explosion sound ONCE for all explosions
+        if (this.onMinionExplodeCallback) {
+            this.onMinionExplodeCallback();
+        }
 
         for (const minion of controlledEnemies) {
             // Create visual explosion
-            this.createExplosionEffect(minion.mesh.position, scene);
+            this.createExplosionEffect(minion.mesh.position, sceneToUse);
 
             // Deal AOE damage to nearby NON-controlled enemies
             for (const target of allEnemies) {
@@ -146,7 +284,7 @@ export class LarsAbilityThree implements CharacterAbilityThree {
 
                 const dist = minion.mesh.position.distanceTo(target.mesh.position);
                 if (dist <= explosionRadius) {
-                    target.takeDamage(explosionDamage, scene);
+                    target.takeDamage(explosionDamage, sceneToUse);
                 }
             }
 
@@ -162,8 +300,8 @@ export class LarsAbilityThree implements CharacterAbilityThree {
         }
 
         // Apply healing
-        if (totalHealing > 0 && gameState) {
-            gameState.health = Math.min(gameState.health + totalHealing, gameState.maxHealth);
+        if (totalHealing > 0 && this.gameState) {
+            this.gameState.health = Math.min(this.gameState.health + totalHealing, this.gameState.maxHealth);
             console.log(`[LARS] Healed ${totalHealing} HP from explosions`);
         }
     }
@@ -177,11 +315,11 @@ export class LarsAbilityThree implements CharacterAbilityThree {
 
     // ========== VISUAL EFFECTS ==========
 
-    private createExplosionEffect(position: THREE.Vector3, scene: THREE.Scene): void {
+    private createExplosionEffect(position: THREE.Vector3, scene: THREE.Scene, color: number = 0x0066ff): void {
         // Create expanding ring effect
         const ringGeometry = new THREE.RingGeometry(0.5, 1.5, 32);
         const ringMaterial = new THREE.MeshBasicMaterial({
-            color: 0x0066ff, // Blue for Lars
+            color: color,
             transparent: true,
             opacity: 0.8,
             side: THREE.DoubleSide

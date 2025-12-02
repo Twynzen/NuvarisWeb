@@ -38,7 +38,25 @@ export class ThreeGameComponent implements AfterViewInit, OnDestroy {
 
     onUpgradeSelected(upgrade: any) {
         console.log('Upgrade selected:', upgrade);
-        // Apply upgrade logic here (TODO: Implement upgrade application)
+
+        // Apply the upgrade effect if it has one
+        if (upgrade && typeof upgrade.effect === 'function') {
+            // Create a scene context with player reference
+            const sceneContext = {
+                player: this.engServ.getPlayer()
+            };
+
+            try {
+                upgrade.effect(sceneContext);
+                console.log(`[UPGRADE] Applied: ${upgrade.name}`);
+            } catch (e) {
+                console.error(`[UPGRADE] Failed to apply ${upgrade.name}:`, e);
+            }
+        }
+
+        // Play roulette/selection sound
+        this.engServ.audioService.play('roulette');
+
         this.engServ.resumeGame();
     }
 

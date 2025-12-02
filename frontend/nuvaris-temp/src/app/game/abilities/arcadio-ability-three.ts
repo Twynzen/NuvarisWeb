@@ -44,6 +44,36 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
     // Stun chance (upgrade)
     public stunChance = 0; // Earthquake legendary
 
+    // ========== BERSERK MODE (Legendary) ==========
+    public canBerserk = false; // Unlocked via skill
+    public berserkKillCounter = 0; // Kills since last berserk
+    public berserkKillsRequired = 100; // Kills needed to activate
+    public berserkActive = false;
+    private berserkTimer = 0;
+    public berserkDuration = 8; // 8 seconds of berserk
+    public berserkReady = false; // True when 100 kills reached
+
+    // Berserk bonuses
+    public berserkOneHitKill = true; // All attacks kill instantly
+    public berserkFullLifesteal = true; // Every hit heals
+
+    // Callback for berserk activation sound
+    public onBerserkActivateCallback: (() => void) | null = null;
+
+    // ========== ADDITIONAL UPGRADES ==========
+    // Blood Rage - increased lifesteal chance
+    public bloodRageBonus = 0; // Extra lifesteal chance
+
+    // Titan Resilience - HP regen
+    public hasRegeneration = false;
+    public regenAmount = 0; // HP per second
+    private regenTimer = 0;
+
+    // Fury - damage boost when low HP
+    public hasFury = false;
+    public furyThreshold = 0.3; // Below 30% HP
+    public furyDamageBoost = 0.5; // +50% damage
+
     // Reference to game state for lifesteal
     private gameStateRef: any = null;
 
@@ -68,6 +98,37 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
             if (this.adrenalineTimer <= 0) {
                 this.adrenalineActive = false;
                 console.log('[ARCADIO] Adrenaline wore off');
+            }
+        }
+
+        // ========== BERSERK MODE UPDATE ==========
+        if (this.berserkActive) {
+            this.berserkTimer -= delta;
+
+            // Visual pulsing effect during berserk
+            if (this.player && this.player.mesh) {
+                const pulse = 1 + Math.sin(Date.now() * 0.01) * 0.1;
+                this.player.mesh.scale.set(pulse, pulse, pulse);
+            }
+
+            if (this.berserkTimer <= 0) {
+                this.deactivateBerserk();
+            }
+        }
+
+        // ========== REGENERATION UPDATE ==========
+        if (this.hasRegeneration && this.regenAmount > 0 && this.gameStateRef) {
+            this.regenTimer += delta;
+            if (this.regenTimer >= 1) { // Every second
+                this.regenTimer = 0;
+                if (this.gameStateRef.health < this.gameStateRef.maxHealth) {
+                    this.gameStateRef.health = Math.min(
+                        this.gameStateRef.health + this.regenAmount,
+                        this.gameStateRef.maxHealth
+                    );
+                    // Small heal indicator
+                    this.showHealNumber(this.regenAmount);
+                }
             }
         }
     }
@@ -169,8 +230,9 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
 
     /**
      * Create visual heal effect on player with floating heal number
+     * Public so it can be called from engine during berserk
      */
-    private createHealEffect(healAmount: number): void {
+    public createHealEffect(healAmount: number): void {
         if (!this.player || !this.player.mesh || !this.scene) return;
 
         // Flash green briefly
@@ -315,5 +377,258 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
             enemy.applyStun(0.5); // 500ms stun
             console.log('[ARCADIO] Earthquake stun applied!');
         }
+    }
+
+    // ========== BERSERK MODE SYSTEM ==========
+
+    /**
+     * Register a kill for berserk counter
+     * Called when Arcadio kills an enemy
+     */
+    public registerKill(): void {
+        if (!this.canBerserk) return;
+
+        this.berserkKillCounter++;
+
+        // Check if berserk is ready
+        if (this.berserkKillCounter >= this.berserkKillsRequired && !this.berserkReady && !this.berserkActive) {
+            this.berserkReady = true;
+            console.log('[ARCADIO] BERSERK READY! Press Q to activate!');
+            this.createBerserkReadyEffect();
+        }
+    }
+
+    /**
+     * Activate berserk mode (called from engine on Q press)
+     */
+    public activateBerserk(): boolean {
+        if (!this.canBerserk) {
+            console.log('[ARCADIO] Berserk not unlocked');
+            return false;
+        }
+
+        if (!this.berserkReady) {
+            console.log(`[ARCADIO] Berserk not ready (${this.berserkKillCounter}/${this.berserkKillsRequired} kills)`);
+            return false;
+        }
+
+        if (this.berserkActive) {
+            console.log('[ARCADIO] Berserk already active');
+            return false;
+        }
+
+        // Activate berserk
+        this.berserkActive = true;
+        this.berserkTimer = this.berserkDuration;
+        this.berserkReady = false;
+        this.berserkKillCounter = 0;
+
+        // Visual effect
+        this.createBerserkActivateEffect();
+
+        // Play sound
+        if (this.onBerserkActivateCallback) {
+            this.onBerserkActivateCallback();
+        }
+
+        console.log(`[ARCADIO] BERSERK MODE ACTIVATED! ${this.berserkDuration}s of carnage!`);
+        return true;
+    }
+
+    /**
+     * Deactivate berserk mode
+     */
+    private deactivateBerserk(): void {
+        this.berserkActive = false;
+        this.berserkTimer = 0;
+
+        // Reset player scale
+        if (this.player && this.player.mesh) {
+            this.player.mesh.scale.set(1, 1, 1);
+        }
+
+        console.log('[ARCADIO] Berserk mode ended');
+    }
+
+    /**
+     * Check if berserk is active (for damage calculation in engine)
+     */
+    public isBerserkActive(): boolean {
+        return this.berserkActive;
+    }
+
+    /**
+     * Get berserk status for UI
+     */
+    public getBerserkStatus(): { ready: boolean; active: boolean; kills: number; required: number; timeLeft: number } {
+        return {
+            ready: this.berserkReady,
+            active: this.berserkActive,
+            kills: this.berserkKillCounter,
+            required: this.berserkKillsRequired,
+            timeLeft: this.berserkTimer
+        };
+    }
+
+    /**
+     * Get current damage multiplier (includes fury bonus)
+     */
+    public getDamageMultiplier(): number {
+        let multiplier = 1;
+
+        // Fury bonus when low HP
+        if (this.hasFury && this.gameStateRef) {
+            const hpPercent = this.gameStateRef.health / this.gameStateRef.maxHealth;
+            if (hpPercent <= this.furyThreshold) {
+                multiplier += this.furyDamageBoost;
+            }
+        }
+
+        return multiplier;
+    }
+
+    /**
+     * Get effective lifesteal chance (base + blood rage bonus)
+     */
+    public getEffectiveLifestealChance(): number {
+        return this.lifestealChance + this.bloodRageBonus;
+    }
+
+    // ========== BERSERK VISUAL EFFECTS ==========
+
+    private createBerserkReadyEffect(): void {
+        if (!this.player || !this.player.mesh || !this.scene) return;
+
+        // Flash red to indicate berserk ready
+        const sprite = this.player.mesh.children[0] as THREE.Sprite;
+        if (sprite && sprite.material) {
+            const material = sprite.material as THREE.SpriteMaterial;
+            const originalColor = material.color.getHex();
+
+            // Red flash sequence
+            let flashes = 0;
+            const flashInterval = setInterval(() => {
+                material.color.setHex(flashes % 2 === 0 ? 0xff0000 : originalColor);
+                flashes++;
+                if (flashes >= 6) {
+                    clearInterval(flashInterval);
+                    material.color.setHex(originalColor);
+                }
+            }, 100);
+        }
+
+        // Create "BERSERK READY" text
+        this.showBerserkText('BERSERK READY!', 0xff0000);
+    }
+
+    private createBerserkActivateEffect(): void {
+        if (!this.player || !this.player.mesh || !this.scene) return;
+
+        // Explosion ring effect
+        const ringGeometry = new THREE.RingGeometry(1, 3, 32);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            transparent: true,
+            opacity: 1,
+            side: THREE.DoubleSide
+        });
+
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.copy(this.player.mesh.position);
+        ring.position.y = 0.5;
+        this.scene.add(ring);
+
+        // Expand and fade
+        let scale = 1;
+        let opacity = 1;
+        const animInterval = setInterval(() => {
+            scale += 0.5;
+            opacity -= 0.08;
+
+            ring.scale.set(scale, scale, 1);
+            ringMaterial.opacity = Math.max(0, opacity);
+
+            if (opacity <= 0) {
+                this.scene.remove(ring);
+                ringGeometry.dispose();
+                ringMaterial.dispose();
+                clearInterval(animInterval);
+            }
+        }, 30);
+
+        // Tint player red during berserk
+        const sprite = this.player.mesh.children[0] as THREE.Sprite;
+        if (sprite && sprite.material) {
+            (sprite.material as THREE.SpriteMaterial).color.setHex(0xff6666);
+        }
+
+        // Show activation text
+        this.showBerserkText('BERSERK!', 0xff0000);
+    }
+
+    private showBerserkText(text: string, color: number): void {
+        if (!this.scene || !this.player || !this.player.mesh) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 64;
+        const context = canvas.getContext('2d')!;
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Convert hex color to CSS string
+        const cssColor = '#' + color.toString(16).padStart(6, '0');
+
+        context.fillStyle = cssColor;
+        context.strokeStyle = '#000000';
+        context.lineWidth = 4;
+        context.font = 'bold 32px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+
+        context.strokeText(text, 128, 32);
+        context.fillText(text, 128, 32);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+
+        const spriteMaterial = new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: false
+        });
+
+        const textSprite = new THREE.Sprite(spriteMaterial);
+        textSprite.scale.set(4, 1, 1);
+
+        const playerPos = this.player.mesh.position.clone();
+        textSprite.position.set(playerPos.x, playerPos.y + 4, playerPos.z);
+
+        this.scene.add(textSprite);
+
+        // Animate up and fade
+        let elapsed = 0;
+        const duration = 1.5;
+        const startY = textSprite.position.y;
+
+        const animate = () => {
+            elapsed += 0.016;
+            const progress = elapsed / duration;
+
+            if (progress >= 1) {
+                this.scene.remove(textSprite);
+                texture.dispose();
+                spriteMaterial.dispose();
+                return;
+            }
+
+            textSprite.position.y = startY + progress * 3;
+            spriteMaterial.opacity = 1 - progress;
+
+            requestAnimationFrame(animate);
+        };
+
+        animate();
     }
 }
