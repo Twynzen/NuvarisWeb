@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, Input, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { ThreeEngineService } from '../../engine/three-engine.service';
 import { CommonModule } from '@angular/common';
 import { LevelUpComponent } from '../../ui/level-up/level-up.component';
@@ -14,7 +14,7 @@ import { MinimapComponent } from '../../ui/minimap/minimap.component';
     standalone: true,
     imports: [CommonModule, LevelUpComponent, PauseMenuComponent, GameOverComponent, DevConsoleComponent, MinimapComponent]
 })
-export class ThreeGameComponent implements AfterViewInit {
+export class ThreeGameComponent implements AfterViewInit, OnDestroy {
     @ViewChild('rendererCanvas', { static: true })
     public rendererCanvas!: ElementRef<HTMLCanvasElement>;
 
@@ -31,6 +31,11 @@ export class ThreeGameComponent implements AfterViewInit {
         this.engServ.createScene(this.rendererCanvas, this.characterId);
     }
 
+    ngOnDestroy(): void {
+        // Stop all audio when component is destroyed
+        this.engServ.audioService.stopAll();
+    }
+
     onUpgradeSelected(upgrade: any) {
         console.log('Upgrade selected:', upgrade);
         // Apply upgrade logic here (TODO: Implement upgrade application)
@@ -42,10 +47,16 @@ export class ThreeGameComponent implements AfterViewInit {
     }
 
     onQuit() {
+        // Stop gameplay music when quitting
+        this.engServ.audioService.stopMusic();
+        this.engServ.audioService.stopHealthWarning();
         this.quitGame.emit();
     }
 
     onReturnToMenu() {
+        // Stop gameplay music when returning to menu
+        this.engServ.audioService.stopMusic();
+        this.engServ.audioService.stopHealthWarning();
         this.engServ.resetGame();
         this.quitGame.emit();
     }

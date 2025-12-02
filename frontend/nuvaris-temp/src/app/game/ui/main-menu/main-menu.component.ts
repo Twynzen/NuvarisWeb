@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AudioService } from '../../services/audio.service';
 
 interface Character {
   id: string;
@@ -58,16 +59,30 @@ export class MainMenuComponent implements OnInit, OnDestroy {
   private animationInterval: any;
   private currentFrameIndex = 1;
 
+  constructor(private audioService: AudioService) {}
+
   ngOnInit() {
     this.hoveredCharacter = this.characters[0];
     this.startAnimation();
+
+    // Initialize audio and play menu music
+    this.audioService.initialize().then(() => {
+      this.audioService.playMenuMusic();
+    });
   }
 
   ngOnDestroy() {
     this.stopAnimation();
+    // Stop menu music when leaving
+    this.audioService.stopMusic();
   }
 
   onHover(char: Character) {
+    // Only play sound if hovering over a different character
+    if (this.hoveredCharacter?.id !== char.id) {
+      this.audioService.play('ui-hover');
+    }
+
     this.hoveredCharacter = char;
     this.currentFrameIndex = 1;
     this.stopAnimation();
@@ -75,8 +90,13 @@ export class MainMenuComponent implements OnInit, OnDestroy {
   }
 
   onSelect(char: Character) {
+    this.audioService.play('ui-select');
     this.selectedCharacter = char;
-    this.characterSelected.emit(char.id);
+
+    // Small delay to let the sound play before transitioning
+    setTimeout(() => {
+      this.characterSelected.emit(char.id);
+    }, 200);
   }
 
   private startAnimation() {

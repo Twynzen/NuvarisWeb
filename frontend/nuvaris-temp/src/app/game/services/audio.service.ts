@@ -45,6 +45,12 @@ export class AudioService {
   private healthWarningActive = false;
   private healthWarningSource: AudioBufferSourceNode | null = null;
 
+  // Walk sound state
+  private isWalking = false;
+  private walkSoundInterval: ReturnType<typeof setInterval> | null = null;
+  private walkIntervalMs = 350; // Milisegundos entre pasos
+  private currentWalkCharacter: string = 'arcadio';
+
   // Configuración de sonidos
   private readonly soundConfigs: SoundConfig[] = [
     // === AMBIENTE ===
@@ -247,6 +253,8 @@ export class AudioService {
       } catch (e) {}
     });
     this.activeSources.clear();
+    this.stopWalking();
+    this.stopHealthWarning();
   }
 
   // ==================== MUSIC CONTROL ====================
@@ -368,7 +376,7 @@ export class AudioService {
   }
 
   /**
-   * Reproducir sonido de caminar según el personaje
+   * Reproducir sonido de caminar según el personaje (un paso)
    */
   playWalk(characterId: string): void {
     if (characterId === 'arcadio') {
@@ -376,6 +384,52 @@ export class AudioService {
     } else {
       this.play('walk-player');
     }
+  }
+
+  /**
+   * Iniciar sonidos de pasos (se reproducen a intervalos mientras el jugador camina)
+   */
+  startWalking(characterId: string): void {
+    if (this.isWalking && this.currentWalkCharacter === characterId) return;
+
+    // Si ya estaba caminando con otro personaje, detener
+    if (this.isWalking) {
+      this.stopWalking();
+    }
+
+    this.isWalking = true;
+    this.currentWalkCharacter = characterId;
+
+    // Reproducir primer paso inmediatamente
+    this.playWalk(characterId);
+
+    // Configurar intervalo para los siguientes pasos
+    this.walkSoundInterval = setInterval(() => {
+      if (this.isWalking && !this.isMuted) {
+        this.playWalk(this.currentWalkCharacter);
+      }
+    }, this.walkIntervalMs);
+  }
+
+  /**
+   * Detener sonidos de pasos
+   */
+  stopWalking(): void {
+    if (!this.isWalking) return;
+
+    this.isWalking = false;
+
+    if (this.walkSoundInterval) {
+      clearInterval(this.walkSoundInterval);
+      this.walkSoundInterval = null;
+    }
+  }
+
+  /**
+   * Verificar si el jugador está caminando (para sincronizar con el engine)
+   */
+  isCurrentlyWalking(): boolean {
+    return this.isWalking;
   }
 
   // ==================== ENEMY SOUNDS ====================

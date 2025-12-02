@@ -46,6 +46,7 @@ export class ThreeEngineService implements OnDestroy {
     private damageNumbers: DamageNumber[] = [];
     private lastSpawnTime = 0;
     private lastShootTime = 0;
+    private wasPlayerWalking = false; // Track walking state for sound
     private portalSystem!: PortalSystem;
     private doorSystem!: DoorSystem;
     // private labStructures!: LabStructures;  // Disabled - using BSP maps
@@ -169,12 +170,8 @@ export class ThreeEngineService implements OnDestroy {
 
         const nearestDoor = this.doorSystem.getNearestDoor(playerX, playerZ, interactRange);
         if (nearestDoor) {
-            const wasOpen = nearestDoor.isOpen;
+            // Sound is handled by door callback
             this.doorSystem.toggleDoor(nearestDoor.id);
-            // Play door sound (only if door state changed)
-            if (wasOpen !== nearestDoor.isOpen) {
-                this.audioService.play('door');
-            }
         }
     }
 
@@ -1267,6 +1264,11 @@ export class ThreeEngineService implements OnDestroy {
         // Initialize Door System (will be populated by map loader)
         this.doorSystem = new DoorSystem(this.scene);
 
+        // Set up door sound callback
+        this.doorSystem.setDoorSoundCallback(() => {
+            this.audioService.play('door');
+        });
+
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
 
@@ -1660,6 +1662,20 @@ export class ThreeEngineService implements OnDestroy {
         if (this.player) {
             this.player.update(delta, this.keys);
 
+            // ========== WALK SOUND DETECTION ==========
+            // Check if player is moving (WASD keys)
+            const isCurrentlyWalking = (this.keys['w'] || this.keys['a'] || this.keys['s'] || this.keys['d']) && !this.player.isDead;
+
+            if (isCurrentlyWalking && !this.wasPlayerWalking) {
+                // Started walking
+                this.audioService.startWalking(this.currentCharacterId);
+            } else if (!isCurrentlyWalking && this.wasPlayerWalking) {
+                // Stopped walking
+                this.audioService.stopWalking();
+            }
+            this.wasPlayerWalking = isCurrentlyWalking;
+            // ========================================
+
             // Update player-centered fog system
             if (this.playerFogSystem) {
                 this.playerFogSystem.update(this.player.mesh.position);
@@ -1934,8 +1950,10 @@ export class ThreeEngineService implements OnDestroy {
         // Play level up sound
         this.audioService.play('level-up');
 
-        // Stop health warning when leveling up (full heal)
+        // Stop other sounds when leveling up
         this.audioService.stopHealthWarning();
+        this.audioService.stopWalking();
+        this.wasPlayerWalking = false;
 
         console.log('LEVEL UP!');
     }
@@ -1948,7 +1966,11 @@ export class ThreeEngineService implements OnDestroy {
 
     public togglePause() {
         this.gameState.isPaused = !this.gameState.isPaused;
-        if (!this.gameState.isPaused) {
+        if (this.gameState.isPaused) {
+            // Stop walk sounds when paused
+            this.audioService.stopWalking();
+            this.wasPlayerWalking = false;
+        } else {
             this.clock.getDelta();
         }
     }
@@ -2078,9 +2100,10 @@ export class ThreeEngineService implements OnDestroy {
     private async handlePlayerDeath() {
         this.player.die();
 
-        // Play death sound and stop music
+        // Play death sound and stop all other sounds
         this.audioService.playDeath(this.currentCharacterId);
         this.audioService.stopHealthWarning();
+        this.audioService.stopWalking();
         this.audioService.stopMusic();
 
         // Create glass break effect
@@ -2206,9 +2229,10 @@ export class ThreeEngineService implements OnDestroy {
             debugMode: false
         };
 
-        // Reset timers
+        // Reset timers and states
         this.lastSpawnTime = 0;
         this.lastShootTime = 0;
+        this.wasPlayerWalking = false;
 
         // Dispose renderer
         if (this.renderer) {
@@ -2276,10 +2300,15 @@ export class ThreeEngineService implements OnDestroy {
         // Reinitialize character ability for new player
         this.initializeCharacterAbility(this.currentCharacterId);
 
-        // Reset timers
+        // Reset timers and states
         this.lastSpawnTime = 0;
         this.lastShootTime = 0;
+        this.wasPlayerWalking = false;
+        this.audioService.stopWalking();
         this.clock.start(); // Restart the clock
+
+        // Restart gameplay music
+        this.audioService.playGameplayMusic();
 
         // Resume game rendering
         this.render();

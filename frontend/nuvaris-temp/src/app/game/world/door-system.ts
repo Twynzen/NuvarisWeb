@@ -69,6 +69,9 @@ export class Door {
     public isLocked: boolean;
     public isAnimating: boolean = false;
 
+    // Callback para sonido de puerta (se setea desde DoorSystem)
+    public onDoorSoundCallback: (() => void) | null = null;
+
     // Animation state
     private targetY: number = 0;
     private currentY: number = 0;
@@ -251,6 +254,12 @@ export class Door {
             return false;
         }
         if (this.isOpen && !this.isAnimating) return true;
+
+        // Play door sound
+        if (this.onDoorSoundCallback) {
+            this.onDoorSoundCallback();
+        }
+
         this.targetY = this.openY;
         this.isAnimating = true;
         this.isOpen = true;
@@ -262,6 +271,12 @@ export class Door {
      */
     public close(): void {
         if (!this.isOpen && !this.isAnimating) return;
+
+        // Play door sound
+        if (this.onDoorSoundCallback) {
+            this.onDoorSoundCallback();
+        }
+
         this.targetY = this.closedY;
         this.isAnimating = true;
         this.isOpen = false;
@@ -411,6 +426,7 @@ export class DoorSystem {
     private scene: THREE.Scene;
     private doors: Map<string, Door> = new Map();
     private linkedDoors: Map<string, string[]> = new Map();
+    private doorSoundCallback: (() => void) | null = null;
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
@@ -421,6 +437,12 @@ export class DoorSystem {
      */
     public addDoor(config: DoorConfig): Door {
         const door = new Door(config);
+
+        // Assign sound callback if set
+        if (this.doorSoundCallback) {
+            door.onDoorSoundCallback = this.doorSoundCallback;
+        }
+
         this.doors.set(config.id, door);
         this.scene.add(door.mesh);
 
@@ -624,6 +646,17 @@ export class DoorSystem {
         });
         this.doors.clear();
         this.linkedDoors.clear();
+    }
+
+    /**
+     * Set sound callback for all doors
+     * This callback will be called when any door opens or closes
+     */
+    public setDoorSoundCallback(callback: () => void): void {
+        this.doorSoundCallback = callback;
+        this.doors.forEach(door => {
+            door.onDoorSoundCallback = callback;
+        });
     }
 
     /**
