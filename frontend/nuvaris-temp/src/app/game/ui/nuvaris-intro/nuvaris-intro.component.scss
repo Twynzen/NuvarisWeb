@@ -1,0 +1,192 @@
+// Cosmic color palette
+$void-black: #000000;
+$nebula-purple: #1a0a2e;
+$nebula-deep: #0d0515;
+$cosmic-dust: #2d1b4e;
+$ethereal-white: #e8e8f0;
+
+.nuvaris-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: $void-black;
+    overflow: hidden;
+    z-index: 9999;
+    cursor: pointer;
+}
+
+// Canvas for dynamic star field
+.star-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+// Animated fog layers
+.fog-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.fog-1 {
+    background: radial-gradient(ellipse at 30% 50%,
+        rgba($nebula-purple, 0.5) 0%,
+        transparent 50%);
+    animation: fog-drift-1 25s ease-in-out infinite;
+}
+
+.fog-2 {
+    background: radial-gradient(ellipse at 70% 60%,
+        rgba($cosmic-dust, 0.4) 0%,
+        transparent 45%);
+    animation: fog-drift-2 30s ease-in-out infinite;
+}
+
+.fog-3 {
+    background: radial-gradient(ellipse at 50% 40%,
+        rgba($nebula-deep, 0.6) 0%,
+        transparent 60%);
+    animation: fog-drift-3 35s ease-in-out infinite;
+}
+
+@keyframes fog-drift-1 {
+    0%, 100% { transform: translate(-10%, -10%) scale(1); }
+    33% { transform: translate(5%, -5%) scale(1.1); }
+    66% { transform: translate(-5%, 5%) scale(1.05); }
+}
+
+@keyframes fog-drift-2 {
+    0%, 100% { transform: translate(5%, -5%) scale(1.1); }
+    33% { transform: translate(-10%, 10%) scale(1); }
+    66% { transform: translate(0%, -10%) scale(1.15); }
+}
+
+@keyframes fog-drift-3 {
+    0%, 100% { transform: translate(-5%, 5%) scale(1); }
+    33% { transform: translate(10%, -10%) scale(1.15); }
+    66% { transform: translate(-10%, 0%) scale(1.1); }
+}
+
+// Content
+.content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+}
+
+.title {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 8rem;
+    font-weight: 300;
+    letter-spacing: 2rem;
+    color: $ethereal-white;
+    text-shadow:
+        0 0 60px rgba($ethereal-white, 0.4),
+        0 0 120px rgba($nebula-purple, 0.6),
+        0 0 180px rgba($cosmic-dust, 0.4);
+    margin: 0;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition: all 2s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: cosmic-breathe 6s ease-in-out infinite;
+    animation-play-state: paused;
+
+    &.visible {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        animation-play-state: running;
+    }
+}
+
+@keyframes cosmic-breathe {
+    0%, 100% {
+        text-shadow:
+            0 0 60px rgba($ethereal-white, 0.4),
+            0 0 120px rgba($nebula-purple, 0.6),
+            0 0 180px rgba($cosmic-dust, 0.4);
+        letter-spacing: 2rem;
+    }
+    50% {
+        text-shadow:
+            0 0 80px rgba($ethereal-white, 0.5),
+            0 0 160px rgba($nebula-purple, 0.7),
+            0 0 240px rgba($cosmic-dust, 0.5);
+        letter-spacing: 2.1rem;
+    }
+}
+
+.prompt {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: rgba($ethereal-white, 0.4);
+    letter-spacing: 0.2rem;
+    margin-top: 4rem;
+    opacity: 0;
+    transition: opacity 2s ease-out;
+    animation: pulse-prompt 3s ease-in-out infinite;
+    animation-play-state: paused;
+
+    &.visible {
+        opacity: 1;
+        animation-play-state: running;
+    }
+}
+
+@keyframes pulse-prompt {
+    0%, 100% {
+        opacity: 0.3;
+        letter-spacing: 0.2rem;
+    }
+    50% {
+        opacity: 0.6;
+        letter-spacing: 0.25rem;
+    }
+}
+
+// Vignette effect
+.vignette {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center,
+        transparent 20%,
+        rgba($void-black, 0.3) 50%,
+        rgba($void-black, 0.7) 80%,
+        rgba($void-black, 0.9) 100%);
+    pointer-events: none;
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .title {
+        font-size: 4rem;
+        letter-spacing: 1rem;
+    }
+
+    .prompt {
+        font-size: 0.8rem;
+        letter-spacing: 0.15rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        font-size: 2.5rem;
+        letter-spacing: 0.5rem;
+    }
+}

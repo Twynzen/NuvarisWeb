@@ -1,0 +1,20 @@
+<ion-content [fullscreen]="true">
+  <!-- Screen 1: QDT Entry -->
+  <app-qdt-entry
+    *ngIf="currentScreen === 'entry'"
+    (enter)="onQdtEnter()">
+  </app-qdt-entry>
+
+  <!-- Screen 2: Character Selection Menu -->
+  <app-main-menu
+    *ngIf="currentScreen === 'menu'"
+    (characterSelected)="startGame($event)">
+  </app-main-menu>
+
+  <!-- Screen 3: The Game -->
+  <app-three-game
+    *ngIf="currentScreen === 'game'"
+    [characterId]="selectedCharacterId"
+    (quitGame)="onQuitGame()">
+  </app-three-game>
+</ion-content>

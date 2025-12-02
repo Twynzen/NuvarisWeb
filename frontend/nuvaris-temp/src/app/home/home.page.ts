@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
-import { ThreeGameComponent } from '../game/components/three-game/three-game.component';
-import { MainMenuComponent } from '../game/ui/main-menu/main-menu.component';
+import { NuvarisIntroComponent } from '../game/ui/nuvaris-intro/nuvaris-intro.component';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -9,21 +9,17 @@ import { CommonModule } from '@angular/common';
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  imports: [IonicModule, ThreeGameComponent, MainMenuComponent, CommonModule],
+  imports: [
+    IonicModule,
+    NuvarisIntroComponent,
+    CommonModule
+  ],
 })
 export class HomePage {
-  gameStarted = false;
-  selectedCharacterId = '';
+  constructor(private router: Router) { }
 
-  constructor() { }
-
-  startGame(characterId: string) {
-    this.selectedCharacterId = characterId;
-    this.gameStarted = true;
-  }
-
-  onQuitGame() {
-    this.gameStarted = false;
-    this.selectedCharacterId = '';
+  // Called when user presses any key or clicks on Nuvaris intro
+  onNuvarisContinue() {
+    this.router.navigate(['/qdt']);
   }
 }

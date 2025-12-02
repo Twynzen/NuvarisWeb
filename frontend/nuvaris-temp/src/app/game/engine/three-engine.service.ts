@@ -1956,6 +1956,8 @@ export class ThreeEngineService implements OnDestroy {
                                         this.gameState.health += actualHeal;
                                         // Show heal effect
                                         arcAbility.createHealEffect(actualHeal);
+                                        // Check health warning (stop heartbeat if healed above threshold)
+                                        this.audioService.checkHealthWarning(this.gameState.health, this.gameState.maxHealth, 15);
                                     }
                                 }
                             }
@@ -2437,6 +2439,10 @@ export class ThreeEngineService implements OnDestroy {
             // Connect berserk activation sound callback
             arcadioAbility.onBerserkActivateCallback = () => {
                 this.audioService.playBerserk();
+            };
+            // Connect health changed callback to check heartbeat sound
+            arcadioAbility.onHealthChangedCallback = () => {
+                this.audioService.checkHealthWarning(this.gameState.health, this.gameState.maxHealth, 15);
             };
         }
 

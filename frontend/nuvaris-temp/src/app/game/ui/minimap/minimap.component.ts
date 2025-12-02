@@ -29,17 +29,17 @@ export class MinimapComponent implements AfterViewInit, OnDestroy {
     private animationId: number | null = null;
     public isVisible = true;
 
-    // Colors for different entities
+    // Colors for different entities (clinical horror palette)
     private readonly COLORS = {
-        background: 'rgba(10, 10, 26, 0.85)',
-        border: 'rgba(0, 255, 255, 0.6)',
-        wall: 'rgba(80, 80, 100, 0.9)',
-        player: '#00ff88',
+        background: 'rgba(10, 10, 14, 0.85)',
+        border: 'rgba(180, 180, 190, 0.5)',
+        wall: 'rgba(90, 90, 100, 0.9)',
+        player: '#e8e8f0',
         enemy: '#ff4444',
         door: '#ffaa00',
         doorOpen: '#44ff44',
         portal: '#aa44ff',
-        grid: 'rgba(50, 50, 70, 0.3)'
+        grid: 'rgba(60, 60, 70, 0.25)'
     };
 
     mapName: string = '';

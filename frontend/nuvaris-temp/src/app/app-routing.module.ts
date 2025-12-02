@@ -3,16 +3,20 @@ import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 
 const routes: Routes = [
   {
-    path: 'home',
+    path: '',
     loadChildren: () => import('./home/home.module').then( m => m.HomePageModule)
+  },
+  {
+    path: 'qdt',
+    loadChildren: () => import('./qdt/qdt.module').then( m => m.QdtModule)
   },
   {
     path: 'map-editor',
     loadChildren: () => import('./map-editor/map-editor.module').then( m => m.MapEditorModule)
   },
   {
-    path: '',
-    redirectTo: 'home',
+    path: 'home',
+    redirectTo: '',
     pathMatch: 'full'
   },
 ];

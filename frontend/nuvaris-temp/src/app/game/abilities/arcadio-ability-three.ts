@@ -128,6 +128,11 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
                     );
                     // Small heal indicator
                     this.showHealNumber(this.regenAmount);
+
+                    // Notify engine to check health warning (stop heartbeat if health is above threshold)
+                    if (this.onHealthChangedCallback) {
+                        this.onHealthChangedCallback();
+                    }
                 }
             }
         }
@@ -185,6 +190,9 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
     // Callback para reproducir sonido de curación (se setea desde el engine)
     public onHealCallback: (() => void) | null = null;
 
+    // Callback para verificar health warning después de curarse (se setea desde el engine)
+    public onHealthChangedCallback: (() => void) | null = null;
+
     /**
      * Apply lifesteal from melee damage dealt
      * Called after melee attack deals damage
@@ -222,6 +230,11 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
             // Play heal sound
             if (this.onHealCallback) {
                 this.onHealCallback();
+            }
+
+            // Notify engine to check health warning (stop heartbeat if health is above threshold)
+            if (this.onHealthChangedCallback) {
+                this.onHealthChangedCallback();
             }
         }
 

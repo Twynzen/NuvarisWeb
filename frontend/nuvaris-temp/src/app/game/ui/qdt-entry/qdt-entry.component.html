@@ -1,0 +1,30 @@
+<div class="qdt-container" [class.glitch]="glitchActive">
+    <!-- Static noise overlay -->
+    <div class="static-overlay"></div>
+
+    <!-- Scan lines -->
+    <div class="scanlines"></div>
+
+    <!-- Main content -->
+    <div class="content">
+        <!-- QDT Logo -->
+        <div class="logo-section" [class.visible]="showLogo">
+            <h1 class="qdt-logo">Q.D.T.</h1>
+        </div>
+
+        <!-- Full name -->
+        <p class="subtitle" [class.visible]="showSubtitle">QUANTUM DIMENSYS TECHNOLOGIES</p>
+
+        <!-- Enter button -->
+        <button class="enter-btn" [class.visible]="showButton" (click)="onEnter()">
+            <span class="btn-text">ENTRAR</span>
+            <span class="btn-glow"></span>
+        </button>
+    </div>
+
+    <!-- Corner decorations -->
+    <div class="corner top-left"></div>
+    <div class="corner top-right"></div>
+    <div class="corner bottom-left"></div>
+    <div class="corner bottom-right"></div>
+</div>

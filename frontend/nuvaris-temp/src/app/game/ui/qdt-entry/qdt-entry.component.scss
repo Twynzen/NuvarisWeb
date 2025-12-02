@@ -1,0 +1,256 @@
+// QDT Industrial Horror palette
+$qdt-black: #050505;
+$qdt-dark: #0a0a0c;
+$qdt-surface: #111115;
+$qdt-grey: #1a1a1e;
+$qdt-text: #a0a0a8;
+$qdt-text-bright: #d0d0d8;
+$warning-amber: #ff9900;
+$warning-red: #aa2222;
+$accent-glow: rgba(255, 153, 0, 0.4);
+
+.qdt-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, $qdt-black 0%, $qdt-dark 50%, $qdt-black 100%);
+    overflow: hidden;
+    z-index: 9999;
+
+    &.glitch {
+        animation: glitch-shake 0.1s linear;
+
+        .qdt-logo {
+            animation: glitch-text 0.1s linear;
+        }
+    }
+}
+
+@keyframes glitch-shake {
+    0%, 100% { transform: translate(0); }
+    25% { transform: translate(-2px, 1px); }
+    50% { transform: translate(2px, -1px); }
+    75% { transform: translate(-1px, -1px); }
+}
+
+@keyframes glitch-text {
+    0%, 100% {
+        text-shadow: 2px 0 $warning-red, -2px 0 cyan;
+        clip-path: inset(0 0 0 0);
+    }
+    25% {
+        text-shadow: -2px 0 $warning-red, 2px 0 cyan;
+        clip-path: inset(10% 0 60% 0);
+    }
+    50% {
+        text-shadow: 2px 0 $warning-red, -2px 0 cyan;
+        clip-path: inset(40% 0 30% 0);
+    }
+    75% {
+        text-shadow: -2px 0 $warning-red, 2px 0 cyan;
+        clip-path: inset(70% 0 10% 0);
+    }
+}
+
+// Static noise
+.static-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    animation: static-flicker 0.5s steps(5) infinite;
+}
+
+@keyframes static-flicker {
+    0%, 100% { opacity: 0.02; }
+    50% { opacity: 0.04; }
+}
+
+// Scanlines
+.scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.15) 2px,
+        rgba(0, 0, 0, 0.15) 4px
+    );
+    pointer-events: none;
+}
+
+// Content
+.content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+    width: 90%;
+    max-width: 800px;
+}
+
+.logo-section {
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.visible {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.qdt-logo {
+    font-family: 'Arial Black', 'Impact', sans-serif;
+    font-size: 10rem;
+    font-weight: 900;
+    letter-spacing: 1.5rem;
+    color: $qdt-text-bright;
+    margin: 0;
+    text-shadow:
+        0 0 40px rgba($qdt-text-bright, 0.3),
+        0 0 80px rgba($warning-amber, 0.1);
+}
+
+.subtitle {
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.5rem;
+    color: $qdt-text;
+    margin-top: 0.5rem;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.6s ease-out;
+
+    &.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.enter-btn {
+    position: relative;
+    margin-top: 2rem;
+    padding: 1rem 3rem;
+    background: transparent;
+    border: 1px solid rgba($qdt-text-bright, 0.3);
+    color: $qdt-text-bright;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.3rem;
+    cursor: pointer;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease-out;
+
+    &.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .btn-text {
+        position: relative;
+        z-index: 2;
+    }
+
+    .btn-glow {
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+            transparent,
+            rgba($warning-amber, 0.2),
+            transparent);
+        transition: left 0.4s ease;
+    }
+
+    &:hover {
+        border-color: $warning-amber;
+        color: #fff;
+        text-shadow: 0 0 10px rgba($warning-amber, 0.5);
+
+        .btn-glow {
+            left: 100%;
+        }
+    }
+
+    &:active {
+        transform: translateY(0) scale(0.98);
+    }
+}
+
+// Corner decorations
+.corner {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-color: rgba($qdt-text, 0.2);
+    border-style: solid;
+    border-width: 0;
+
+    &.top-left {
+        top: 20px;
+        left: 20px;
+        border-top-width: 1px;
+        border-left-width: 1px;
+    }
+
+    &.top-right {
+        top: 20px;
+        right: 20px;
+        border-top-width: 1px;
+        border-right-width: 1px;
+    }
+
+    &.bottom-left {
+        bottom: 20px;
+        left: 20px;
+        border-bottom-width: 1px;
+        border-left-width: 1px;
+    }
+
+    &.bottom-right {
+        bottom: 20px;
+        right: 20px;
+        border-bottom-width: 1px;
+        border-right-width: 1px;
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .qdt-logo {
+        font-size: 5rem;
+        letter-spacing: 0.8rem;
+    }
+
+    .subtitle {
+        font-size: 0.7rem;
+        letter-spacing: 0.3rem;
+    }
+
+    .sector-info .sector-name {
+        font-size: 1.1rem;
+        letter-spacing: 0.2rem;
+    }
+
+    .quote {
+        font-size: 0.85rem;
+        padding: 1rem;
+    }
+}

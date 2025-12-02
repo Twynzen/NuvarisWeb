@@ -1,3 +1,9 @@
+// Clinical Horror palette
+$clinical-text: #b0b0b8;
+$clinical-text-bright: #e8e8f0;
+$clinical-border: #3a3a42;
+$clinical-glow: rgba(255, 255, 255, 0.3);
+
 .minimap-container {
     position: fixed;
     bottom: 20px;
@@ -21,15 +27,15 @@
     .map-name {
         margin-top: 8px;
         padding: 4px 12px;
-        background: rgba(10, 10, 26, 0.85);
-        border: 1px solid rgba(0, 255, 255, 0.4);
+        background: rgba(10, 10, 14, 0.85);
+        border: 1px solid $clinical-border;
         border-radius: 4px;
-        color: #00ffff;
-        font-family: 'Orbitron', 'Courier New', monospace;
+        color: $clinical-text-bright;
+        font-family: 'Courier New', monospace;
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        text-shadow: 0 0 8px $clinical-glow;
     }
 }
 
