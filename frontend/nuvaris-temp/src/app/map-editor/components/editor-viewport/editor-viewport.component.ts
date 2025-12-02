@@ -1229,13 +1229,14 @@ export class EditorViewportComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  // Export generated map as JSON (compatible with game)
+  // Export generated map as Radial JSON format
   exportProceduralMapAsJSON(): void {
     if (!this.lastRadialData) {
       alert('No hay un mapa generado. Genera uno primero.');
       return;
     }
 
+    // Radial format for gameplay
     const mapData = {
       name: `Radial Map - ${this.radialConfig.seed}`,
       version: '1.0',
