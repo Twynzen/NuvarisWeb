@@ -1,6 +1,61 @@
 <div class="pause-overlay">
   <div class="menu-container">
     <h1 class="title">PAUSED</h1>
+
+    <!-- Audio Settings -->
+    <div class="audio-settings">
+      <h2 class="settings-title">AUDIO SETTINGS</h2>
+
+      <!-- Mute Toggle -->
+      <div class="setting-row mute-row">
+        <button class="mute-btn" [class.muted]="isMuted" (click)="toggleMute()">
+          {{ isMuted ? '🔇 MUTED' : '🔊 SOUND ON' }}
+        </button>
+      </div>
+
+      <!-- Master Volume -->
+      <div class="setting-row">
+        <label>MASTER</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          [ngModel]="masterVolume"
+          (ngModelChange)="onMasterVolumeChange($event)"
+          class="volume-slider"
+        />
+        <span class="volume-value">{{ masterVolume }}%</span>
+      </div>
+
+      <!-- Music Volume -->
+      <div class="setting-row">
+        <label>MUSIC</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          [ngModel]="musicVolume"
+          (ngModelChange)="onMusicVolumeChange($event)"
+          class="volume-slider"
+        />
+        <span class="volume-value">{{ musicVolume }}%</span>
+      </div>
+
+      <!-- SFX Volume -->
+      <div class="setting-row">
+        <label>SFX</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          [ngModel]="sfxVolume"
+          (ngModelChange)="onSFXVolumeChange($event)"
+          class="volume-slider"
+        />
+        <span class="volume-value">{{ sfxVolume }}%</span>
+      </div>
+    </div>
+
     <div class="buttons">
       <button (click)="onResume()">RESUME MISSION</button>
       <button (click)="onQuit()" class="quit">ABORT MISSION</button>

@@ -24,8 +24,9 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
     public damage = 40; // Base melee damage
     public knockbackMultiplier = 1; // Knockback force multiplier
 
-    // LIFESTEAL - Arcadio roba vida con cada golpe
-    public lifestealPercent = 0.15; // 15% base lifesteal (robar vida por golpe)
+    // LIFESTEAL - Arcadio tiene probabilidad de curar al golpear
+    public lifestealChance = 0.30; // 30% probabilidad de activar curación
+    public lifestealHealPercent = 0.20; // 20% de la vida máxima cuando se activa
 
     // Damage reduction (stacks with upgrades)
     public damageReduction = 0; // 0 = 0%, 0.1 = 10%, etc.
@@ -50,7 +51,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
         this.scene = scene;
         this.player = player;
         this.gameStateRef = gameState;
-        console.log('[ARCADIO] Titan Strength ability initialized - 15% Lifesteal active');
+        console.log('[ARCADIO] Titan Strength ability initialized - 30% chance for 20% HP heal');
     }
 
     /**
@@ -120,14 +121,27 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
 
     // ========== LIFESTEAL SYSTEM ==========
 
+    // Callback para reproducir sonido de curación (se setea desde el engine)
+    public onHealCallback: (() => void) | null = null;
+
     /**
      * Apply lifesteal from melee damage dealt
      * Called after melee attack deals damage
+     * - 30% probabilidad de activar curación
+     * - Cuando se activa, cura 20% de la vida máxima
      */
     public applyLifesteal(totalDamage: number, enemiesHit: number): number {
-        if (totalDamage <= 0 || !this.gameStateRef) return 0;
+        if (totalDamage <= 0 || !this.gameStateRef || enemiesHit <= 0) return 0;
 
-        const healAmount = Math.ceil(totalDamage * this.lifestealPercent);
+        // 30% probabilidad de activar curación
+        const roll = Math.random();
+        if (roll > this.lifestealChance) {
+            // No se activó el lifesteal
+            return 0;
+        }
+
+        // Curación = 20% de la vida máxima
+        const healAmount = Math.ceil(this.gameStateRef.maxHealth * this.lifestealHealPercent);
 
         // Apply healing
         const oldHealth = this.gameStateRef.health;
@@ -139,10 +153,15 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
         const actualHeal = this.gameStateRef.health - oldHealth;
 
         if (actualHeal > 0) {
-            console.log(`[ARCADIO] Lifesteal: +${actualHeal} HP (${this.lifestealPercent * 100}% of ${totalDamage} damage)`);
+            console.log(`[ARCADIO] Lifesteal activated! +${actualHeal} HP (${this.lifestealHealPercent * 100}% of max HP, roll: ${(roll * 100).toFixed(1)}%)`);
 
             // Visual feedback - green flash on player + floating number
             this.createHealEffect(actualHeal);
+
+            // Play heal sound
+            if (this.onHealCallback) {
+                this.onHealCallback();
+            }
         }
 
         return actualHeal;

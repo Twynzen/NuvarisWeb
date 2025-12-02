@@ -37,6 +37,9 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     // Mind control duration base (10 seconds)
     private baseDuration = 10;
 
+    // Callback para reproducir sonido de control mental
+    public onMindControlCallback: (() => void) | null = null;
+
     initialize(scene: THREE.Scene, player: PlayerThree, gameState?: any): void {
         this.scene = scene;
         this.player = player;
@@ -79,9 +82,17 @@ export class LarsAbilityThree implements CharacterAbilityThree {
                         otherEnemy.mindControl(duration, this.minionHealthMult, this.minionDamageMult);
                     }
                 }
+                // Play mind control sound once for area effect
+                if (this.onMindControlCallback) {
+                    this.onMindControlCallback();
+                }
             } else {
                 // Single target mind control
                 enemy.mindControl(duration, this.minionHealthMult, this.minionDamageMult);
+                // Play mind control sound
+                if (this.onMindControlCallback) {
+                    this.onMindControlCallback();
+                }
             }
         }
     }

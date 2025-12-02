@@ -45,6 +45,9 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
     // Passive dodge (20% for Yurany)
     public dodgeChance = 0.20;
 
+    // Callback para reproducir sonido de chain lightning
+    public onChainLightningCallback: (() => void) | null = null;
+
     initialize(scene: THREE.Scene, player: PlayerThree, gameState?: any): void {
         this.scene = scene;
         this.player = player;
@@ -177,6 +180,11 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
     ): void {
         // Create visual lightning effect
         this.createLightningEffect(source.mesh.position, target.mesh.position, scene);
+
+        // Play chain lightning sound
+        if (this.onChainLightningCallback) {
+            this.onChainLightningCallback();
+        }
 
         // Apply damage to target
         target.takeDamage(damage, scene);

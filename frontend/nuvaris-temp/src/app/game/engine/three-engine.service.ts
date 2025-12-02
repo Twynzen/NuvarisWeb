@@ -21,6 +21,7 @@ import { TemplateMapGenerator, TemplateMapConfig, GeneratedTemplateMap } from '.
 import { SimpleTween } from '../utils/simple-tween';
 import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.converter';
 import { PlayerFogSystem } from '../world/player-fog.system';
+import { AudioService } from '../services/audio.service';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -129,7 +130,8 @@ export class ThreeEngineService implements OnDestroy {
     constructor(
         private ngZone: NgZone,
         private mapLoader: MapLoaderService,
-        private roomTemplateLoader: RoomTemplateLoader
+        private roomTemplateLoader: RoomTemplateLoader,
+        public audioService: AudioService
     ) {
         this.setupInput();
         // Create RoomVisibilityManager (will be initialized in createScene)
@@ -167,7 +169,12 @@ export class ThreeEngineService implements OnDestroy {
 
         const nearestDoor = this.doorSystem.getNearestDoor(playerX, playerZ, interactRange);
         if (nearestDoor) {
+            const wasOpen = nearestDoor.isOpen;
             this.doorSystem.toggleDoor(nearestDoor.id);
+            // Play door sound (only if door state changed)
+            if (wasOpen !== nearestDoor.isOpen) {
+                this.audioService.play('door');
+            }
         }
     }
 
@@ -1156,6 +1163,8 @@ export class ThreeEngineService implements OnDestroy {
             if (projectile) {
                 this.projectiles.push(projectile);
                 this.lastShootTime = currentTime;
+                // Play shoot sound
+                this.audioService.playShoot(this.currentCharacterId);
             }
             return;
         }
@@ -1168,6 +1177,8 @@ export class ThreeEngineService implements OnDestroy {
         if (projectile) {
             this.projectiles.push(projectile);
             this.lastShootTime = currentTime;
+            // Play shoot sound
+            this.audioService.playShoot(this.currentCharacterId);
         }
     }
 
@@ -1204,6 +1215,13 @@ export class ThreeEngineService implements OnDestroy {
     createScene(canvas: ElementRef<HTMLCanvasElement>, characterId: string = 'arcadio'): void {
         this.currentCharacterId = characterId; // Save for restart
         this.canvas = canvas.nativeElement;
+
+        // Initialize Audio System
+        this.audioService.initialize().then(() => {
+            console.log('[Game] Audio system initialized');
+            // Start gameplay music
+            this.audioService.playGameplayMusic();
+        });
 
         this.renderer = new THREE.WebGLRenderer({
             canvas: this.canvas,
@@ -1832,10 +1850,13 @@ export class ThreeEngineService implements OnDestroy {
                             );
                         }
 
+                        const enemyType = enemy.getType();
                         const orb = enemy.takeDamage(damage, this.scene);
                         if (orb) {
                             this.xpOrbs.push(orb);
                             this.enemies.splice(j, 1);
+                            // Play enemy death sound
+                            this.audioService.playEnemyDeath(enemyType);
                         }
 
                         // ARCADIO LIFESTEAL: Robar vida cuando el proyectil golpea
@@ -1909,6 +1930,13 @@ export class ThreeEngineService implements OnDestroy {
         this.gameState.xp = 0;
         this.gameState.xpToLevel = Math.floor(this.gameState.xpToLevel * 1.5);
         this.gameState.isLevelingUp = true;
+
+        // Play level up sound
+        this.audioService.play('level-up');
+
+        // Stop health warning when leveling up (full heal)
+        this.audioService.stopHealthWarning();
+
         console.log('LEVEL UP!');
     }
 
@@ -1984,6 +2012,13 @@ export class ThreeEngineService implements OnDestroy {
                     // Apply damage to player
                     this.gameState.health -= damageAmount;
 
+                    // Play hit sounds
+                    this.audioService.playHit(this.currentCharacterId);
+                    this.audioService.playEnemyAttack(enemy.getType());
+
+                    // Check health warning (15% threshold)
+                    this.audioService.checkHealthWarning(this.gameState.health, this.gameState.maxHealth, 15);
+
                     // Set player damage immunity to prevent multiple hits within 100ms
                     this.playerDamageImmunityTime = this.playerDamageImmunityDuration;
 
@@ -2042,6 +2077,11 @@ export class ThreeEngineService implements OnDestroy {
     // Handle player death
     private async handlePlayerDeath() {
         this.player.die();
+
+        // Play death sound and stop music
+        this.audioService.playDeath(this.currentCharacterId);
+        this.audioService.stopHealthWarning();
+        this.audioService.stopMusic();
 
         // Create glass break effect
         const glassEffect = new GlassBreakEffect(this.scene, this.renderer);
@@ -2268,9 +2308,30 @@ export class ThreeEngineService implements OnDestroy {
         // Initialize the ability with game state reference
         this.characterAbility.initialize(this.scene, this.player, this.gameState);
 
-        // For Arcadio, also set game state reference for lifesteal
+        // Set up audio callbacks for each character
         if (characterId === 'arcadio' && this.characterAbility) {
-            (this.characterAbility as ArcadioAbilityThree).setGameState(this.gameState);
+            const arcadioAbility = this.characterAbility as ArcadioAbilityThree;
+            arcadioAbility.setGameState(this.gameState);
+            // Connect heal sound callback
+            arcadioAbility.onHealCallback = () => {
+                this.audioService.play('arcadio-heal');
+            };
+        }
+
+        if (characterId === 'lars' && this.characterAbility) {
+            const larsAbility = this.characterAbility as LarsAbilityThree;
+            // Connect mind control sound callback
+            larsAbility.onMindControlCallback = () => {
+                this.audioService.play('lars-mind-control');
+            };
+        }
+
+        if (characterId === 'yurany' && this.characterAbility) {
+            const yuranyAbility = this.characterAbility as YuranyAbilityThree;
+            // Connect chain lightning sound callback
+            yuranyAbility.onChainLightningCallback = () => {
+                this.audioService.play('yurany-shoot-chain');
+            };
         }
 
         // Store reference to ability in player for potential direct access
