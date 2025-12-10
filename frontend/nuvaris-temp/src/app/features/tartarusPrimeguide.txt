@@ -1,0 +1,809 @@
+# Tartarus Prime: Complete Technical Guide for Volcanic Planet Simulation
+
+**Building an immersive volcanic world in Three.js requires mastering atmosphere rendering, procedural lava shaders, particle systems, and aggressive performance optimization.** This comprehensive guide provides production-ready code for every system needed to create a living, breathing volcanic planet where civilization survives on the brink of destruction. The techniques span from Rayleigh-Mie atmospheric scattering to GPU-instanced cities with thousands of flickering lights, all targeting **60fps on modern hardware**.
+
+---
+
+## Atmospheric scattering creates the volcanic sky
+
+Planetary atmosphere rendering uses **Rayleigh scattering** (wavelength-dependent, affects blue light on Earth) and **Mie scattering** (particle-based, creates sun halos). For a volcanic planet, we invert the typical blue-favoring coefficients to create an orange-red atmosphere filled with ash.
+
+The core algorithm samples points along view rays, accumulating optical depth and scattering contributions. Key parameters for volcanic aesthetic:
+
+| Parameter | Earth Value | Volcanic Value | Visual Effect |
+|-----------|-------------|----------------|---------------|
+| Rayleigh Coefficient | (5.5e-6, 13.0e-6, 22.4e-6) | (19.5e-6, 11.0e-6, 4.5e-6) | Orange/red sky |
+| Mie Coefficient | 21e-6 | 45e-6 | Dusty, smoky appearance |
+| Mie Scale Height | 1.2e3 | 2.5e3 | Thick lower atmosphere |
+| Mie G (directional) | 0.758 | 0.85 | Brighter sun corona |
+
+```typescript
+// VolcanicAtmosphere.ts - Complete implementation
+import * as THREE from 'three';
+
+export class VolcanicAtmosphere {
+  private mesh: THREE.Mesh;
+  
+  constructor(planetRadius: number) {
+    const geometry = new THREE.SphereGeometry(planetRadius * 1.025, 64, 64);
+    
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uSunPosition: { value: new THREE.Vector3(1, 0.2, -0.5) },
+        uPlanetRadius: { value: planetRadius },
+        uAtmosphereRadius: { value: planetRadius * 1.025 },
+        uRayleighCoefficient: { value: new THREE.Vector3(19.5e-6, 11.0e-6, 4.5e-6) },
+        uMieCoefficient: { value: 45e-6 },
+        uMieDirectionalG: { value: 0.85 },
+        uSunIntensity: { value: 22.0 }
+      },
+      vertexShader: atmosphereVertexShader,
+      fragmentShader: atmosphereFragmentShader,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false
+    });
+    
+    this.mesh = new THREE.Mesh(geometry, material);
+  }
+}
+```
+
+The **atmospheric halo** effect uses Fresnel calculations on a slightly larger sphere rendered with `THREE.BackSide`. Edges appear brighter because light grazes at shallow angles:
+
+```glsl
+// Fresnel-based glow - fragment shader
+varying float vIntensity;
+uniform vec3 uGlowColor; // vec3(1.0, 0.3, 0.05) for volcanic orange
+
+void main() {
+    vec3 glow = uGlowColor * pow(vIntensity, 4.0) * 0.6;
+    gl_FragColor = vec4(glow, vIntensity * 0.6);
+}
+```
+
+---
+
+## Volumetric clouds use raymarching with Beer's Law
+
+Three approaches exist for volumetric effects, each with distinct tradeoffs:
+
+| Technique | Quality | Performance | Best For |
+|-----------|---------|-------------|----------|
+| **Raymarching** | Highest - true 3D volumes | 2-8ms/frame | Hero clouds near lava |
+| **Billboards** | Good - fades at edges | 0.5ms | Distant atmosphere |
+| **Particles** | Medium - discrete look | Variable | Ash, debris, smoke |
+
+Raymarching samples density along view rays using **Fractal Brownian Motion (FBM)** for organic shapes and **Beer's Law** for light absorption:
+
+```glsl
+// Beer's Law - light absorption in volumes
+float beersLaw(float dist, float absorption) {
+    return exp(-dist * absorption);
+}
+
+// FBM for cloud density
+float fbm(vec3 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 6; i++) {
+        value += amplitude * noise3D(p);
+        p *= 2.02;
+        amplitude *= 0.5;
+    }
+    return value;
+}
+```
+
+**Blue noise dithering** with temporal accumulation reduces required samples by **50%** while maintaining quality. Sample the dithering offset from a blue noise texture and add a temporal component to prevent static patterns.
+
+---
+
+## Advanced lava shaders combine multiple noise techniques
+
+Realistic magma requires layering several procedural techniques beyond basic Voronoi noise:
+
+**Voronoi convection cells** simulate rising/falling magma currents. Cell centers animate over time, creating the characteristic hexagonal patterns of cooling lava:
+
+```glsl
+vec3 voronoi(vec2 uv, float time, float cellDensity) {
+    vec2 n = floor(uv * cellDensity);
+    vec2 f = fract(uv * cellDensity);
+    float minDist = 10.0;
+    
+    for(int y = -1; y <= 1; y++) {
+        for(int x = -1; x <= 1; x++) {
+            vec2 neighbor = vec2(float(x), float(y));
+            vec2 point = hash2(n + neighbor);
+            // Animate cell centers for convection
+            point = 0.5 + 0.5 * sin(time * 0.3 + 6.2831 * point);
+            float dist = length(neighbor + point - f);
+            if(dist < minDist) minDist = dist;
+        }
+    }
+    return vec3(minDist);
+}
+```
+
+**Temperature-based color gradients** map heat values to authentic lava colors based on blackbody radiation:
+
+```glsl
+vec3 lavaColorRamp(float temperature) {
+    // temperature: 0.0 = cold/black, 1.0 = hottest/white
+    vec3 black = vec3(0.05, 0.02, 0.01);
+    vec3 darkRed = vec3(0.3, 0.05, 0.0);
+    vec3 red = vec3(0.8, 0.1, 0.0);
+    vec3 orange = vec3(1.0, 0.4, 0.0);
+    vec3 yellow = vec3(1.0, 0.8, 0.2);
+    vec3 white = vec3(1.0, 1.0, 0.9);
+    
+    if(temperature < 0.2) return mix(black, darkRed, temperature / 0.2);
+    if(temperature < 0.4) return mix(darkRed, red, (temperature - 0.2) / 0.2);
+    if(temperature < 0.6) return mix(red, orange, (temperature - 0.4) / 0.2);
+    if(temperature < 0.8) return mix(orange, yellow, (temperature - 0.6) / 0.2);
+    return mix(yellow, white, (temperature - 0.8) / 0.2);
+}
+```
+
+**Subsurface scattering approximation** gives molten lava its characteristic translucent glow. The technique uses half-Lambert diffuse with view-light alignment for translucency:
+
+```glsl
+vec3 calculateSSS(vec3 lightDir, vec3 viewDir, vec3 normal, float thickness) {
+    vec3 H = normalize(lightDir + normal * 0.3); // distortion
+    float VdotH = pow(clamp(dot(viewDir, -H), 0.0, 1.0), 3.0);
+    float translucency = VdotH * (1.0 - thickness) * 0.8;
+    return vec3(1.0, 0.3, 0.05) * translucency; // orange SSS color
+}
+```
+
+**Pulsing/breathing effect** uses multiple overlapping sine waves with spatial noise variation:
+
+```glsl
+float calculatePulse(vec2 uv, float time) {
+    float pulse1 = sin(time * 1.0) * 0.5 + 0.5;
+    float pulse2 = sin(time * 1.3 + 2.0) * 0.5 + 0.5;
+    float spatialVar = fbm(uv * 3.0 + time * 0.1);
+    return mix(1.0, (pulse1 + pulse2 * 0.5) / 1.5, 0.3 * spatialVar);
+}
+```
+
+---
+
+## Post-processing creates heat and light effects
+
+### God rays through volumetric light scattering
+
+The `three-good-godrays` library provides screen-space raymarched god rays compatible with Three.js r150+:
+
+```typescript
+import { GodraysPass } from 'three-good-godrays';
+
+const godraysParams = {
+  density: 1 / 128,
+  maxDensity: 0.5,
+  color: new THREE.Color(0xff4400),
+  raymarchSteps: 60,
+  blur: true
+};
+
+const godraysPass = new GodraysPass(lavaLight, camera, godraysParams);
+```
+
+### Selective bloom prevents scene burnout
+
+Using Three.js layers system, bloom applies only to emissive surfaces:
+
+```typescript
+const BLOOM_LAYER = 1;
+lavaMesh.layers.enable(BLOOM_LAYER);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  1.2,  // strength - moderate for lava
+  0.8,  // radius - wider spread
+  0.6   // threshold - only bright surfaces
+);
+```
+
+### Heat distortion uses UV displacement
+
+```glsl
+// Heat shimmer fragment shader
+uniform float time;
+uniform float heatIntensity;
+
+void main() {
+    vec2 uv = vUv;
+    float heightFactor = uv.y; // More distortion higher up
+    
+    float distortionX = sin(uv.y * 100.0 + time * 2.0) * heatIntensity;
+    float distortionY = cos(uv.x * 50.0 + time * 1.4) * heatIntensity * 0.5;
+    
+    distortionX *= heightFactor;
+    distortionY *= heightFactor;
+    
+    gl_FragColor = texture2D(tDiffuse, uv + vec2(distortionX, distortionY));
+}
+```
+
+### Tone mapping for extreme contrast
+
+**ACESFilmicToneMapping** handles bright lava against deep shadows well:
+
+```typescript
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+```
+
+---
+
+## Volcanic eruptions combine particles, physics, and events
+
+### GPU particle system with parabolic trajectories
+
+```glsl
+// Eruption particle vertex shader
+attribute vec3 movements; // theta, v0r, v0y
+uniform float t;
+uniform vec3 u_Gravity;
+uniform vec3 u_Origin;
+
+void main() {
+    float theta = movements.y;
+    float v0r = movements.x;
+    float v0y = movements.z;
+    
+    float v0x = v0r * cos(theta);
+    float v0z = v0r * sin(theta);
+    
+    vec3 p = u_Origin;
+    p.x += v0x * t;
+    p.y += -0.5 * 9.8 * t * t + v0y * t; // gravity
+    p.z += v0z * t;
+    
+    // Reset particles that fall below origin
+    if(p.y < u_Origin.y - 10.0) p = u_Origin;
+    
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+}
+```
+
+### Volcanic lightning uses midpoint displacement
+
+The algorithm recursively subdivides line segments with perpendicular random offsets:
+
+```typescript
+class LightningBolt {
+    generate(start: Vector3, end: Vector3, iterations: number = 5): Vector3[] {
+        let points = [start, end];
+        
+        for (let i = 0; i < iterations; i++) {
+            const newPoints: Vector3[] = [];
+            const offset = 1.0 / Math.pow(2, i);
+            
+            for (let j = 0; j < points.length - 1; j++) {
+                const mid = new Vector3().lerpVectors(points[j], points[j + 1], 0.5);
+                // Add perpendicular displacement
+                const perp = this.getPerpendicularOffset(points[j], points[j + 1], offset);
+                mid.add(perp);
+                newPoints.push(points[j], mid);
+            }
+            newPoints.push(points[points.length - 1]);
+            points = newPoints;
+        }
+        return points;
+    }
+}
+```
+
+### Event system coordinates eruption sequences
+
+```typescript
+class VolcanicEventSystem {
+    static readonly ERUPTION_START = 'eruption:start';
+    static readonly ERUPTION_PEAK = 'eruption:peak';
+    static readonly LIGHTNING_STRIKE = 'lightning:strike';
+    
+    triggerScriptedEruption(camera: Camera): void {
+        this.emit(EARTHQUAKE, { intensity: 0.3, camera });
+        this.scheduleEvent(2000, ERUPTION_START, { intensity: 0.5 });
+        this.scheduleEvent(5000, ERUPTION_PEAK, { intensity: 1.0 });
+        this.scheduleEvent(15000, ERUPTION_END, {});
+    }
+}
+```
+
+### Screen shake with multi-frequency noise
+
+```typescript
+computeShake(time: number, intensity: number): Vector3 {
+    return new Vector3(
+        Math.sin(time * 0.1) * Math.sin(time * 0.017) * intensity,
+        Math.sin(time * 0.15) * Math.cos(time * 0.013) * intensity * 0.5,
+        Math.sin(time * 0.12) * Math.sin(time * 0.011) * intensity
+    );
+}
+```
+
+---
+
+## Procedural terrain generation uses domain warping
+
+### Beyond basic Perlin noise
+
+**Fractal Brownian Motion (FBM)** layers multiple octaves of noise with decreasing amplitude:
+
+```glsl
+float fbm(vec2 p) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    mat2 rot = mat2(0.877, 0.479, -0.479, 0.877); // Rotation reduces axial bias
+    
+    for (int i = 0; i < OCTAVES; i++) {
+        value += amplitude * noise(p);
+        p = rot * p * 2.0;
+        amplitude *= 0.5;
+    }
+    return value;
+}
+```
+
+**Domain warping** (Inigo Quilez technique) creates organic volcanic terrain:
+
+```glsl
+float pattern(vec2 p) {
+    vec2 q = vec2(fbm(p), fbm(p + vec2(5.2, 1.3)));
+    vec2 r = vec2(fbm(p + 4.0*q + vec2(1.7, 9.2)), fbm(p + 4.0*q + vec2(8.3, 2.8)));
+    return fbm(p + 4.0*r);
+}
+```
+
+### Volcanic cone and caldera generation
+
+```glsl
+float crater(vec2 p, vec2 center, float radius, float rimHeight, float depth) {
+    float dist = length(p - center);
+    float normalizedDist = dist / radius;
+    
+    // Rim profile
+    float rim = rimHeight * smoothstep(0.8, 1.0, normalizedDist) * 
+                smoothstep(1.3, 1.0, normalizedDist);
+    
+    // Inner depression
+    float depression = -depth * smoothstep(0.8, 0.0, normalizedDist);
+    
+    return rim + depression + fbm(p * 0.5) * 0.1;
+}
+```
+
+### Columnar basalt with Voronoi placement
+
+Basalt columns use **Lloyd relaxation** for natural hexagonal distribution:
+
+```typescript
+function generateVoronoiSeeds(bounds: Box2, count: number): Vector2[] {
+    let seeds = Array(count).fill(0).map(() => 
+        new Vector2(Math.random() * bounds.width, Math.random() * bounds.depth)
+    );
+    
+    // Lloyd relaxation for uniform distribution
+    for (let iter = 0; iter < 5; iter++) {
+        const voronoi = computeVoronoi(seeds, bounds);
+        seeds = voronoi.cells.map(cell => computeCentroid(cell));
+    }
+    return seeds;
+}
+```
+
+### Triplanar mapping eliminates texture stretching
+
+```glsl
+vec4 triplanarSample(sampler2D tex, vec3 pos, vec3 normal, float scale, float sharpness) {
+    vec3 blending = pow(abs(normal), vec3(sharpness));
+    blending /= (blending.x + blending.y + blending.z);
+    
+    vec4 xProj = texture2D(tex, pos.yz * scale);
+    vec4 yProj = texture2D(tex, pos.xz * scale);
+    vec4 zProj = texture2D(tex, pos.xy * scale);
+    
+    return xProj * blending.x + yProj * blending.y + zProj * blending.z;
+}
+```
+
+---
+
+## Dynamic lighting from lava illuminates the world
+
+### RectAreaLight for large lava surfaces
+
+```typescript
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib';
+
+RectAreaLightUniformsLib.init(); // Required initialization
+
+const lavaLight = new THREE.RectAreaLight(0xff4500, 15, 50, 50);
+lavaLight.position.set(0, 0.5, 0);
+lavaLight.lookAt(0, 1, 0);
+```
+
+**Limitation**: RectAreaLight doesn't cast shadows. Use PointLights for shadow-casting volcanic features.
+
+### Animated lava light intensity
+
+```typescript
+updateLavaIntensity(deltaTime: number): void {
+    this.time += deltaTime;
+    
+    this.lavaLights.forEach((light, i) => {
+        const flicker = 
+            Math.sin(this.time * 2.5 + i) * 0.3 +
+            Math.sin(this.time * 7.3 + i * 1.7) * 0.15 +
+            Math.sin(this.time * 13.1 + i * 2.3) * 0.05;
+        
+        light.intensity = this.baseLavaIntensity * (1 + flicker);
+    });
+}
+```
+
+### N8AO for efficient ambient occlusion
+
+```typescript
+import { N8AOPass } from 'n8ao';
+
+const n8aoPass = new N8AOPass(scene, camera, width, height);
+n8aoPass.configuration.aoRadius = 2.0;
+n8aoPass.configuration.intensity = 3.0;
+n8aoPass.configuration.halfRes = true; // 50% resolution for performance
+n8aoPass.configuration.color = new THREE.Color(0x110000); // Warm AO
+```
+
+---
+
+## Flow maps create realistic lava rivers
+
+Based on Valve's Portal 2 water technique, flow maps encode direction vectors in RG channels:
+
+```glsl
+uniform sampler2D flowMap;
+uniform float time;
+uniform float flowSpeed;
+
+void main() {
+    vec2 flow = (texture2D(flowMap, vUv).rg - 0.5) * 2.0;
+    
+    // Two-phase sampling prevents repetition
+    float phase0 = fract(time * flowSpeed);
+    float phase1 = fract(time * flowSpeed + 0.5);
+    
+    vec2 uv0 = vUv + flow * phase0;
+    vec2 uv1 = vUv + flow * phase1;
+    
+    vec4 lava0 = texture2D(lavaTexture, uv0);
+    vec4 lava1 = texture2D(lavaTexture, uv1);
+    
+    float blend = abs(2.0 * phase0 - 1.0);
+    gl_FragColor = mix(lava0, lava1, blend);
+}
+```
+
+### Geyser particle system with physics
+
+```glsl
+// Parabolic water trajectory
+void main() {
+    vec3 p = u_Origin;
+    p.x += v0x * t;
+    p.y += -0.5 * 9.8 * 80.0 * t * t + v0y * t;
+    p.z += v0z * t;
+    
+    if(p.y < -1.0) p = vec3(-0.1); // Reset below ground
+    
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+}
+```
+
+### Bubble emergence effect
+
+```glsl
+float bubble(vec2 uv, vec2 center, float radius, float t) {
+    float dist = length(uv - center);
+    float growth = fract(t);
+    float bubble = smoothstep(radius, radius * 0.9, dist);
+    bubble *= step(growth, 0.9);  // Pop at 90%
+    bubble *= smoothstep(0.0, 0.3, growth); // Grow in
+    return bubble;
+}
+```
+
+---
+
+## Cities use GPU instancing for thousands of buildings
+
+### InstancedMesh for building variations
+
+```typescript
+class VolcanicCityRenderer {
+    private buildingInstances: THREE.InstancedMesh;
+    private instanceCount = 3000;
+    
+    constructor(scene: THREE.Scene) {
+        const buildingGeo = new THREE.BoxGeometry(10, 50, 10);
+        const material = new THREE.MeshStandardMaterial({ 
+            vertexColors: true 
+        });
+        
+        this.buildingInstances = new THREE.InstancedMesh(
+            buildingGeo, material, this.instanceCount
+        );
+        
+        // Per-instance color for variation
+        const colors = new Float32Array(this.instanceCount * 3);
+        for (let i = 0; i < this.instanceCount; i++) {
+            const damage = Math.random();
+            colors[i * 3] = 0.4 + damage * 0.2;
+            colors[i * 3 + 1] = 0.35 - damage * 0.1;
+            colors[i * 3 + 2] = 0.3 - damage * 0.1;
+        }
+        this.buildingInstances.instanceColor = 
+            new THREE.InstancedBufferAttribute(colors, 3);
+    }
+}
+```
+
+### Procedural window textures with flickering
+
+```typescript
+function generateWindowTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+    
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(0, 0, 512, 512);
+    
+    for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 8; x++) {
+            const lit = Math.random() > 0.4;
+            const colors = ['#ffdd88', '#fff4cc', '#aaccff', '#ffaa66'];
+            ctx.fillStyle = lit ? colors[Math.floor(Math.random() * 4)] : '#1a1a22';
+            ctx.fillRect(x * 60 + 10, y * 30 + 5, 40, 25);
+        }
+    }
+    
+    return new THREE.CanvasTexture(canvas);
+}
+```
+
+### Window flicker shader
+
+```glsl
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+void main() {
+    vec4 windowColor = texture2D(windowMap, vUv);
+    float brightness = (windowColor.r + windowColor.g + windowColor.b) / 3.0;
+    
+    if (brightness > 0.4) {
+        vec2 windowId = floor(vUv * 8.0);
+        float flickerOffset = hash(windowId);
+        float flicker = 0.9 + 0.1 * sin(time * 2.0 + flickerOffset * 6.28);
+        windowColor.rgb *= flicker;
+    }
+    
+    gl_FragColor = windowColor;
+}
+```
+
+---
+
+## Performance optimization targets 60fps
+
+### Quadtree-based terrain chunking
+
+```typescript
+class TerrainQuadTree {
+    private splitThreshold = 2.0; // Pixels of screen-space error
+    
+    traverseAndUpdate(node: QuadTreeNode): void {
+        const screenError = this.calculateScreenError(node, distToNode);
+        const shouldSplit = screenError > this.splitThreshold && 
+                           node.level < this.maxDepth;
+        
+        if (shouldSplit && !node.children) {
+            this.splitNode(node);
+        }
+        
+        if (shouldSplit) {
+            node.children?.forEach(child => this.traverseAndUpdate(child));
+            if (node.mesh) node.mesh.visible = false;
+        } else {
+            if (node.mesh) node.mesh.visible = true;
+        }
+    }
+}
+```
+
+### Shader optimization techniques
+
+**Move calculations from fragment to vertex shader** where possible:
+
+```glsl
+// BEFORE - per-pixel (expensive)
+void main() {
+    vec3 lightDir = normalize(uLightPos - vWorldPosition);
+    float attenuation = 1.0 / (1.0 + 0.1 * length(uLightPos - vWorldPosition));
+}
+
+// AFTER - per-vertex (cheaper, interpolated)
+varying vec3 vLightDir;
+varying float vAttenuation;
+void main() { // vertex shader
+    vLightDir = normalize(uLightPos - worldPos);
+    vAttenuation = 1.0 / (1.0 + 0.1 * length(uLightPos - worldPos));
+}
+```
+
+**Noise texture vs procedural noise tradeoffs**:
+
+| Approach | Cost | Best For |
+|----------|------|----------|
+| Procedural Simplex | ~50 ALU ops | Low-frequency, 3D/4D patterns |
+| Texture lookup | ~4 cycles | High-frequency detail |
+
+### Quality presets system
+
+```typescript
+const QUALITY_PRESETS = {
+    low: {
+        pixelRatio: 0.75,
+        shadowMapSize: 512,
+        maxParticles: 1000,
+        noiseOctaves: 2,
+        postProcessing: false
+    },
+    high: {
+        pixelRatio: Math.min(devicePixelRatio, 2),
+        shadowMapSize: 2048,
+        maxParticles: 20000,
+        noiseOctaves: 6,
+        postProcessing: true
+    },
+    ultra: {
+        pixelRatio: devicePixelRatio,
+        shadowMapSize: 4096,
+        maxParticles: 100000,
+        noiseOctaves: 8,
+        postProcessing: true
+    }
+};
+```
+
+### Dynamic quality adjustment
+
+```typescript
+class AdaptiveQualityManager {
+    update(deltaMs: number): void {
+        const utilization = this.frameBudget.getBudgetUtilization();
+        
+        if (utilization > 120) this.decreaseQuality();
+        else if (utilization < 60) this.increaseQuality();
+    }
+}
+```
+
+---
+
+## Visual references inform authentic volcanic aesthetics
+
+### Film and game references
+
+**Mustafar (Star Wars)** used real Mount Etna footage composited with CGI. Key techniques: high-contrast lighting between molten lava and black basalt, industrial silhouettes against glow, toxic ash atmosphere.
+
+**Doom Eternal** hell environments combine biomechanical H.R. Giger influence with infernal architecture. Walking titans in backgrounds establish scale.
+
+### Authentic volcanic color palette
+
+Based on real volcanic photography and USGS temperature data:
+
+```
+Temperature → Color mapping:
+1,200°C+ → Bright White/Yellow  #FFFFA0
+1,000-1,200°C → Yellow-Orange   #FFD700
+800-1,000°C → Bright Orange     #FF6600
+650-800°C → Bright Red          #FF3300
+500-650°C → Dark Red            #8B0000
+Cooled → Black                  #1A1A1A
+```
+
+**Primary volcanic palette**:
+- Maximum Red: `#D82909`
+- Flame: `#EB5121`
+- Chinese Orange: `#FA7445`
+- Saffron: `#FCB930`
+- Charleston Green: `#292929`
+
+---
+
+## Recommended code architecture
+
+### System organization
+
+```
+src/
+├── systems/
+│   ├── AtmosphereSystem.ts
+│   ├── TerrainSystem.ts
+│   ├── LavaSystem.ts
+│   ├── CitySystem.ts
+│   └── RenderSystem.ts
+├── materials/
+│   ├── LavaMaterial.ts
+│   └── TerrainMaterial.ts
+├── shaders/
+│   ├── chunks/
+│   │   ├── noise.glsl
+│   │   └── lighting.glsl
+│   ├── lava/
+│   └── atmosphere/
+└── config/
+    ├── PlanetConfig.ts
+    └── QualityPresets.ts
+```
+
+### Composition over inheritance
+
+Components extend `THREE.Group` and implement lifecycle hooks:
+
+```typescript
+class LavaPool extends THREE.Group {
+    update(dt: number, time: number): void {
+        this.material.uniforms.uTime.value = time;
+        this.children.forEach(child => {
+            if ('update' in child) (child as any).update(dt, time);
+        });
+    }
+}
+```
+
+### Configuration GUI with lil-gui
+
+```typescript
+import GUI from 'lil-gui';
+
+const gui = new GUI({ title: 'Volcanic Planet Controls' });
+const lavaFolder = gui.addFolder('Lava');
+
+lavaFolder.add(config.lava, 'temperature', 500, 1200)
+    .name('Temperature (°C)')
+    .onChange(() => updateMaterials());
+
+lavaFolder.add(config.lava, 'flowSpeed', 0, 2)
+    .name('Flow Speed');
+
+lavaFolder.addColor(config.lava, 'hotColor')
+    .name('Hot Color');
+```
+
+---
+
+## Implementation priorities
+
+**HIGH PRIORITY** (implement first):
+1. Volumetric atmosphere with Rayleigh-Mie scattering and volcanic colors
+2. Lava shader with Voronoi convection, temperature gradients, and SSS
+3. Heat distortion and bloom post-processing
+4. Basic eruption particle system
+
+**MEDIUM PRIORITY**:
+5. Flow map lava rivers and waterfalls
+6. Geyser particle systems with physics
+7. Instanced buildings with procedural windows
+8. LOD and terrain chunking
+
+**LOW PRIORITY** (polish):
+9. Volcanic lightning with midpoint displacement
+10. Event-driven eruption sequences and screen shake
+
+The planet should feel **alive, dangerous, and impressive** - every shader, particle, and lighting effect contributes to the visual narrative of a world on the brink of destruction where civilization has learned to survive against the fury of volcanic forces.
