@@ -1,25 +1,42 @@
 import * as THREE from 'three';
 import { createNoise2D, createNoise3D, NoiseFunction2D, NoiseFunction3D } from 'simplex-noise';
 import { PlanetLayer, TartarusConfig } from './magma-core.system';
+import {
+  AtmosphericScatteringShader,
+  AtmosphericHaloShader,
+  VolcanicDustShader,
+} from '../shaders/atmosphere.shader';
 
 /**
- * TARTARUS PRIME - Atmosphere System
+ * TARTARUS PRIME - Advanced Atmosphere System
  *
- * Based on Concepto.png:
- * - SUBTLE dark red/crimson background glow (NOT bright pink)
- * - Whitish-gray smoke wisps (like thin volcanic ash/steam)
- * - Ember particles rising from the volcanic ring
- * - NO bright pink/magenta halos
+ * Features:
+ * - Rayleigh-Mie atmospheric scattering (volcanic orange/red)
+ * - Volumetric dust/ash layers with FBM
+ * - Fresnel halo effect at planet edges
+ * - Steam/smoke particle systems
+ * - Ember particles rising from core
  */
 
 export class AtmosphereSystem implements PlanetLayer {
   name = 'atmosphere';
   mesh: THREE.Group;
 
+  // Main atmosphere layers
+  private scatteringMesh!: THREE.Mesh;
+  private haloMesh!: THREE.Mesh;
+  private dustLayers: THREE.Mesh[] = [];
+
+  // Particle systems
   private steamLayers: THREE.Mesh[] = [];
   private ashParticles!: THREE.Points;
   private emberParticles!: THREE.Points;
-  private backgroundGlow!: THREE.Mesh;
+
+  // Materials for updates
+  private scatteringMaterial!: THREE.ShaderMaterial;
+  private haloMaterial!: THREE.ShaderMaterial;
+  private dustMaterials: THREE.ShaderMaterial[] = [];
+
   private noise2D: NoiseFunction2D;
   private noise3D: NoiseFunction3D;
 
@@ -27,86 +44,113 @@ export class AtmosphereSystem implements PlanetLayer {
     this.mesh = new THREE.Group();
     this.noise2D = createNoise2D();
     this.noise3D = createNoise3D();
-    this.createBackgroundGlow();  // Subtle dark red, NOT bright pink
-    this.createSteamLayers();     // Whitish-gray smoke
+
+    this.createAtmosphericScattering();
+    this.createAtmosphericHalo();
+    this.createVolcanicDustLayers();
+    this.createSteamLayers();
     this.createAshParticles();
     this.createEmberParticles();
   }
 
   /**
-   * Creates a subtle dark crimson/red background glow
-   * This is NOT the bright pink from before - much more subtle
+   * Creates the main atmospheric scattering sphere
+   * Uses Rayleigh-Mie model with volcanic color inversion
    */
-  private createBackgroundGlow(): void {
+  private createAtmosphericScattering(): void {
     const { coreRadius } = this.config;
+    const atmosphereRadius = coreRadius * 1.08;
 
-    // Single subtle background glow - dark crimson, very faint
-    const glowGeometry = new THREE.SphereGeometry(coreRadius * 4.0, 48, 48);
-    const glowMaterial = new THREE.ShaderMaterial({
+    const geometry = new THREE.SphereGeometry(atmosphereRadius, 64, 64);
+
+    this.scatteringMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        time: { value: 0 },
-        glowColor: { value: new THREE.Color(0x4a1515) },  // Dark crimson/maroon
-        coreRadius: { value: coreRadius },
+        ...THREE.UniformsUtils.clone(AtmosphericScatteringShader.uniforms),
+        uPlanetRadius: { value: coreRadius },
+        uAtmosphereRadius: { value: atmosphereRadius },
       },
-      vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vWorldPosition;
-
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          vec4 worldPos = modelMatrix * vec4(position, 1.0);
-          vWorldPosition = worldPos.xyz;
-          gl_Position = projectionMatrix * viewMatrix * worldPos;
-        }
-      `,
-      fragmentShader: `
-        uniform float time;
-        uniform vec3 glowColor;
-        uniform float coreRadius;
-
-        varying vec3 vNormal;
-        varying vec3 vWorldPosition;
-
-        void main() {
-          vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-          float fresnel = pow(1.0 - abs(dot(vNormal, viewDir)), 2.0);
-
-          // Very subtle pulse
-          float pulse = 0.95 + sin(time * 0.5) * 0.05;
-
-          // Fade based on distance
-          float dist = length(vWorldPosition);
-          float fade = 1.0 - smoothstep(coreRadius * 2.5, coreRadius * 4.0, dist);
-
-          float alpha = fresnel * pulse * 0.2 * fade;
-
-          gl_FragColor = vec4(glowColor, alpha);
-        }
-      `,
-      transparent: true,
+      vertexShader: AtmosphericScatteringShader.vertexShader,
+      fragmentShader: AtmosphericScatteringShader.fragmentShader,
       side: THREE.BackSide,
+      transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
 
-    this.backgroundGlow = new THREE.Mesh(glowGeometry, glowMaterial);
-    this.mesh.add(this.backgroundGlow);
+    this.scatteringMesh = new THREE.Mesh(geometry, this.scatteringMaterial);
+    this.mesh.add(this.scatteringMesh);
+  }
+
+  /**
+   * Creates the outer atmospheric halo (Fresnel glow)
+   */
+  private createAtmosphericHalo(): void {
+    const { coreRadius } = this.config;
+    const haloRadius = coreRadius * 1.15;
+
+    const geometry = new THREE.SphereGeometry(haloRadius, 48, 48);
+
+    this.haloMaterial = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.clone(AtmosphericHaloShader.uniforms),
+      vertexShader: AtmosphericHaloShader.vertexShader,
+      fragmentShader: AtmosphericHaloShader.fragmentShader,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    this.haloMesh = new THREE.Mesh(geometry, this.haloMaterial);
+    this.mesh.add(this.haloMesh);
+  }
+
+  /**
+   * Creates volumetric dust layers with FBM noise
+   */
+  private createVolcanicDustLayers(): void {
+    const { coreRadius } = this.config;
+
+    const layerConfigs = [
+      { radius: coreRadius * 1.25, density: 0.25 },
+      { radius: coreRadius * 1.45, density: 0.18 },
+      { radius: coreRadius * 1.7, density: 0.12 },
+    ];
+
+    layerConfigs.forEach((cfg) => {
+      const geometry = new THREE.SphereGeometry(cfg.radius, 48, 48);
+
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          ...THREE.UniformsUtils.clone(VolcanicDustShader.uniforms),
+          uDensity: { value: cfg.density },
+          uCoreRadius: { value: coreRadius },
+        },
+        vertexShader: VolcanicDustShader.vertexShader,
+        fragmentShader: VolcanicDustShader.fragmentShader,
+        side: THREE.DoubleSide,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      this.dustLayers.push(mesh);
+      this.dustMaterials.push(material);
+      this.mesh.add(mesh);
+    });
   }
 
   /**
    * Creates whitish-gray smoke/steam layers
-   * Like ultra-thin white smoke, not pink or warm-toned
    */
   private createSteamLayers(): void {
     const { coreRadius } = this.config;
 
-    // WHITISH-GRAY smoke layers - matching concept art
     const layerConfigs = [
-      { radius: coreRadius * 1.4, opacity: 0.15, color: 0x888888, rotationDir: 1 },   // Gray
-      { radius: coreRadius * 1.6, opacity: 0.12, color: 0x999999, rotationDir: -1 },  // Lighter gray
-      { radius: coreRadius * 1.9, opacity: 0.08, color: 0xaaaaaa, rotationDir: 1 },   // Even lighter
-      { radius: coreRadius * 2.3, opacity: 0.05, color: 0xbbbbbb, rotationDir: -1 },  // Almost white
-      { radius: coreRadius * 2.8, opacity: 0.03, color: 0xcccccc, rotationDir: 1 },   // Whispy white
+      { radius: coreRadius * 1.35, opacity: 0.12, color: 0x888888, rotationDir: 1 },
+      { radius: coreRadius * 1.55, opacity: 0.09, color: 0x999999, rotationDir: -1 },
+      { radius: coreRadius * 1.85, opacity: 0.06, color: 0xaaaaaa, rotationDir: 1 },
+      { radius: coreRadius * 2.2, opacity: 0.04, color: 0xbbbbbb, rotationDir: -1 },
     ];
 
     layerConfigs.forEach((layerConfig, index) => {
@@ -144,22 +188,17 @@ export class AtmosphereSystem implements PlanetLayer {
           varying vec3 vNormal;
 
           void main() {
-            // Animated UV offset for drifting smoke
             vec2 uv = vUv;
-            uv.x += time * 0.008;
-            uv.y += sin(time * 0.4 + vUv.x * 4.0) * 0.015;
+            uv.x += time * 0.006;
+            uv.y += sin(time * 0.35 + vUv.x * 4.0) * 0.012;
 
-            // Sample noise texture
             float noise = texture2D(map, uv).a;
 
-            // View-dependent opacity (thicker at edges like real smoke)
             vec3 viewDir = normalize(cameraPosition - vWorldPosition);
             float viewAngle = abs(dot(vNormal, viewDir));
             float edgeFactor = 1.0 - pow(viewAngle, 0.6);
 
             float alpha = noise * opacity * (0.4 + edgeFactor * 0.6);
-
-            // Slight variation
             alpha *= 0.85 + sin(time * 0.5 + vUv.y * 8.0) * 0.15;
 
             gl_FragColor = vec4(color, alpha);
@@ -172,9 +211,8 @@ export class AtmosphereSystem implements PlanetLayer {
       });
 
       const steamMesh = new THREE.Mesh(geometry, material);
-
       steamMesh.userData = {
-        rotationSpeed: 0.0001 * layerConfig.rotationDir * (1 + index * 0.15),
+        rotationSpeed: 0.00008 * layerConfig.rotationDir * (1 + index * 0.12),
         material,
       };
 
@@ -203,7 +241,7 @@ export class AtmosphereSystem implements PlanetLayer {
         value += this.noise2D(nx * 32 + seed, ny * 32) * 0.0625;
 
         value = (value + 1) / 2;
-        value = Math.pow(value, 1.3); // More contrast for wispy look
+        value = Math.pow(value, 1.3);
 
         const i = (y * size + x) * 4;
         imageData.data[i] = 255;
@@ -239,11 +277,10 @@ export class AtmosphereSystem implements PlanetLayer {
     geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
     geometry.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
 
-    // Gray ash particles
     const material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
-        color: { value: new THREE.Color(0x666666) },  // Gray ash
+        color: { value: new THREE.Color(0x555555) },
       },
       vertexShader: `
         attribute float size;
@@ -255,10 +292,9 @@ export class AtmosphereSystem implements PlanetLayer {
           vPhase = phase;
           vec3 pos = position;
 
-          // Drifting motion
-          pos.x += sin(time * 0.25 + phase * 8.0) * 0.15;
-          pos.y += cos(time * 0.15 + phase * 6.0) * 0.1;
-          pos.z += sin(time * 0.2 + phase * 10.0) * 0.15;
+          pos.x += sin(time * 0.2 + phase * 8.0) * 0.12;
+          pos.y += cos(time * 0.12 + phase * 6.0) * 0.08;
+          pos.z += sin(time * 0.15 + phase * 10.0) * 0.12;
 
           vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
           gl_PointSize = size * (200.0 / -mvPosition.z);
@@ -273,7 +309,7 @@ export class AtmosphereSystem implements PlanetLayer {
           float dist = length(gl_PointCoord - vec2(0.5));
           if (dist > 0.5) discard;
 
-          float alpha = (1.0 - dist * 2.0) * 0.4;
+          float alpha = (1.0 - dist * 2.0) * 0.35;
           gl_FragColor = vec4(color, alpha);
         }
       `,
@@ -297,26 +333,25 @@ export class AtmosphereSystem implements PlanetLayer {
 
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(2 * Math.random() - 1);
-    const r = coreRadius * 1.5 + Math.random() * (atmosphereRadius - coreRadius * 1.5) * 0.7;
+    const r = coreRadius * 1.4 + Math.random() * (atmosphereRadius - coreRadius * 1.4) * 0.6;
 
     const i3 = index * 3;
     positions[i3] = r * Math.sin(phi) * Math.cos(theta);
     positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta) + (Math.random() - 0.5) * 4;
     positions[i3 + 2] = r * Math.cos(phi);
 
-    sizes[index] = 0.02 + Math.random() * 0.06;
+    sizes[index] = 0.02 + Math.random() * 0.05;
     phases[index] = Math.random() * Math.PI * 2;
 
-    // Slow orbital velocity
     const tangent = new THREE.Vector3(-positions[i3 + 2], 0, positions[i3]).normalize();
-    const speed = 0.008 + Math.random() * 0.015;
+    const speed = 0.006 + Math.random() * 0.012;
     velocities[i3] = tangent.x * speed;
-    velocities[i3 + 1] = (Math.random() - 0.5) * 0.003;
+    velocities[i3 + 1] = (Math.random() - 0.5) * 0.002;
     velocities[i3 + 2] = tangent.z * speed;
   }
 
   private createEmberParticles(): void {
-    const particleCount = 1200;
+    const particleCount = 1500;
     const positions = new Float32Array(particleCount * 3);
     const sizes = new Float32Array(particleCount);
     const colors = new Float32Array(particleCount * 3);
@@ -350,21 +385,18 @@ export class AtmosphereSystem implements PlanetLayer {
 
           vec3 pos = position;
 
-          // Rising motion with spiral
-          float rise = mod(time * 0.25 + phase * 4.0, 6.0);
+          float rise = mod(time * 0.2 + phase * 4.0, 5.0);
           pos.y += rise;
 
-          // Spiral outward
-          float spiralAngle = time * 0.4 + phase * 8.0;
-          float spiralRadius = rise * 0.08;
+          float spiralAngle = time * 0.35 + phase * 8.0;
+          float spiralRadius = rise * 0.06;
           pos.x += cos(spiralAngle) * spiralRadius;
           pos.z += sin(spiralAngle) * spiralRadius;
 
           vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
 
-          // Flicker size
-          float flicker = sin(time * 8.0 + phase * 80.0) * 0.25 + 0.75;
-          gl_PointSize = size * flicker * (180.0 / -mvPosition.z);
+          float flicker = sin(time * 10.0 + phase * 100.0) * 0.2 + 0.8;
+          gl_PointSize = size * flicker * (200.0 / -mvPosition.z);
 
           gl_Position = projectionMatrix * mvPosition;
         }
@@ -380,8 +412,8 @@ export class AtmosphereSystem implements PlanetLayer {
           float glow = 1.0 - dist * 2.0;
           glow = pow(glow, 1.5);
 
-          vec3 color = vColor * (1.0 + glow * 0.4);
-          float alpha = glow * 0.85;
+          vec3 color = vColor * (1.0 + glow * 0.3);
+          float alpha = glow * 0.9;
 
           gl_FragColor = vec4(color, alpha);
         }
@@ -404,50 +436,51 @@ export class AtmosphereSystem implements PlanetLayer {
   ): void {
     const { coreRadius } = this.config;
 
-    // Embers originate near the core/ring area
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(2 * Math.random() - 1);
-    const r = coreRadius * (1.1 + Math.random() * 0.4);
+    const r = coreRadius * (1.08 + Math.random() * 0.35);
 
     const i3 = index * 3;
     positions[i3] = r * Math.sin(phi) * Math.cos(theta);
     positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
     positions[i3 + 2] = r * Math.cos(phi);
 
-    sizes[index] = 0.06 + Math.random() * 0.12;
+    sizes[index] = 0.05 + Math.random() * 0.1;
     phases[index] = Math.random() * Math.PI * 2;
 
-    // Orange to yellow colors for embers
     const colorT = Math.random();
-    if (colorT < 0.35) {
-      // Yellow (hottest)
+    if (colorT < 0.3) {
       colors[i3] = 1.0;
-      colors[i3 + 1] = 0.85 + Math.random() * 0.15;
-      colors[i3 + 2] = 0.25 + Math.random() * 0.25;
-    } else if (colorT < 0.75) {
-      // Orange
+      colors[i3 + 1] = 0.9 + Math.random() * 0.1;
+      colors[i3 + 2] = 0.3 + Math.random() * 0.2;
+    } else if (colorT < 0.7) {
       colors[i3] = 1.0;
-      colors[i3 + 1] = 0.45 + Math.random() * 0.25;
-      colors[i3 + 2] = 0.0;
+      colors[i3 + 1] = 0.5 + Math.random() * 0.2;
+      colors[i3 + 2] = 0.05;
     } else {
-      // Red
       colors[i3] = 0.9 + Math.random() * 0.1;
-      colors[i3 + 1] = 0.15 + Math.random() * 0.2;
+      colors[i3 + 1] = 0.2 + Math.random() * 0.15;
       colors[i3 + 2] = 0.0;
     }
   }
 
   update(time: number, delta: number): void {
-    // Update background glow
-    if (this.backgroundGlow) {
-      const mat = this.backgroundGlow.material as THREE.ShaderMaterial;
+    // Update scattering shader
+    this.scatteringMaterial.uniforms['time'].value = time;
+
+    // Update halo shader
+    this.haloMaterial.uniforms['time'].value = time;
+
+    // Update dust layers
+    this.dustMaterials.forEach((mat, i) => {
       mat.uniforms['time'].value = time;
-    }
+      this.dustLayers[i].rotation.y += 0.0001 * (i % 2 === 0 ? 1 : -1);
+    });
 
     // Rotate steam layers
     this.steamLayers.forEach(layer => {
       layer.rotation.y += layer.userData['rotationSpeed'];
-      layer.rotation.x += layer.userData['rotationSpeed'] * 0.25;
+      layer.rotation.x += layer.userData['rotationSpeed'] * 0.2;
 
       const mat = layer.userData['material'] as THREE.ShaderMaterial;
       mat.uniforms['time'].value = time;
@@ -457,7 +490,6 @@ export class AtmosphereSystem implements PlanetLayer {
     const ashMat = this.ashParticles.material as THREE.ShaderMaterial;
     ashMat.uniforms['time'].value = time;
 
-    // Slowly move ash particles
     const ashPos = this.ashParticles.geometry.attributes['position'].array as Float32Array;
     const ashVel = this.ashParticles.geometry.attributes['velocity'].array as Float32Array;
 
@@ -475,11 +507,16 @@ export class AtmosphereSystem implements PlanetLayer {
   }
 
   dispose(): void {
-    // Dispose background glow
-    if (this.backgroundGlow) {
-      this.backgroundGlow.geometry.dispose();
-      (this.backgroundGlow.material as THREE.Material).dispose();
-    }
+    this.scatteringMesh.geometry.dispose();
+    this.scatteringMaterial.dispose();
+
+    this.haloMesh.geometry.dispose();
+    this.haloMaterial.dispose();
+
+    this.dustLayers.forEach((mesh, i) => {
+      mesh.geometry.dispose();
+      this.dustMaterials[i].dispose();
+    });
 
     this.steamLayers.forEach(layer => {
       layer.geometry.dispose();

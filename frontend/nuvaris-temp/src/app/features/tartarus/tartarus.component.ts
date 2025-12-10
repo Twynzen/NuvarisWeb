@@ -18,8 +18,7 @@ import { MediaPipeService, GestureType } from '../../core/services/mediapipe.ser
 import { MagmaCoreSystem, TartarusConfig } from './systems/magma-core.system';
 import { VolcanicIslandsSystem } from './systems/volcanic-islands.system';
 import { AtmosphereSystem } from './systems/atmosphere.system';
-// REMOVED: CreaturesSystem - red dots removed
-// REMOVED: CitiesSystem - cities are now integrated into VolcanicIslandsSystem
+import { EruptionSystem } from './systems/eruption.system';
 import { NavigationSystem } from './systems/navigation.system';
 import { PostProcessingSystem } from './systems/postprocessing.system';
 
@@ -831,14 +830,28 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
     // Create planet group
     const planetGroup = new THREE.Group();
 
-    // Initialize core systems only
-    // REMOVED creatures (red dots) and cities (now integrated in islands)
+    // Initialize core systems
     const magmaCore = new MagmaCoreSystem(this.config);
     const islands = new VolcanicIslandsSystem(this.config);
     const atmosphere = new AtmosphereSystem(this.config);
+    const eruptions = new EruptionSystem(this.config);
+
+    // Set up eruption screen shake callback
+    eruptions.setScreenShakeCallback((intensity) => {
+      // Apply camera shake
+      const shake = eruptions.computeShake(this.clock.getElapsedTime(), intensity);
+      this.camera.position.add(shake);
+    });
+
+    // Trigger random eruptions periodically
+    setInterval(() => {
+      if (Math.random() < 0.3) {
+        eruptions.triggerEruption(undefined, 0.5 + Math.random() * 0.5);
+      }
+    }, 15000);
 
     // Add to layers for updates
-    this.layers = [magmaCore, islands, atmosphere];
+    this.layers = [magmaCore, islands, atmosphere, eruptions];
 
     // Add meshes to planet group
     this.layers.forEach(layer => {
