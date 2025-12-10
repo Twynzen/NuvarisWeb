@@ -156,9 +156,9 @@ export interface PostProcessingOptions {
 
 const DEFAULT_OPTIONS: PostProcessingOptions = {
   bloomEnabled: true,
-  bloomStrength: 1.2,
-  bloomRadius: 0.5,
-  bloomThreshold: 0.7,
+  bloomStrength: 0.6,
+  bloomRadius: 0.3,
+  bloomThreshold: 0.85,
   heatDistortionEnabled: true,
   heatDistortionAmount: 0.0015,
   vignetteEnabled: true,

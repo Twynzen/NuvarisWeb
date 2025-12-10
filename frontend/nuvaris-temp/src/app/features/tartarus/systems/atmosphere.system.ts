@@ -261,7 +261,7 @@ export class AtmosphereSystem implements PlanetLayer {
   }
 
   private createAshParticles(): void {
-    const particleCount = 3000;
+    const particleCount = 1500;
     const positions = new Float32Array(particleCount * 3);
     const sizes = new Float32Array(particleCount);
     const velocities = new Float32Array(particleCount * 3);
@@ -351,7 +351,7 @@ export class AtmosphereSystem implements PlanetLayer {
   }
 
   private createEmberParticles(): void {
-    const particleCount = 1500;
+    const particleCount = 800;
     const positions = new Float32Array(particleCount * 3);
     const sizes = new Float32Array(particleCount);
     const colors = new Float32Array(particleCount * 3);

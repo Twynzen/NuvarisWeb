@@ -35,7 +35,7 @@ export class EruptionSystem implements PlanetLayer {
   // Eruption particles (GPU)
   private eruptionParticles!: THREE.Points;
   private particleMaterial!: THREE.ShaderMaterial;
-  private particleCount = 5000;
+  private particleCount = 2000;
 
   // Volcanic bombs (larger projectiles)
   private bombs: VolcanicBomb[] = [];

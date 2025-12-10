@@ -15,7 +15,7 @@ import * as THREE from 'three';
 export const AtmosphericScatteringShader = {
   uniforms: {
     uSunPosition: { value: new THREE.Vector3(100, 50, -80) },
-    uSunIntensity: { value: 22.0 },
+    uSunIntensity: { value: 8.0 },
     uPlanetRadius: { value: 10.0 },
     uAtmosphereRadius: { value: 10.25 },
     // Volcanic atmosphere - inverted from Earth (more red/orange scattering)
@@ -206,7 +206,7 @@ export const AtmosphericScatteringShader = {
 export const AtmosphericHaloShader = {
   uniforms: {
     uGlowColor: { value: new THREE.Color(1.0, 0.3, 0.05) },
-    uIntensity: { value: 0.6 },
+    uIntensity: { value: 0.25 },
     uPower: { value: 4.0 },
     time: { value: 0 },
   },

@@ -15,16 +15,16 @@ export const MagmaShader = {
   uniforms: {
     time: { value: 0 },
     // Temperature range (0 = cool/black, 1 = hottest/white)
-    uMinTemperature: { value: 0.3 },
-    uMaxTemperature: { value: 0.95 },
+    uMinTemperature: { value: 0.2 },
+    uMaxTemperature: { value: 0.75 },
     // Convection
     uCellScale: { value: 4.0 },
     uConvectionSpeed: { value: 0.15 },
     // SSS
-    uSSSIntensity: { value: 0.8 },
+    uSSSIntensity: { value: 0.3 },
     uSSSColor: { value: new THREE.Color(1.0, 0.3, 0.05) },
     // Pulse
-    uPulseIntensity: { value: 0.3 },
+    uPulseIntensity: { value: 0.15 },
     // Colors (based on blackbody radiation)
     uColorBlack: { value: new THREE.Color(0.05, 0.02, 0.01) },
     uColorDarkRed: { value: new THREE.Color(0.3, 0.05, 0.0) },
