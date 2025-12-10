@@ -15,6 +15,10 @@ const routes: Routes = [
     loadChildren: () => import('./map-editor/map-editor.module').then( m => m.MapEditorModule)
   },
   {
+    path: 'tartarus-prime',
+    loadChildren: () => import('./features/tartarus/tartarus.module').then( m => m.TartarusModule)
+  },
+  {
     path: 'home',
     redirectTo: '',
     pathMatch: 'full'

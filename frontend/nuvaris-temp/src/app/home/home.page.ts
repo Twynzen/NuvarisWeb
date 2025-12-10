@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { NuvarisIntroComponent } from '../game/ui/nuvaris-intro/nuvaris-intro.component';
 import { CommonModule } from '@angular/common';
@@ -12,7 +12,8 @@ import { CommonModule } from '@angular/common';
   imports: [
     IonicModule,
     NuvarisIntroComponent,
-    CommonModule
+    CommonModule,
+    RouterModule
   ],
 })
 export class HomePage {
