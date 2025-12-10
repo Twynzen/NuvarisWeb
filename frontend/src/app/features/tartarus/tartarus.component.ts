@@ -39,7 +39,7 @@ interface PlanetLayer {
       <!-- Three.js Canvas -->
       <canvas #canvas class="render-canvas"></canvas>
 
-      <!-- Video for hand tracking (hidden) -->
+      <!-- Video for hand tracking (hidden by default) -->
       <video #video class="video-feed" [class.visible]="showVideo()" autoplay playsinline></video>
 
       <!-- UI Overlay -->
@@ -55,77 +55,101 @@ interface PlanetLayer {
         <!-- Title -->
         <h1 class="title">TARTARUS PRIME</h1>
 
-        <!-- Hand tracking indicator -->
-        <div class="tracking-status" [class.active]="isHandDetected()">
+        <!-- Hand tracking status - only show when enabled -->
+        <div class="tracking-status" *ngIf="handTrackingEnabled()" [class.active]="isHandDetected()">
           <div class="hand-icon" [class.detected]="isHandDetected()">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
           </div>
-          <span>{{ isHandDetected() ? getGestureLabel() : 'No hand detected' }}</span>
+          <span>{{ isHandDetected() ? getGestureLabel() : 'Show your hand' }}</span>
+        </div>
+
+        <!-- Initial hint - show only when hand tracking is not enabled and not loading -->
+        <div class="initial-hint" *ngIf="!handTrackingEnabled() && !isLoading()">
+          <span>Use mouse to rotate or enable hand control</span>
         </div>
 
         <!-- Controls help -->
         <div class="controls-help" [class.visible]="showControls()">
           <h3>Controls</h3>
-          <div class="control-item">
-            <span class="key">Open Hand</span>
-            <span class="action">Rotate view</span>
+          <div class="control-section" *ngIf="handTrackingEnabled()">
+            <h4>Hand Gestures</h4>
+            <div class="control-item">
+              <span class="key">Open Hand</span>
+              <span class="action">Rotate view</span>
+            </div>
+            <div class="control-item">
+              <span class="key">Pinch</span>
+              <span class="action">Zoom in/out</span>
+            </div>
           </div>
-          <div class="control-item">
-            <span class="key">Pinch</span>
-            <span class="action">Zoom in/out</span>
+          <div class="control-section">
+            <h4>Mouse / Touch</h4>
+            <div class="control-item">
+              <span class="key">Drag</span>
+              <span class="action">Rotate view</span>
+            </div>
+            <div class="control-item">
+              <span class="key">Scroll</span>
+              <span class="action">Zoom</span>
+            </div>
           </div>
-          <div class="control-item">
-            <span class="key">Mouse Drag</span>
-            <span class="action">Rotate view</span>
-          </div>
-          <div class="control-item">
-            <span class="key">Scroll</span>
-            <span class="action">Zoom</span>
-          </div>
-          <div class="control-item">
-            <span class="key">WASD / Arrows</span>
-            <span class="action">Rotate</span>
-          </div>
-          <div class="control-item">
-            <span class="key">Q / E</span>
-            <span class="action">Zoom</span>
+          <div class="control-section">
+            <h4>Keyboard</h4>
+            <div class="control-item">
+              <span class="key">WASD / Arrows</span>
+              <span class="action">Rotate</span>
+            </div>
+            <div class="control-item">
+              <span class="key">Q / E</span>
+              <span class="action">Zoom</span>
+            </div>
           </div>
         </div>
 
-        <!-- Toggle buttons -->
-        <div class="toggle-buttons">
+        <!-- Bottom controls -->
+        <div class="bottom-controls">
+          <!-- Hand tracking button - prominent when not active -->
           <button
-            class="toggle-btn"
-            [class.active]="showVideo()"
-            (click)="toggleVideo()"
-            title="Toggle camera view"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-            </svg>
-          </button>
-          <button
-            class="toggle-btn"
-            [class.active]="showControls()"
-            (click)="toggleControls()"
-            title="Toggle controls help"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
-            </svg>
-          </button>
-          <button
-            class="toggle-btn"
+            class="hand-control-btn"
             [class.active]="handTrackingEnabled()"
+            [class.loading]="isInitializingCamera()"
             (click)="toggleHandTracking()"
-            title="Toggle hand tracking"
+            [disabled]="isInitializingCamera()"
           >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18 11V6.83l-3.59-3.59L13 4.66V3a1 1 0 0 0-2 0v1.66L9.59 3.24 6 6.83V11H4v9h16v-9h-2zm-8 0V7.41l2-2 2 2V11h-4z"/>
+            <svg viewBox="0 0 24 24" fill="currentColor" class="hand-icon-svg">
+              <path d="M18.5 8c-.4 0-.8.1-1.1.3-.2-.7-.8-1.3-1.6-1.3-.4 0-.8.1-1.1.3-.2-.7-.8-1.2-1.5-1.3V4c0-1.1-.9-2-2-2s-2 .9-2 2v6.3l-1.2-1.2c-.6-.6-1.4-.9-2.2-.9-.4 0-.8.2-1.1.5-.5.6-.4 1.5.2 2l4.4 4.4c.5.5.8 1.2.8 1.9v1c0 1.1.9 2 2 2h7c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2z"/>
             </svg>
+            <span class="btn-text">
+              {{ isInitializingCamera() ? 'Activating...' : (handTrackingEnabled() ? 'Hand Control ON' : 'Enable Hand Control') }}
+            </span>
           </button>
+
+          <!-- Toggle buttons -->
+          <div class="toggle-buttons">
+            <button
+              class="toggle-btn"
+              *ngIf="handTrackingEnabled()"
+              [class.active]="showVideo()"
+              (click)="toggleVideo()"
+              title="Toggle camera preview"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+              </svg>
+            </button>
+            <button
+              class="toggle-btn"
+              [class.active]="showControls()"
+              (click)="toggleControls()"
+              title="Toggle controls help"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <!-- Loading indicator -->
@@ -308,10 +332,111 @@ interface PlanetLayer {
       color: rgba(255, 255, 255, 0.6);
     }
 
-    .toggle-buttons {
+    .initial-hint {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 12px;
+      animation: fadeInOut 4s ease-in-out;
+      animation-fill-mode: forwards;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-10px); }
+      15% { opacity: 1; transform: translateY(0); }
+      85% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .control-section {
+      margin-bottom: 12px;
+    }
+
+    .control-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-section h4 {
+      margin: 0 0 8px 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .bottom-controls {
       position: absolute;
       bottom: 20px;
-      right: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hand-control-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid rgba(255, 68, 0, 0.4);
+      border-radius: 30px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .hand-control-btn:hover:not(:disabled) {
+      background: rgba(255, 68, 0, 0.2);
+      border-color: #ff4400;
+      transform: scale(1.02);
+    }
+
+    .hand-control-btn.active {
+      background: rgba(255, 68, 0, 0.3);
+      border-color: #ff4400;
+      box-shadow: 0 0 20px rgba(255, 68, 0, 0.3);
+    }
+
+    .hand-control-btn.loading {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .hand-control-btn:disabled {
+      cursor: not-allowed;
+    }
+
+    .hand-control-btn .hand-icon-svg {
+      width: 24px;
+      height: 24px;
+      color: #ff6633;
+    }
+
+    .hand-control-btn.active .hand-icon-svg {
+      color: #ff4400;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    .hand-control-btn .btn-text {
+      white-space: nowrap;
+    }
+
+    .toggle-buttons {
       display: flex;
       gap: 10px;
     }
@@ -385,9 +510,36 @@ interface PlanetLayer {
       }
 
       .video-feed {
-        width: 150px;
-        height: 112px;
-        bottom: 80px;
+        width: 140px;
+        height: 105px;
+        bottom: 100px;
+        right: 10px;
+      }
+
+      .initial-hint {
+        font-size: 11px;
+        padding: 8px 12px;
+      }
+
+      .bottom-controls {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .hand-control-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+
+      .hand-control-btn .hand-icon-svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .toggle-btn {
+        width: 40px;
+        height: 40px;
+        padding: 8px;
       }
     }
   `]
@@ -405,6 +557,7 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
   showVideo = signal(false);
   showControls = signal(false);
   handTrackingEnabled = signal(false);
+  isInitializingCamera = signal(false);
 
   // Computed from MediaPipe
   isHandDetected = this.mediaPipe.isHandDetected;
@@ -809,19 +962,29 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
 
   async toggleHandTracking(): Promise<void> {
     if (this.handTrackingEnabled()) {
+      // Disable hand tracking
       this.mediaPipe.stopTracking();
       this.handTrackingEnabled.set(false);
       this.showVideo.set(false);
     } else {
-      const video = this.videoRef.nativeElement;
-      const initialized = await this.mediaPipe.initialize(video);
+      // Enable hand tracking
+      this.isInitializingCamera.set(true);
 
-      if (initialized) {
-        const started = await this.mediaPipe.startCamera();
-        if (started) {
-          this.handTrackingEnabled.set(true);
-          this.showVideo.set(true);
+      try {
+        const video = this.videoRef.nativeElement;
+        const initialized = await this.mediaPipe.initialize(video);
+
+        if (initialized) {
+          const started = await this.mediaPipe.startCamera();
+          if (started) {
+            this.handTrackingEnabled.set(true);
+            this.showVideo.set(true);
+          }
         }
+      } catch (error) {
+        console.error('Failed to initialize hand tracking:', error);
+      } finally {
+        this.isInitializingCamera.set(false);
       }
     }
   }
