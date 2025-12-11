@@ -16,6 +16,7 @@ import * as THREE from 'three';
 
 import { MediaPipeService, GestureType } from '../../core/services/mediapipe.service';
 import { MagmaCoreSystem, TartarusConfig } from './systems/magma-core.system';
+import { VolcanicCrustSystem } from './systems/volcanic-crust.system';
 import { VolcanicIslandsSystem } from './systems/volcanic-islands.system';
 import { AtmosphereSystem } from './systems/atmosphere.system';
 import { EruptionSystem } from './systems/eruption.system';
@@ -790,8 +791,9 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
     // Create planet group
     const planetGroup = new THREE.Group();
 
-    // Initialize core systems
+    // Initialize core systems (ORDER MATTERS for rendering)
     const magmaCore = new MagmaCoreSystem(this.config);
+    const volcanicCrust = new VolcanicCrustSystem(this.config); // Covers magma
     const islands = new VolcanicIslandsSystem(this.config);
     const atmosphere = new AtmosphereSystem(this.config);
     const eruptions = new EruptionSystem(this.config);
@@ -811,7 +813,7 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
     }, 15000);
 
     // Add to layers for updates
-    this.layers = [magmaCore, islands, atmosphere, eruptions];
+    this.layers = [magmaCore, volcanicCrust, islands, atmosphere, eruptions];
 
     // Add meshes to planet group
     this.layers.forEach(layer => {
