@@ -20,6 +20,7 @@ import { SimpleTween } from '../utils/simple-tween';
 import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.converter';
 import { PlayerFogSystem } from '../world/player-fog.system';
 import { AudioService } from '../services/audio.service';
+import { GameFeelOrchestrator } from './game-feel';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -116,6 +117,9 @@ export class ThreeEngineService implements OnDestroy {
 
     // Debug Visualizer
     private debugVisualizer!: DebugVisualizer;
+
+    // Game Feel System (screen shake + hit stop)
+    private gameFeel!: GameFeelOrchestrator;
 
     public get currentScene(): THREE.Scene {
         return this.scene;
@@ -1328,6 +1332,8 @@ export class ThreeEngineService implements OnDestroy {
 
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
+               // Initialize Game Feel System (screen shake + hit stop)
+        this.gameFeel = new GameFeelOrchestrator();
 
         // Initialize Room Visibility System
         this.roomVisibilityManager.initialize(this.scene, this.camera).then(() => {
@@ -1694,7 +1700,14 @@ export class ThreeEngineService implements OnDestroy {
 
         if (this.gameState.isLevelingUp || this.gameState.isPaused || this.gameState.isGameOver) return;
 
-        let delta = this.clock.getDelta();
+        const rawDelta = this.clock.getDelta();
+
+        // Update Game Feel system (hit stop state)
+        if (this.gameFeel) { this.gameFeel.update(); }
+
+        // Calculate scaled delta
+        let delta = rawDelta * this.timeScale;
+        if (this.gameFeel) { delta *= this.gameFeel.getTimeScale(); }
 
         // Update SimpleTween animations (for room lighting transitions)
         SimpleTween.update(delta);
@@ -1934,6 +1947,11 @@ export class ThreeEngineService implements OnDestroy {
                         }
 
                         const orb = enemy.takeDamage(finalDamage, this.scene);
+                        // GAME FEEL: Screen shake + hit stop on enemy hit
+                        if (this.gameFeel) {
+                            const isKill = orb !== null;
+                            this.gameFeel.onEnemyHit(finalDamage, enemy.health + finalDamage, isKill);
+                        }
                         if (orb) {
                             this.xpOrbs.push(orb);
                             this.enemies.splice(j, 1);
@@ -2004,6 +2022,10 @@ export class ThreeEngineService implements OnDestroy {
             this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
             this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
             this.camera.lookAt(this.player.mesh.position.x, 0, this.player.mesh.position.z);
+                       // Apply screen shake (uses rawDelta to keep shaking during hit stop)
+            if (this.gameFeel) {
+                this.gameFeel.applyShake(this.camera, rawDelta);
+            }
 
             // Update debug visuals
             this.updateDebugVisuals();
@@ -2124,6 +2146,10 @@ export class ThreeEngineService implements OnDestroy {
 
                     // Apply damage to player
                     this.gameState.health -= damageAmount;
+                    // GAME FEEL: Screen shake + hit stop when player takes damage
+                    if (this.gameFeel) {
+                        this.gameFeel.onPlayerHit(damageAmount, this.gameState.maxHealth);
+                    }
 
                     // Play hit sounds
                     this.audioService.playHit(this.currentCharacterId);
