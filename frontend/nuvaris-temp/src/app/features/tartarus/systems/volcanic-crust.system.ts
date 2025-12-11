@@ -32,16 +32,16 @@ export class VolcanicCrustSystem implements PlanetLayer {
       uniforms: {
         time: { value: 0 },
         coreRadius: { value: this.config.coreRadius },
-        // Crust appearance
+        // Continental crust appearance
         crustColor: { value: new THREE.Color(0x1a1410) }, // Dark volcanic rock
-        crackColor: { value: new THREE.Color(0x0a0602) }, // Darker cracks
-        // Magma glow in cracks
+        coastlineColor: { value: new THREE.Color(0x0f0a08) }, // Darker coastline
+        // Magma ocean glow
         magmaGlowColor: { value: new THREE.Color(0xff4400) },
-        magmaGlowIntensity: { value: 0.3 },
-        // Crack pattern
-        crackScale: { value: 8.0 },
-        crackWidth: { value: 0.25 }, // 25% of surface = cracks (magma visible)
-        crackSharpness: { value: 0.85 },
+        magmaGlowIntensity: { value: 0.4 },
+        // Continental parameters
+        continentScale: { value: 1.8 }, // Size of continents (lower = bigger)
+        continentCoverage: { value: 0.6 }, // 60% land, 40% magma ocean
+        coastlineWidth: { value: 0.08 }, // Coastline transition width
       },
       vertexShader: `
         varying vec3 vPosition;
@@ -62,63 +62,25 @@ export class VolcanicCrustSystem implements PlanetLayer {
         uniform float time;
         uniform float coreRadius;
         uniform vec3 crustColor;
-        uniform vec3 crackColor;
+        uniform vec3 coastlineColor;
         uniform vec3 magmaGlowColor;
         uniform float magmaGlowIntensity;
-        uniform float crackScale;
-        uniform float crackWidth;
-        uniform float crackSharpness;
+        uniform float continentScale;
+        uniform float continentCoverage;
+        uniform float coastlineWidth;
 
         varying vec3 vPosition;
         varying vec3 vNormal;
         varying vec3 vWorldPosition;
 
-        // Hash function for randomness
-        vec3 hash3(vec3 p) {
-          p = vec3(
-            dot(p, vec3(127.1, 311.7, 74.7)),
-            dot(p, vec3(269.5, 183.3, 246.1)),
-            dot(p, vec3(113.5, 271.9, 124.6))
-          );
-          return fract(sin(p) * 43758.5453123);
-        }
-
-        // 3D Voronoi for crack pattern
-        vec2 voronoi3D(vec3 p) {
-          vec3 ip = floor(p);
-          vec3 fp = fract(p);
-
-          float d1 = 8.0;  // Distance to closest cell
-          float d2 = 8.0;  // Distance to second closest
-
-          for (int k = -1; k <= 1; k++) {
-            for (int j = -1; j <= 1; j++) {
-              for (int i = -1; i <= 1; i++) {
-                vec3 b = vec3(float(i), float(j), float(k));
-                vec3 r = hash3(ip + b);
-                vec3 diff = b + r - fp;
-                float dist = dot(diff, diff);
-
-                if (dist < d1) {
-                  d2 = d1;
-                  d1 = dist;
-                } else if (dist < d2) {
-                  d2 = dist;
-                }
-              }
-            }
-          }
-
-          return vec2(sqrt(d1), sqrt(d2));
-        }
-
-        // Simple 3D noise
+        // Hash function for noise
         float hash(vec3 p) {
           p = fract(p * vec3(443.897, 441.423, 437.195));
           p += dot(p, p.yxz + 19.19);
           return fract((p.x + p.y) * p.z);
         }
 
+        // 3D Perlin-like noise
         float noise3D(vec3 p) {
           vec3 i = floor(p);
           vec3 f = fract(p);
@@ -132,38 +94,62 @@ export class VolcanicCrustSystem implements PlanetLayer {
           );
         }
 
+        // Fractal Brownian Motion for continental shapes
+        float fbm(vec3 p) {
+          float value = 0.0;
+          float amplitude = 0.5;
+          float frequency = 1.0;
+          mat3 rot = mat3(0.877, 0.479, 0.0, -0.479, 0.877, 0.0, 0.0, 0.0, 1.0);
+
+          // 5 octaves for detailed continents
+          for (int i = 0; i < 5; i++) {
+            value += amplitude * noise3D(p * frequency);
+            p = rot * p * 2.02; // Rotate for better variation
+            amplitude *= 0.5;
+            frequency *= 2.0;
+          }
+          return value;
+        }
+
         void main() {
           // Normalize position for spherical sampling
-          vec3 spherePos = normalize(vWorldPosition) * crackScale;
+          vec3 spherePos = normalize(vWorldPosition) * continentScale;
 
-          // Get Voronoi pattern for cracks
-          vec2 vor = voronoi3D(spherePos);
-          float cellDist = vor.x;
-          float edgeDist = vor.y - vor.x;
+          // Generate continental pattern with FBM
+          float continentNoise = fbm(spherePos);
 
-          // Create cracks at Voronoi edges
-          float crack = smoothstep(crackWidth * crackSharpness, crackWidth, edgeDist);
+          // Add larger-scale variation for continent distribution
+          float largeScale = fbm(spherePos * 0.5) * 0.3;
+          continentNoise += largeScale;
 
-          // Add noise variation to crack edges
-          float noiseVar = noise3D(spherePos * 2.0) * 0.15;
-          crack = clamp(crack + noiseVar, 0.0, 1.0);
+          // Map to continent/ocean (0 = ocean, 1 = continent)
+          float landMask = smoothstep(continentCoverage - 0.1, continentCoverage + 0.1, continentNoise);
 
-          // Base crust color
-          vec3 finalColor = mix(crackColor, crustColor, crack);
+          // Create coastline transition zone
+          float coastline = smoothstep(continentCoverage - coastlineWidth,
+                                       continentCoverage + coastlineWidth,
+                                       continentNoise);
 
-          // Add subtle magma glow at crack edges
-          float crackEdge = 1.0 - smoothstep(crackWidth, crackWidth + 0.1, edgeDist);
-          vec3 magmaGlow = magmaGlowColor * crackEdge * magmaGlowIntensity;
+          // Base color: blend between ocean (transparent) and continent (opaque)
+          vec3 finalColor = mix(coastlineColor, crustColor, coastline);
+
+          // Add detail variation to continents
+          float detail = noise3D(spherePos * 4.0) * 0.1;
+          finalColor *= 1.0 - detail;
+
+          // Magma glow at coastlines (where land meets ocean)
+          float coastGlow = (1.0 - abs(landMask - 0.5) * 2.0) * 0.5;
+          vec3 magmaGlow = magmaGlowColor * coastGlow * magmaGlowIntensity;
           finalColor += magmaGlow;
 
-          // Add very subtle pulsing to magma glow
-          float pulse = 0.95 + sin(time * 0.8) * 0.05;
-          finalColor += magmaGlow * pulse * 0.2;
+          // Subtle pulsing in magma ocean
+          float pulse = 0.95 + sin(time * 0.5) * 0.05;
+          finalColor += magmaGlow * pulse * 0.15;
 
-          // Alpha: opaque on crust, transparent in cracks (to see magma below)
-          float alpha = crack;
+          // Alpha: opaque on continents, transparent in magma ocean
+          float alpha = landMask;
 
-          // Fresnel darkening at edges (planet curvature)
+          // Fresnel darkening at planet edges
           vec3 viewDir = normalize(cameraPosition - vWorldPosition);
           float fresnel = dot(vNormal, viewDir);
           finalColor *= 0.7 + fresnel * 0.3;
