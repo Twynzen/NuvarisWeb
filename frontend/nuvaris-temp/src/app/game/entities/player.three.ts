@@ -69,20 +69,20 @@ export class PlayerThree {
 
         this.sprite = new THREE.Sprite(material);
         this.sprite.center.set(0.5, 0);
-        this.sprite.scale.set(3, 3, 1);
+        this.sprite.scale.set(4.5, 4.5, 1);
         this.mesh.add(this.sprite);
 
-        // Shadow
-        const shadowGeo = new THREE.CircleGeometry(0.8, 32);
-        const shadowMat = new THREE.MeshBasicMaterial({
-            color: 0x000000,
-            transparent: true,
-            opacity: 0.3
-        });
-        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
-        shadow.rotation.x = -Math.PI / 2;
-        shadow.position.y = 0.05;
-        this.mesh.add(shadow);
+        // Shadow removed as per user request
+        // const shadowGeo = new THREE.CircleGeometry(0.8, 32);
+        // const shadowMat = new THREE.MeshBasicMaterial({
+        //     color: 0x000000,
+        //     transparent: true,
+        //     opacity: 0.3
+        // });
+        // const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+        // shadow.rotation.x = -Math.PI / 2;
+        // shadow.position.y = 0.05;
+        // this.mesh.add(shadow);
 
         scene.add(this.mesh);
 
