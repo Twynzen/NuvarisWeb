@@ -21,6 +21,7 @@ import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.convert
 import { PlayerFogSystem } from '../world/player-fog.system';
 import { AudioService } from '../services/audio.service';
 import { GameFeelOrchestrator } from './game-feel';
+import { FakeRagdollManager } from './fake-ragdoll';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -120,6 +121,8 @@ export class ThreeEngineService implements OnDestroy {
 
     // Game Feel System (screen shake + hit stop)
     private gameFeel!: GameFeelOrchestrator;
+   // Fake Ragdoll System (death physics)
+    private ragdollManager!: FakeRagdollManager;
 
     public get currentScene(): THREE.Scene {
         return this.scene;
@@ -1334,6 +1337,8 @@ export class ThreeEngineService implements OnDestroy {
         this.debugVisualizer = new DebugVisualizer(this.scene);
                // Initialize Game Feel System (screen shake + hit stop)
         this.gameFeel = new GameFeelOrchestrator();
+       // Initialize Fake Ragdoll System
+        this.ragdollManager = new FakeRagdollManager();
 
         // Initialize Room Visibility System
         this.roomVisibilityManager.initialize(this.scene, this.camera).then(() => {
@@ -1711,6 +1716,10 @@ export class ThreeEngineService implements OnDestroy {
 
         // Update SimpleTween animations (for room lighting transitions)
         SimpleTween.update(delta);
+       // Update ragdoll physics (uses raw delta for smooth death animations)
+        if (this.ragdollManager) {
+            this.ragdollManager.update(rawDelta);
+        }
 
         // Apply time scale (debug speed control)
         delta *= this.timeScale;
@@ -1954,6 +1963,13 @@ export class ThreeEngineService implements OnDestroy {
                         }
                         if (orb) {
                             this.xpOrbs.push(orb);
+                           // RAGDOLL: Start death physics
+                            if (this.ragdollManager) {
+                                const damageDir = new THREE.Vector3()
+                                    .subVectors(enemy.mesh.position, proj.mesh.position)
+                                    .normalize();
+                                this.ragdollManager.startRagdoll(enemy.getSprite(), damageDir);
+                            }
                             this.enemies.splice(j, 1);
                             // Play enemy death sound
                             this.audioService.playEnemyDeath(enemyType);

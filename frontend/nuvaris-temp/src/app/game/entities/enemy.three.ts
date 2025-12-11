@@ -3,6 +3,15 @@ import { PlayerThree } from './player.three';
 import { SpriteAnimator } from '../engine/sprite-animator';
 import { XPOrb } from './xp-orb.three';
 
+/**
+ * Result of taking damage - includes ragdoll info for death effect
+ */
+export interface DamageResult {
+    died: boolean;
+    xpOrb: XPOrb | null;
+    ragdollSprite: THREE.Sprite | null;
+    damageDirection: THREE.Vector3 | null;
+}
 export class EnemyThree {
     public mesh: THREE.Group;
     private sprite: THREE.Sprite;
@@ -10,6 +19,8 @@ export class EnemyThree {
     private speed = 5;
     public health = 50;
     public isDead = false;
+    public isRagdolling = false;  // True when death ragdoll is active
+    private lastDamageDirection: THREE.Vector3 = new THREE.Vector3(0, 0, -1);
     private enemyType: 'spider' | 'worm' = 'spider'; // Enemy type
 
     // Collision and sprite dimensions (for debug visualization)
@@ -577,6 +588,57 @@ export class EnemyThree {
             }, 100);
             return null;
         }
+    }
+    /**
+     * Take damage with ragdoll support
+     * @param amount - Damage amount
+     * @param scene - Scene for XP orb
+     * @param damageSource - Position of damage source (for ragdoll direction)
+     */
+    takeDamageWithRagdoll(amount: number, scene: THREE.Scene, damageSource?: THREE.Vector3): DamageResult {
+        this.health -= amount;
+        this.showDamageNumber(amount, scene);
+
+        // Calculate damage direction
+        if (damageSource) {
+            this.lastDamageDirection.subVectors(this.mesh.position, damageSource).normalize();
+        }
+
+        if (this.health <= 0) {
+            this.isDead = true;
+            this.isRagdolling = true;
+            // Do NOT hide mesh - let ragdoll handle it
+            // this.mesh.visible = false;
+            return {
+                died: true,
+                xpOrb: new XPOrb(scene, this.mesh.position.x, this.mesh.position.z, 20),
+                ragdollSprite: this.sprite,
+                damageDirection: this.lastDamageDirection.clone()
+            };
+        } else {
+            const flashColor = this.isMindControlled ? 0x00ffff : 0xff0000;
+            const restoreColor = this.isMindControlled ? this.mindControlColor : this.originalColor;
+            this.sprite.material.color.setHex(flashColor);
+            setTimeout(() => {
+                if (!this.isDead) this.sprite.material.color.setHex(restoreColor);
+            }, 100);
+            return { died: false, xpOrb: null, ragdollSprite: null, damageDirection: null };
+        }
+    }
+
+    /**
+     * Get the sprite for external ragdoll management
+     */
+    getSprite(): THREE.Sprite {
+        return this.sprite;
+    }
+
+    /**
+     * Called when ragdoll animation completes
+     */
+    onRagdollComplete(): void {
+        this.isRagdolling = false;
+        this.mesh.visible = false;
     }
 
     /**
