@@ -75,7 +75,7 @@ export class VolcanicIslandsSystem implements PlanetLayer {
       metalness: 0.1,
       flatShading: true,
       emissive: 0x331100,
-      emissiveIntensity: 0.04, // Reduced from 0.15
+      emissiveIntensity: 0.15,
     });
 
     // Darker rock for cliffs
@@ -85,7 +85,7 @@ export class VolcanicIslandsSystem implements PlanetLayer {
       metalness: 0.08,
       flatShading: true,
       emissive: 0x0a0400,
-      emissiveIntensity: 0.03, // Reduced from 0.1
+      emissiveIntensity: 0.1,
     });
 
     // Industrial metal
@@ -139,27 +139,27 @@ export class VolcanicIslandsSystem implements PlanetLayer {
   private createMassiveFormations(): void {
     const formations: MassiveFormationConfig[] = [];
 
-    // === MAIN CITADEL === Capital (ECUADOR)
+    // === THE CITADEL === Main capital city
     formations.push({
       id: 'citadel',
       theta: 0,
       phi: Math.PI / 2,
-      baseRadius: 3.5,
-      peakHeight: this.coreRadius * 2.8,
+      baseRadius: 5.0,
+      peakHeight: this.coreRadius * 4,
       peakCount: 5,
       hasCity: true,
       isMassive: true,
       cityType: 'capital',
-      connectedTo: ['forge'],
+      connectedTo: ['forge', 'watchtower'],
     });
 
-    // === THE FORGE === Industrial (NORTE)
+    // === THE FORGE === Industrial district
     formations.push({
       id: 'forge',
-      theta: Math.PI * 0.4,
-      phi: Math.PI * 0.35, // Norte 63°
-      baseRadius: 2.8,
-      peakHeight: this.coreRadius * 2.2,
+      theta: Math.PI * 0.25,
+      phi: Math.PI / 2 + 0.15,
+      baseRadius: 4.0,
+      peakHeight: this.coreRadius * 3,
       peakCount: 4,
       hasCity: true,
       isMassive: true,
@@ -167,51 +167,106 @@ export class VolcanicIslandsSystem implements PlanetLayer {
       connectedTo: ['citadel'],
     });
 
-    // === HAVEN === Residential (SUR)
+    // === THE WATCHTOWER === Beacon/lighthouse
+    formations.push({
+      id: 'watchtower',
+      theta: Math.PI * -0.2,
+      phi: Math.PI / 2 - 0.1,
+      baseRadius: 3.0,
+      peakHeight: this.coreRadius * 3.5,
+      peakCount: 2,
+      hasCity: true,
+      isMassive: true,
+      cityType: 'outpost',
+      connectedTo: ['citadel'],
+    });
+
+    // === THE SPINE === Residential area
+    formations.push({
+      id: 'spine',
+      theta: Math.PI * 0.7,
+      phi: Math.PI / 2 + 0.2,
+      baseRadius: 3.5,
+      peakHeight: this.coreRadius * 2.5,
+      peakCount: 4,
+      hasCity: true,
+      isMassive: true,
+      cityType: 'residential',
+      connectedTo: ['haven'],
+    });
+
+    // === HAVEN === Twin peaks residential
     formations.push({
       id: 'haven',
-      theta: Math.PI * 1.2,
-      phi: Math.PI * 0.65, // Sur 117°
-      baseRadius: 2.5,
-      peakHeight: this.coreRadius * 2.0,
+      theta: Math.PI * 0.9,
+      phi: Math.PI / 2 + 0.1,
+      baseRadius: 2.8,
+      peakHeight: this.coreRadius * 2.2,
       peakCount: 3,
       hasCity: true,
       isMassive: true,
       cityType: 'residential',
+      connectedTo: ['spine'],
     });
 
-    // Distributed islands (SPHERICAL)
-    const sphericalIslands = [
-      { theta: Math.PI * 0.8, phi: Math.PI * 0.25, city: true, type: 'outpost' as const },  // Norte alto
-      { theta: Math.PI * 1.6, phi: Math.PI * 0.5, city: true, type: 'outpost' as const },   // Ecuador
-      { theta: Math.PI * -0.5, phi: Math.PI * 0.75, city: false, type: undefined },         // Sur bajo
-      { theta: Math.PI * 0.1, phi: Math.PI * 0.6, city: true, type: 'industrial' as const },// Hemisferio sur
+    // === THE FANGS === Dramatic uninhabited peaks
+    formations.push({
+      id: 'fangs',
+      theta: Math.PI * 1.4,
+      phi: Math.PI / 2 - 0.15,
+      baseRadius: 3.0,
+      peakHeight: this.coreRadius * 2,
+      peakCount: 3,
+      hasCity: false,
+      isMassive: true,
+    });
+
+    // Large volcanic islands with outposts
+    const largeIslands = [
+      { theta: Math.PI * 0.5, phi: Math.PI / 2 + 0.3, city: true, type: 'outpost' as const },
+      { theta: Math.PI * 1.1, phi: Math.PI / 2 - 0.25, city: true, type: 'outpost' as const },
+      { theta: Math.PI * 1.7, phi: Math.PI / 2 + 0.2, city: false, type: undefined },
+      { theta: Math.PI * -0.4, phi: Math.PI / 2 + 0.35, city: true, type: 'industrial' as const },
     ];
 
-    sphericalIslands.forEach((island, i) => {
+    largeIslands.forEach((island, i) => {
       formations.push({
-        id: `island_${i}`,
+        id: `large_${i}`,
         theta: island.theta,
         phi: island.phi,
-        baseRadius: 1.4 + Math.random() * 0.4,
-        peakHeight: this.coreRadius * (0.8 + Math.random() * 0.3),
-        peakCount: 2,
+        baseRadius: 1.8 + Math.random() * 0.8,
+        peakHeight: this.coreRadius * (1.0 + Math.random() * 0.5),
+        peakCount: 2 + Math.floor(Math.random() * 2),
         hasCity: island.city,
         isMassive: false,
         cityType: island.type,
       });
     });
 
-    // Small outcrops (UNIFORM SPHERICAL DISTRIBUTION)
-    for (let i = 0; i < 5; i++) {
+    // Medium formations
+    for (let i = 0; i < 6; i++) {
       const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1); // Uniform sphere
       formations.push({
-        id: `outcrop_${i}`,
+        id: `medium_${i}`,
         theta,
-        phi,
-        baseRadius: 0.5 + Math.random() * 0.3,
-        peakHeight: this.coreRadius * (0.3 + Math.random() * 0.2),
+        phi: Math.PI / 2 + (Math.random() - 0.5) * 0.8,
+        baseRadius: 0.8 + Math.random() * 0.7,
+        peakHeight: this.coreRadius * (0.4 + Math.random() * 0.4),
+        peakCount: 1 + Math.floor(Math.random() * 2),
+        hasCity: false,
+        isMassive: false,
+      });
+    }
+
+    // Small rocky outcrops
+    for (let i = 0; i < 10; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      formations.push({
+        id: `small_${i}`,
+        theta,
+        phi: Math.PI / 2 + (Math.random() - 0.5) * 1.0,
+        baseRadius: 0.4 + Math.random() * 0.4,
+        peakHeight: this.coreRadius * (0.2 + Math.random() * 0.25),
         peakCount: 1,
         hasCity: false,
         isMassive: false,

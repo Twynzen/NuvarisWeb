@@ -61,7 +61,7 @@ export class AtmosphereSystem implements PlanetLayer {
     const { coreRadius } = this.config;
     const atmosphereRadius = coreRadius * 1.08;
 
-    const geometry = new THREE.SphereGeometry(atmosphereRadius, 64, 64);
+    const geometry = new THREE.SphereGeometry(atmosphereRadius, 32, 32);
 
     this.scatteringMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -88,7 +88,7 @@ export class AtmosphereSystem implements PlanetLayer {
     const { coreRadius } = this.config;
     const haloRadius = coreRadius * 1.15;
 
-    const geometry = new THREE.SphereGeometry(haloRadius, 48, 48);
+    const geometry = new THREE.SphereGeometry(haloRadius, 24, 24);
 
     this.haloMaterial = new THREE.ShaderMaterial({
       uniforms: THREE.UniformsUtils.clone(AtmosphericHaloShader.uniforms),
@@ -117,7 +117,7 @@ export class AtmosphereSystem implements PlanetLayer {
     ];
 
     layerConfigs.forEach((cfg) => {
-      const geometry = new THREE.SphereGeometry(cfg.radius, 48, 48);
+      const geometry = new THREE.SphereGeometry(cfg.radius, 24, 24);
 
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -156,7 +156,7 @@ export class AtmosphereSystem implements PlanetLayer {
     layerConfigs.forEach((layerConfig, index) => {
       const texture = this.createNoiseTexture(512, index);
 
-      const geometry = new THREE.SphereGeometry(layerConfig.radius, 64, 64);
+      const geometry = new THREE.SphereGeometry(layerConfig.radius, 32, 32);
       const material = new THREE.ShaderMaterial({
         uniforms: {
           time: { value: 0 },

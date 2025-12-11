@@ -684,75 +684,35 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private setupLighting(): void {
     // === PRIMARY MAGMA CORE LIGHT ===
-    // Bright central light that illuminates everything from the core
-    const coreLight = new THREE.PointLight(0xff4400, 4, this.config.coreRadius * 15);
+    const coreLight = new THREE.PointLight(0xff4400, 2.5, this.config.coreRadius * 15);
     coreLight.position.set(0, 0, 0);
     this.scene.add(coreLight);
 
-    // Secondary core light - warmer, helps fill shadows
-    const warmCoreLight = new THREE.PointLight(0xffaa33, 2.5, this.config.coreRadius * 12);
-    warmCoreLight.position.set(0, 0, 0);
-    this.scene.add(warmCoreLight);
-
     // === AMBIENT ILLUMINATION ===
-    // Stronger ambient to make rock details visible
-    const ambientLight = new THREE.AmbientLight(0x553322, 0.8);
+    const ambientLight = new THREE.AmbientLight(0x553322, 0.5);
     this.scene.add(ambientLight);
 
-    // Hemisphere light - warm from below (magma), cooler from above (space)
-    const hemiLight = new THREE.HemisphereLight(0x221111, 0xff6644, 0.6);
+    // Hemisphere light - warm from below, cooler from above
+    const hemiLight = new THREE.HemisphereLight(0x221111, 0xff6644, 0.4);
     this.scene.add(hemiLight);
 
-    // === DIRECTIONAL LIGHTS FOR MOUNTAIN DEFINITION ===
-    // Key light - main directional to define shapes
-    const keyLight = new THREE.DirectionalLight(0xff7744, 1.2);
+    // === KEY LIGHTS ===
+    // Main directional light
+    const keyLight = new THREE.DirectionalLight(0xff7744, 0.8);
     keyLight.position.set(30, 50, 20);
     keyLight.target.position.set(0, 0, 0);
     this.scene.add(keyLight);
     this.scene.add(keyLight.target);
 
-    // Fill light - softer, from opposite side
-    const fillLight = new THREE.DirectionalLight(0xff5522, 0.6);
+    // Fill light
+    const fillLight = new THREE.DirectionalLight(0xff5522, 0.4);
     fillLight.position.set(-40, 30, -30);
     this.scene.add(fillLight);
 
-    // Rim light - backlight for silhouette definition
-    const rimLight = new THREE.DirectionalLight(0xff4400, 0.8);
-    rimLight.position.set(0, -20, -50);
-    this.scene.add(rimLight);
-
-    // === ORBITING POINT LIGHTS FOR DYNAMIC ILLUMINATION ===
-    // These will light the mountains from multiple angles
-    const orbitRadius = this.config.coreRadius * 3;
-    const orbitLights = [
-      { angle: 0, height: 15, color: 0xff6633, intensity: 1.5 },
-      { angle: Math.PI * 0.66, height: 10, color: 0xff5522, intensity: 1.2 },
-      { angle: Math.PI * 1.33, height: 20, color: 0xff7744, intensity: 1.0 },
-    ];
-
-    orbitLights.forEach(cfg => {
-      const light = new THREE.PointLight(cfg.color, cfg.intensity, this.config.coreRadius * 10);
-      light.position.set(
-        Math.cos(cfg.angle) * orbitRadius,
-        cfg.height,
-        Math.sin(cfg.angle) * orbitRadius
-      );
-      this.scene.add(light);
-    });
-
-    // === HIGH ALTITUDE LIGHTS FOR MASSIVE MOUNTAINS ===
-    // Special lights positioned high to illuminate the massive peaks
-    const highLights = [
-      { x: 20, y: 45, z: 0, color: 0xff6633, intensity: 2.0 },
-      { x: -15, y: 40, z: 25, color: 0xff5522, intensity: 1.5 },
-      { x: 0, y: 50, z: -20, color: 0xff7744, intensity: 1.8 },
-    ];
-
-    highLights.forEach(cfg => {
-      const light = new THREE.PointLight(cfg.color, cfg.intensity, 80);
-      light.position.set(cfg.x, cfg.y, cfg.z);
-      this.scene.add(light);
-    });
+    // Top point light for peaks
+    const topLight = new THREE.PointLight(0xff6633, 1.0, this.config.coreRadius * 12);
+    topLight.position.set(0, 45, 0);
+    this.scene.add(topLight);
   }
 
   private createStarfield(): void {
