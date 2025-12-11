@@ -11,7 +11,7 @@ import {
   effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router, NavigationStart } from '@angular/router';
 import * as THREE from 'three';
 
 import { MediaPipeService, GestureType } from '../../core/services/mediapipe.service';
@@ -551,6 +551,7 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private ngZone = inject(NgZone);
   private mediaPipe = inject(MediaPipeService);
+  private router = inject(Router);
 
   // UI State
   isLoading = signal(true);
@@ -580,6 +581,18 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Animation frame
   private animationFrameId: number | null = null;
+
+  // Router subscription
+  private routerSubscription: any;
+
+  // Audio
+  private magmaAudio: HTMLAudioElement | null = null;
+  private audioVolumeConfig = {
+    min: 0.05,    // Volume when zoomed out (far)
+    max: 0.8,     // Volume when zoomed in (close)
+    current: 0.4, // Current volume (smoothed)
+    lerpSpeed: 0.05 // Smooth transition speed
+  };
 
   // Planet config
   private config: TartarusConfig = {
@@ -620,6 +633,14 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     // Initialize keyboard listeners
     this.setupKeyboardListeners();
+
+    // Listen for route changes to cleanup audio
+    this.routerSubscription = this.router.events.subscribe(event => {
+      if (event instanceof NavigationStart) {
+        // Stop audio immediately when navigating away
+        this.stopAudio();
+      }
+    });
   }
 
   ngAfterViewInit(): void {
@@ -628,6 +649,7 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
       this.initializePlanet();
       this.setupMouseListeners();
       this.startRenderLoop();
+      this.initializeAudio();
     });
   }
 
@@ -828,6 +850,81 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  private initializeAudio(): void {
+    // Create and configure magma ambient audio
+    this.magmaAudio = new Audio('assets/sounds/magma.wav');
+    this.magmaAudio.loop = true;
+
+    // Initial volume based on starting camera distance (50)
+    const initialZoomLevel = this.navigation.getZoomLevel();
+    this.audioVolumeConfig.current = this.calculateTargetVolume(initialZoomLevel);
+    this.magmaAudio.volume = this.audioVolumeConfig.current;
+
+    // Play audio (handle autoplay restrictions)
+    this.magmaAudio.play().catch(error => {
+      console.warn('Audio autoplay blocked. User interaction required:', error);
+
+      // Attempt to play on first user interaction
+      const playOnInteraction = () => {
+        this.magmaAudio?.play().catch(e => console.error('Failed to play audio:', e));
+        document.removeEventListener('click', playOnInteraction);
+        document.removeEventListener('keydown', playOnInteraction);
+      };
+
+      document.addEventListener('click', playOnInteraction, { once: true });
+      document.addEventListener('keydown', playOnInteraction, { once: true });
+    });
+  }
+
+  /**
+   * Calculate target volume based on zoom level
+   * zoomLevel = 0 (zoomed in/close) -> max volume
+   * zoomLevel = 1 (zoomed out/far) -> min volume
+   */
+  private calculateTargetVolume(zoomLevel: number): number {
+    // Invert zoom level so close = high volume
+    const volumeRange = this.audioVolumeConfig.max - this.audioVolumeConfig.min;
+    return this.audioVolumeConfig.max - (zoomLevel * volumeRange);
+  }
+
+  /**
+   * Update audio volume dynamically based on camera distance
+   */
+  private updateAudioVolume(): void {
+    if (!this.magmaAudio || !this.navigation) return;
+
+    // Get normalized zoom level (0 = close, 1 = far)
+    const zoomLevel = this.navigation.getZoomLevel();
+
+    // Calculate target volume
+    const targetVolume = this.calculateTargetVolume(zoomLevel);
+
+    // Smooth lerp towards target
+    this.audioVolumeConfig.current +=
+      (targetVolume - this.audioVolumeConfig.current) * this.audioVolumeConfig.lerpSpeed;
+
+    // Apply to audio element
+    this.magmaAudio.volume = Math.max(0, Math.min(1, this.audioVolumeConfig.current));
+  }
+
+  /**
+   * Stop and cleanup audio completely
+   */
+  private stopAudio(): void {
+    if (this.magmaAudio) {
+      try {
+        this.magmaAudio.pause();
+        this.magmaAudio.currentTime = 0;
+        this.magmaAudio.src = ''; // Clear source
+        this.magmaAudio.load(); // Reset audio element
+        this.magmaAudio.remove(); // Remove from DOM if added
+      } catch (e) {
+        console.warn('Error stopping audio:', e);
+      }
+      this.magmaAudio = null;
+    }
+  }
+
   private setupMouseListeners(): void {
     const canvas = this.canvasRef.nativeElement;
 
@@ -914,6 +1011,9 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
 
       // Update navigation
       this.navigation.update(delta);
+
+      // Update audio volume based on camera distance
+      this.updateAudioVolume();
 
       // Update all planet systems
       this.layers.forEach(layer => {
@@ -1004,6 +1104,14 @@ export class TartarusComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
     }
+
+    // Unsubscribe from router events
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
+
+    // Stop and cleanup audio aggressively
+    this.stopAudio();
 
     // Dispose MediaPipe
     this.mediaPipe.dispose();
