@@ -2170,17 +2170,7 @@ export class ThreeEngineService implements OnDestroy {
 
                     // Visual feedback on player when taking damage
                     if (this.player && this.player.mesh) {
-                        // Flash effect on player (tint red briefly)
-                        const sprite = (this.player.mesh.children[0] as THREE.Sprite);
-                        if (sprite && sprite.material) {
-                            const material = sprite.material as THREE.SpriteMaterial;
-                            const originalColor = material.color.getHex();
-                            material.color.setHex(0xff3333); // Red flash
-
-                            setTimeout(() => {
-                                material.color.setHex(originalColor);
-                            }, 100);
-                        }
+                        // NOTE: Red flash removed - screen shake provides feedback instead
 
                         // Show damage number
                         const damageNum = new DamageNumber(
