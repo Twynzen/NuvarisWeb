@@ -72,7 +72,7 @@ export class EnemyThree {
     private mindControlColor: number = 0x0066ff; // Blue color for mind controlled
     public targetAllies: boolean = false; // When true, attacks other enemies instead of player
 
-    // ========== STUN SYSTEM (Yurany Ability) ==========
+    // ========== STUN SYSTEM (Project Y Ability) ==========
     public isStunned: boolean = false;
     private stunDuration: number = 0;
 
@@ -783,7 +783,7 @@ export class EnemyThree {
         }
     }
 
-    // ========== STUN METHODS (Yurany Ability) ==========
+    // ========== STUN METHODS (Project Y Ability) ==========
 
     /**
      * Apply stun to this enemy

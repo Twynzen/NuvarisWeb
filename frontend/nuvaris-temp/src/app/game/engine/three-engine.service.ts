@@ -9,9 +9,9 @@ import { DebugVisualizer } from './debug-visualizer';
 import { PortalSystem, MapPortalData } from '../world/portal-system';
 import { DoorSystem, DoorConfig } from '../world/door-system';
 import { CharacterAbilityThree } from '../abilities/character-ability-three';
-import { ArcadioAbilityThree } from '../abilities/arcadio-ability-three';
+import { ProyectoAAbilityThree } from '../abilities/proyecto-a-ability-three';
 import { LarsAbilityThree } from '../abilities/lars-ability-three';
-import { YuranyAbilityThree } from '../abilities/yurany-ability-three';
+import { ProyectoYAbilityThree } from '../abilities/proyecto-y-ability-three';
 import { MapLoaderService, MapData, MapObject, DoorMapConfig } from '../services/map-loader.service';
 import { RoomVisibilityManager } from '../world/room-visibility.manager';
 import { RoomTemplateLoader, RoomFactory } from '../world/room-factory';
@@ -34,7 +34,7 @@ export class ThreeEngineService implements OnDestroy {
     private scene!: THREE.Scene;
     private frameId: number | null = null;
     private clock = new THREE.Clock();
-    private currentCharacterId: string = 'arcadio'; // Store character ID for restart
+    private currentCharacterId: string = 'proyecto-a'; // Store character ID for restart
 
     // Game Entities
     private player!: PlayerThree;
@@ -177,9 +177,9 @@ export class ThreeEngineService implements OnDestroy {
             return;
         }
 
-        // Yurany: Dash ability
-        if (this.currentCharacterId === 'yurany' && this.characterAbility instanceof YuranyAbilityThree) {
-            const yuranyAbility = this.characterAbility as YuranyAbilityThree;
+        // Project Y: Dash ability
+        if (this.currentCharacterId === 'proyecto-y' && this.characterAbility instanceof ProyectoYAbilityThree) {
+            const projectYAbility = this.characterAbility as ProyectoYAbilityThree;
 
             // Get movement direction for dash
             const direction = new THREE.Vector3();
@@ -188,14 +188,14 @@ export class ThreeEngineService implements OnDestroy {
             if (this.keys['a'] || this.keys['arrowleft']) direction.x -= 1;
             if (this.keys['d'] || this.keys['arrowright']) direction.x += 1;
 
-            yuranyAbility.executeDash(this.player, direction, this.scene);
+            projectYAbility.executeDash(this.player, direction, this.scene);
             return;
         }
 
-        // Arcadio: Berserk mode
-        if (this.currentCharacterId === 'arcadio' && this.characterAbility instanceof ArcadioAbilityThree) {
-            const arcadioAbility = this.characterAbility as ArcadioAbilityThree;
-            arcadioAbility.activateBerserk();
+        // Project A: Berserk mode
+        if (this.currentCharacterId === 'proyecto-a' && this.characterAbility instanceof ProyectoAAbilityThree) {
+            const projectAAbility = this.characterAbility as ProyectoAAbilityThree;
+            projectAAbility.activateBerserk();
             return;
         }
     }
@@ -1924,13 +1924,13 @@ export class ThreeEngineService implements OnDestroy {
 
                         // Apply berserk damage if active (one-hit kill)
                         let finalDamage = damage;
-                        if (this.characterAbility instanceof ArcadioAbilityThree) {
-                            const arcAbility = this.characterAbility as ArcadioAbilityThree;
-                            if (arcAbility.isBerserkActive()) {
+                        if (this.characterAbility instanceof ProyectoAAbilityThree) {
+                            const projectAAbility = this.characterAbility as ProyectoAAbilityThree;
+                            if (projectAAbility.isBerserkActive()) {
                                 finalDamage = 999999; // One-hit kill during berserk
                             }
                             // Apply damage multiplier (fury)
-                            finalDamage *= arcAbility.getDamageMultiplier();
+                            finalDamage *= projectAAbility.getDamageMultiplier();
                         }
 
                         const orb = enemy.takeDamage(finalDamage, this.scene);
@@ -1940,13 +1940,13 @@ export class ThreeEngineService implements OnDestroy {
                             // Play enemy death sound
                             this.audioService.playEnemyDeath(enemyType);
 
-                            // Register kill for Arcadio berserk counter
-                            if (this.characterAbility instanceof ArcadioAbilityThree) {
-                                const arcAbility = this.characterAbility as ArcadioAbilityThree;
-                                arcAbility.registerKill();
+                            // Register kill for Project A berserk counter
+                            if (this.characterAbility instanceof ProyectoAAbilityThree) {
+                                const projectAAbility = this.characterAbility as ProyectoAAbilityThree;
+                                projectAAbility.registerKill();
 
                                 // Berserk mode: heal on every kill
-                                if (arcAbility.isBerserkActive() && arcAbility.berserkFullLifesteal) {
+                                if (projectAAbility.isBerserkActive() && projectAAbility.berserkFullLifesteal) {
                                     const healAmount = Math.ceil(this.gameState.maxHealth * 0.05);
                                     const actualHeal = Math.min(
                                         healAmount,
@@ -1955,24 +1955,24 @@ export class ThreeEngineService implements OnDestroy {
                                     if (actualHeal > 0) {
                                         this.gameState.health += actualHeal;
                                         // Show heal effect
-                                        arcAbility.createHealEffect(actualHeal);
+                                        projectAAbility.createHealEffect(actualHeal);
                                         // Check health warning (stop heartbeat if healed above threshold)
                                         this.audioService.checkHealthWarning(this.gameState.health, this.gameState.maxHealth, 15);
                                     }
                                 }
                             }
-                        }
 
-                        // ARCADIO LIFESTEAL: Robar vida cuando el proyectil golpea
-                        if (this.characterAbility && this.characterAbility.name === 'Titan Strength') {
-                            const arcadioAbility = this.characterAbility as ArcadioAbilityThree;
-                            arcadioAbility.applyLifesteal(damage, 1);
-                        }
+                            // PROJECT A LIFESTEAL: Robar vida cuando el proyectil golpea
+                            if (this.characterAbility && this.characterAbility.name === 'Titan Strength') {
+                                const projectAAbility = this.characterAbility as ProyectoAAbilityThree;
+                                projectAAbility.applyLifesteal(damage, 1);
+                            }
 
-                        // Destroy projectile
-                        proj.mesh.visible = false;
-                        this.projectiles.splice(i, 1);
-                        break; // Projectile hit something, stop checking other enemies
+                            // Destroy projectile
+                            proj.mesh.visible = false;
+                            this.projectiles.splice(i, 1);
+                            break; // Projectile hit something, stop checking other enemies
+                        }
                     }
                 }
             }
@@ -2412,36 +2412,36 @@ export class ThreeEngineService implements OnDestroy {
      */
     private initializeCharacterAbility(characterId: string): void {
         switch (characterId) {
-            case 'arcadio':
-                this.characterAbility = new ArcadioAbilityThree();
+            case 'proyecto-a':
+                this.characterAbility = new ProyectoAAbilityThree();
                 break;
             case 'lars':
                 this.characterAbility = new LarsAbilityThree();
                 break;
-            case 'yurany':
-                this.characterAbility = new YuranyAbilityThree();
+            case 'proyecto-y':
+                this.characterAbility = new ProyectoYAbilityThree();
                 break;
             default:
-                this.characterAbility = new ArcadioAbilityThree();
+                this.characterAbility = new ProyectoAAbilityThree();
         }
 
         // Initialize the ability with game state reference
         this.characterAbility.initialize(this.scene, this.player, this.gameState);
 
         // Set up audio callbacks for each character
-        if (characterId === 'arcadio' && this.characterAbility) {
-            const arcadioAbility = this.characterAbility as ArcadioAbilityThree;
-            arcadioAbility.setGameState(this.gameState);
+        if (characterId === 'proyecto-a' && this.characterAbility) {
+            const projectAAbility = this.characterAbility as ProyectoAAbilityThree;
+            projectAAbility.setGameState(this.gameState);
             // Connect heal sound callback
-            arcadioAbility.onHealCallback = () => {
-                this.audioService.play('arcadio-heal');
+            projectAAbility.onHealCallback = () => {
+                this.audioService.play('proyecto-a-heal');
             };
             // Connect berserk activation sound callback
-            arcadioAbility.onBerserkActivateCallback = () => {
+            projectAAbility.onBerserkActivateCallback = () => {
                 this.audioService.playBerserk();
             };
             // Connect health changed callback to check heartbeat sound
-            arcadioAbility.onHealthChangedCallback = () => {
+            projectAAbility.onHealthChangedCallback = () => {
                 this.audioService.checkHealthWarning(this.gameState.health, this.gameState.maxHealth, 15);
             };
         }
@@ -2458,11 +2458,11 @@ export class ThreeEngineService implements OnDestroy {
             };
         }
 
-        if (characterId === 'yurany' && this.characterAbility) {
-            const yuranyAbility = this.characterAbility as YuranyAbilityThree;
+        if (characterId === 'proyecto-y' && this.characterAbility) {
+            const projectYAbility = this.characterAbility as ProyectoYAbilityThree;
             // Connect chain lightning sound callback
-            yuranyAbility.onChainLightningCallback = () => {
-                this.audioService.play('yurany-shoot-chain');
+            projectYAbility.onChainLightningCallback = () => {
+                this.audioService.play('proyecto-y-shoot-chain');
             };
         }
 

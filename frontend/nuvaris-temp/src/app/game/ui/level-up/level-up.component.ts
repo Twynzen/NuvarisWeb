@@ -1,9 +1,9 @@
 import { Component, EventEmitter, Output, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbilityOption } from '../../abilities/ability-option';
-import { ArcadioSkills } from '../../abilities/skills/arcadio.skills';
+import { ProyectoASkills } from '../../abilities/skills/proyecto-a.skills';
 import { LarsSkills } from '../../abilities/skills/lars.skills';
-import { YuranySkills } from '../../abilities/skills/yurany.skills';
+import { ProyectoYSkills } from '../../abilities/skills/proyecto-y.skills';
 
 type Rarity = 'basica' | 'epica' | 'legendaria';
 
@@ -19,7 +19,7 @@ interface RouletteUpgrade extends AbilityOption {
     styleUrls: ['./level-up.component.scss']
 })
 export class LevelUpComponent implements OnInit, OnDestroy {
-    @Input() characterId: string = 'arcadio';
+    @Input() characterId: string = 'proyecto-a';
     @Output() upgradeSelected = new EventEmitter<AbilityOption>();
 
     // Roulette state
@@ -57,17 +57,17 @@ export class LevelUpComponent implements OnInit, OnDestroy {
      */
     private loadCharacterUpgrades(): void {
         switch (this.characterId) {
-            case 'arcadio':
-                this.characterUpgrades = ArcadioSkills;
+            case 'proyecto-a':
+                this.characterUpgrades = ProyectoASkills;
                 break;
             case 'lars':
                 this.characterUpgrades = LarsSkills;
                 break;
-            case 'yurany':
-                this.characterUpgrades = YuranySkills;
+            case 'proyecto-y':
+                this.characterUpgrades = ProyectoYSkills;
                 break;
             default:
-                this.characterUpgrades = ArcadioSkills;
+                this.characterUpgrades = ProyectoASkills;
         }
     }
 

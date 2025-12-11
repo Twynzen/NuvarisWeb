@@ -12,7 +12,7 @@ export class ProjectileThree {
     private lifeTime = 2; // seconds
     private characterId: string;
 
-    // ========== ARCADIO HOZ CURVA ==========
+    // ========== PROJECT A HOZ CURVA ==========
     private isCurvedProjectile = false;
     private curveProgress = 0; // 0 to 1 (represents 1/4 circle arc)
     private curveRadius = 6; // Radio del arco
@@ -47,19 +47,19 @@ export class ProjectileThree {
         this.loadAnimation(characterId);
         this.animator.play('shoot', true, 30);
 
-        // ARCADIO: Configurar proyectil curvo (hoz)
-        if (characterId === 'arcadio') {
+        // PROJECT A: Configurar proyectil curvo (hoz)
+        if (characterId === 'proyecto-a') {
             this.setupCurvedProjectile();
         }
     }
 
     /**
-     * Configura el proyectil curvo para Arcadio (hoz que hace 1/4 de círculo)
+     * Configura el proyectil curvo para Project A (hoz que hace 1/4 de círculo)
      * La hoz barre HACIA el enemigo, empezando desde un lado del jugador
      */
     private setupCurvedProjectile(): void {
         this.isCurvedProjectile = true;
-        this.damage = 40; // Daño de Arcadio
+        this.damage = 40; // Daño de Project A
         this.lifeTime = 0.6; // Duración del arco
         this.curveProgress = 0;
 
@@ -84,9 +84,8 @@ export class ProjectileThree {
         let folder = characterId;
         let prefix = `${characterId}-shoot-`;
 
-        if (characterId === 'yurany') {
-            folder = 'proyecto-y';
-            prefix = 'y-shoot-';
+        if (characterId === 'proyecto-y') {
+            // Already correct in folder structure hopefully, but keeping logic just in case
         }
 
         this.animator.loadAnimation({

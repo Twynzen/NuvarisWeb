@@ -3,7 +3,7 @@ import { CharacterAbilityThree } from './character-ability-three';
 import { PlayerThree } from '../entities/player.three';
 import { EnemyThree } from '../entities/enemy.three';
 import { ProjectileThree } from '../entities/projectile.three';
-import { ArcadioSkills } from './skills/arcadio.skills';
+import { ProyectoASkills } from './skills/proyecto-a.skills';
 
 /**
  * Arcadio Ability - Three.js implementation
@@ -13,7 +13,7 @@ import { ArcadioSkills } from './skills/arcadio.skills';
  * - Knockback effect on hits
  * - Thorns damage when hit (upgrade)
  */
-export class ArcadioAbilityThree implements CharacterAbilityThree {
+export class ProyectoAAbilityThree implements CharacterAbilityThree {
     name = 'Titan Strength';
     description = 'Uses a powerful melee punch and has increased resistance.';
 
@@ -81,7 +81,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
         this.scene = scene;
         this.player = player;
         this.gameStateRef = gameState;
-        console.log('[ARCADIO] Titan Strength ability initialized - 30% chance for 20% HP heal');
+        console.log('[PROJECT A] Titan Strength ability initialized - 30% chance for 20% HP heal');
     }
 
     /**
@@ -97,7 +97,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
             this.adrenalineTimer -= delta;
             if (this.adrenalineTimer <= 0) {
                 this.adrenalineActive = false;
-                console.log('[ARCADIO] Adrenaline wore off');
+                console.log('[PROJECT A] Adrenaline wore off');
             }
         }
 
@@ -170,7 +170,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
         if (this.thorns > 0) {
             const thornsDamage = damageAmount * this.thorns;
             enemy.takeDamage(thornsDamage, scene);
-            console.log(`[ARCADIO] Thorns reflected ${thornsDamage.toFixed(1)} damage`);
+            console.log(`[PROJECT A] Thorns reflected ${thornsDamage.toFixed(1)} damage`);
         }
 
         // Trigger adrenaline if unlocked
@@ -182,7 +182,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
     }
 
     getUpgrades(): any[] {
-        return ArcadioSkills;
+        return ProyectoASkills;
     }
 
     // ========== LIFESTEAL SYSTEM ==========
@@ -222,7 +222,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
         const actualHeal = this.gameStateRef.health - oldHealth;
 
         if (actualHeal > 0) {
-            console.log(`[ARCADIO] Lifesteal activated! +${actualHeal} HP (${this.lifestealHealPercent * 100}% of max HP, roll: ${(roll * 100).toFixed(1)}%)`);
+            console.log(`[PROJECT A] Lifesteal activated! +${actualHeal} HP (${this.lifestealHealPercent * 100}% of max HP, roll: ${(roll * 100).toFixed(1)}%)`);
 
             // Visual feedback - green flash on player + floating number
             this.createHealEffect(actualHeal);
@@ -352,7 +352,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
 
         this.adrenalineActive = true;
         this.adrenalineTimer = this.adrenalineDuration;
-        console.log('[ARCADIO] Adrenaline activated! +5% speed for 2s');
+        console.log('[PROJECT A] Adrenaline activated! +5% speed for 2s');
     }
 
     /**
@@ -388,7 +388,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
     public tryApplyStun(enemy: EnemyThree): void {
         if (this.stunChance > 0 && Math.random() < this.stunChance) {
             enemy.applyStun(0.5); // 500ms stun
-            console.log('[ARCADIO] Earthquake stun applied!');
+            console.log('[PROJECT A] Earthquake stun applied!');
         }
     }
 
@@ -406,7 +406,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
         // Check if berserk is ready
         if (this.berserkKillCounter >= this.berserkKillsRequired && !this.berserkReady && !this.berserkActive) {
             this.berserkReady = true;
-            console.log('[ARCADIO] BERSERK READY! Press Q to activate!');
+            console.log('[PROJECT A] BERSERK READY! Press Q to activate!');
             this.createBerserkReadyEffect();
         }
     }
@@ -416,17 +416,17 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
      */
     public activateBerserk(): boolean {
         if (!this.canBerserk) {
-            console.log('[ARCADIO] Berserk not unlocked');
+            console.log('[PROJECT A] Berserk not unlocked');
             return false;
         }
 
         if (!this.berserkReady) {
-            console.log(`[ARCADIO] Berserk not ready (${this.berserkKillCounter}/${this.berserkKillsRequired} kills)`);
+            console.log(`[PROJECT A] Berserk not ready (${this.berserkKillCounter}/${this.berserkKillsRequired} kills)`);
             return false;
         }
 
         if (this.berserkActive) {
-            console.log('[ARCADIO] Berserk already active');
+            console.log('[PROJECT A] Berserk already active');
             return false;
         }
 
@@ -444,7 +444,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
             this.onBerserkActivateCallback();
         }
 
-        console.log(`[ARCADIO] BERSERK MODE ACTIVATED! ${this.berserkDuration}s of carnage!`);
+        console.log(`[PROJECT A] BERSERK MODE ACTIVATED! ${this.berserkDuration}s of carnage!`);
         return true;
     }
 
@@ -460,7 +460,7 @@ export class ArcadioAbilityThree implements CharacterAbilityThree {
             this.player.mesh.scale.set(1, 1, 1);
         }
 
-        console.log('[ARCADIO] Berserk mode ended');
+        console.log('[PROJECT A] Berserk mode ended');
     }
 
     /**

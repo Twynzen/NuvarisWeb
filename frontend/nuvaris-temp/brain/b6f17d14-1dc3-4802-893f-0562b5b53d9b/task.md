@@ -1,0 +1,6 @@
+- [ ] Review project structure and understand QDT flow
+- [ ] Identify all user-facing occurrences of "yurany" and "arcadio"
+- [ ] Replace them with generic names "Project A" and "Project B" in UI
+- [ ] Ensure internal logic still works (character IDs may stay unchanged)
+- [ ] Increase asset size for better visibility in gameplay
+- [ ] Verify changes by running the application and checking UI and gameplay

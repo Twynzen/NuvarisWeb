@@ -49,7 +49,7 @@ export class AudioService {
   private isWalking = false;
   private walkSoundInterval: ReturnType<typeof setInterval> | null = null;
   private walkIntervalMs = 350; // Milisegundos entre pasos
-  private currentWalkCharacter: string = 'arcadio';
+  private currentWalkCharacter: string = 'proyecto-a';
 
   // Configuración de sonidos
   private readonly soundConfigs: SoundConfig[] = [
@@ -57,13 +57,13 @@ export class AudioService {
     { key: 'ambiente-menu', path: 'assets/sounds/ambiente-qdt-menu.mp3', volume: 0.25, loop: true, category: 'music' },
     { key: 'ambiente-gameplay', path: 'assets/sounds/ambiente-qdt-gameplay.mp3', volume: 0.2, loop: true, category: 'music' },
 
-    // === ARCADIO ===
-    { key: 'arcadio-dead', path: 'assets/sounds/arcadio-dead.wav', volume: 0.8, loop: false, category: 'sfx' },
-    { key: 'arcadio-heal', path: 'assets/sounds/arcadio-heal.mp3', volume: 0.3, loop: false, category: 'sfx' },
-    { key: 'arcadio-hit', path: 'assets/sounds/arcadio-hit.wav', volume: 0.6, loop: false, category: 'sfx' },
-    { key: 'arcadio-shoot', path: 'assets/sounds/arcadio-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
-    { key: 'arcadio-berserk', path: 'assets/sounds/arcadio-berserk.wav', volume: 1.0, loop: false, category: 'sfx' },
-    { key: 'walk-arcadio', path: 'assets/sounds/walk-arcadio.mp3', volume: 0.3, loop: false, category: 'sfx' },
+    // === ARCADIO (PROJECT A) ===
+    { key: 'proyecto-a-dead', path: 'assets/sounds/proyecto-a-dead.wav', volume: 0.8, loop: false, category: 'sfx' },
+    { key: 'proyecto-a-heal', path: 'assets/sounds/proyecto-a-heal.mp3', volume: 0.3, loop: false, category: 'sfx' },
+    { key: 'proyecto-a-hit', path: 'assets/sounds/proyecto-a-hit.wav', volume: 0.6, loop: false, category: 'sfx' },
+    { key: 'proyecto-a-shoot', path: 'assets/sounds/proyecto-a-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
+    { key: 'proyecto-a-berserk', path: 'assets/sounds/proyecto-a-berserk.wav', volume: 1.0, loop: false, category: 'sfx' },
+    { key: 'walk-proyecto-a', path: 'assets/sounds/walk-proyecto-a.mp3', volume: 0.3, loop: false, category: 'sfx' },
 
     // === LARS ===
     { key: 'lars-dead', path: 'assets/sounds/lars-dead.mp3', volume: 0.8, loop: false, category: 'sfx' },
@@ -72,11 +72,11 @@ export class AudioService {
     { key: 'lars-shoot', path: 'assets/sounds/lars-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
     { key: 'minion-explode', path: 'assets/sounds/minion-explode.wav', volume: 0.8, loop: false, category: 'sfx' },
 
-    // === YURANY ===
-    { key: 'yurany-dead', path: 'assets/sounds/yurany-dead.wav', volume: 0.8, loop: false, category: 'sfx' },
-    { key: 'yurany-hit', path: 'assets/sounds/yurany-hit.mp3', volume: 0.6, loop: false, category: 'sfx' },
-    { key: 'yurany-shoot', path: 'assets/sounds/yurany-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
-    { key: 'yurany-shoot-chain', path: 'assets/sounds/yurany-shoot-chain.wav', volume: 0.6, loop: false, category: 'sfx' },
+    // === YURANY (PROJECT Y) ===
+    { key: 'proyecto-y-dead', path: 'assets/sounds/proyecto-y-dead.wav', volume: 0.8, loop: false, category: 'sfx' },
+    { key: 'proyecto-y-hit', path: 'assets/sounds/proyecto-y-hit.mp3', volume: 0.6, loop: false, category: 'sfx' },
+    { key: 'proyecto-y-shoot', path: 'assets/sounds/proyecto-y-shoot.wav', volume: 0.5, loop: false, category: 'sfx' },
+    { key: 'proyecto-y-shoot-chain', path: 'assets/sounds/proyecto-y-shoot-chain.wav', volume: 0.6, loop: false, category: 'sfx' },
 
     // === ENEMIGOS ===
     { key: 'spider-bite', path: 'assets/sounds/spider-bite.mp3', volume: 0.6, loop: false, category: 'sfx' },
@@ -252,7 +252,7 @@ export class AudioService {
     this.activeSources.forEach((source, key) => {
       try {
         source.stop();
-      } catch (e) {}
+      } catch (e) { }
     });
     this.activeSources.clear();
     this.stopWalking();
@@ -330,14 +330,14 @@ export class AudioService {
    */
   playShoot(characterId: string): void {
     switch (characterId) {
-      case 'arcadio':
-        this.play('arcadio-shoot');
+      case 'proyecto-a':
+        this.play('proyecto-a-shoot');
         break;
       case 'lars':
         this.play('lars-shoot');
         break;
-      case 'yurany':
-        this.play('yurany-shoot');
+      case 'proyecto-y':
+        this.play('proyecto-y-shoot');
         break;
     }
   }
@@ -347,14 +347,14 @@ export class AudioService {
    */
   playHit(characterId: string): void {
     switch (characterId) {
-      case 'arcadio':
-        this.play('arcadio-hit');
+      case 'proyecto-a':
+        this.play('proyecto-a-hit');
         break;
       case 'lars':
         this.play('lars-hit');
         break;
-      case 'yurany':
-        this.play('yurany-hit');
+      case 'proyecto-y':
+        this.play('proyecto-y-hit');
         break;
     }
   }
@@ -365,14 +365,14 @@ export class AudioService {
   playDeath(characterId: string): void {
     this.stopHealthWarning(); // Detener latidos al morir
     switch (characterId) {
-      case 'arcadio':
-        this.play('arcadio-dead');
+      case 'proyecto-a':
+        this.play('proyecto-a-dead');
         break;
       case 'lars':
         this.play('lars-dead');
         break;
-      case 'yurany':
-        this.play('yurany-dead');
+      case 'proyecto-y':
+        this.play('proyecto-y-dead');
         break;
     }
   }
@@ -381,8 +381,8 @@ export class AudioService {
    * Reproducir sonido de caminar según el personaje (un paso)
    */
   playWalk(characterId: string): void {
-    if (characterId === 'arcadio') {
-      this.play('walk-arcadio');
+    if (characterId === 'proyecto-a') {
+      this.play('walk-proyecto-a');
     } else {
       this.play('walk-player');
     }
@@ -449,7 +449,7 @@ export class AudioService {
    * Reproducir sonido de activación de modo berserk (Arcadio ability)
    */
   playBerserk(): void {
-    this.play('arcadio-berserk');
+    this.play('proyecto-a-berserk');
   }
 
   // ==================== ENEMY SOUNDS ====================

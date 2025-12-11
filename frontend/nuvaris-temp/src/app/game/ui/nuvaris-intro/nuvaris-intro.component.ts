@@ -1,5 +1,6 @@
 import { Component, Output, EventEmitter, OnInit, OnDestroy, HostListener, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 
 interface Star {
     x: number;
@@ -50,6 +51,8 @@ export class NuvarisIntroComponent implements OnInit, OnDestroy, AfterViewInit {
     private time = 0;
     private shootingStarTimer = 0;
 
+    constructor(private router: Router) { }
+
     ngOnInit() {
         // Sequence the reveal
         setTimeout(() => this.showTitle = true, 500);
@@ -82,17 +85,19 @@ export class NuvarisIntroComponent implements OnInit, OnDestroy, AfterViewInit {
         }
     }
 
-    @HostListener('document:keydown', ['$event'])
-    onKeyDown(event: KeyboardEvent) {
-        if (this.canContinue && !event.ctrlKey && !event.altKey && !event.metaKey) {
-            this.continue.emit();
+    // Navigate to QDT
+    navigateToQdt(event: Event) {
+        event.stopPropagation();
+        if (this.canContinue) {
+            this.router.navigate(['/qdt']);
         }
     }
 
-    @HostListener('document:click')
-    onClick() {
+    // Navigate to Tartarus Prime
+    navigateToTartarus(event: Event) {
+        event.stopPropagation();
         if (this.canContinue) {
-            this.continue.emit();
+            this.router.navigate(['/tartarus-prime']);
         }
     }
 

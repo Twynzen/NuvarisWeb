@@ -9,8 +9,162 @@
 
     <!-- Main content -->
     <div class="content">
-        <h1 class="title" [class.visible]="showTitle">NUVARIS</h1>
-        <p class="prompt" [class.visible]="showPrompt">Presiona cualquier tecla para continuar...</p>
+        <h1 class="title" [class.visible]="showTitle">NÚVARIZ</h1>
+        <p class="prompt" [class.visible]="showPrompt">Elige tu destino.</p>
+
+        <!-- Portal navigation -->
+        <div class="portal-container" [class.visible]="showPrompt">
+            <!-- QDT Metallic Portal -->
+            <div class="portal-wrapper" (click)="navigateToQdt($event)">
+                <svg class="portal-svg metallic-portal" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Outer metallic ring -->
+                    <defs>
+                        <linearGradient id="metalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#8B8B8B;stop-opacity:1" />
+                            <stop offset="25%" style="stop-color:#D4D4D4;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#8B8B8B;stop-opacity:1" />
+                            <stop offset="75%" style="stop-color:#D4D4D4;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#8B8B8B;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="innerMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#4A4A4A;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#6B6B6B;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#4A4A4A;stop-opacity:1" />
+                        </linearGradient>
+                        <radialGradient id="portalGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" style="stop-color:#00BFFF;stop-opacity:0.8" />
+                            <stop offset="60%" style="stop-color:#0066CC;stop-opacity:0.5" />
+                            <stop offset="100%" style="stop-color:#000033;stop-opacity:0.9" />
+                        </radialGradient>
+                        <filter id="metalShadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#00BFFF" flood-opacity="0.6" />
+                        </filter>
+                    </defs>
+
+                    <!-- Outer decorative ring -->
+                    <circle cx="100" cy="100" r="95" fill="none" stroke="url(#metalGradient)" stroke-width="3" />
+
+                    <!-- Main metallic frame -->
+                    <circle cx="100" cy="100" r="85" fill="none" stroke="url(#metalGradient)" stroke-width="12"
+                        filter="url(#metalShadow)" />
+
+                    <!-- Inner metallic ring -->
+                    <circle cx="100" cy="100" r="70" fill="none" stroke="url(#innerMetal)" stroke-width="4" />
+
+                    <!-- Bolts/rivets around the frame -->
+                    <circle cx="100" cy="15" r="5" fill="url(#metalGradient)" />
+                    <circle cx="100" cy="185" r="5" fill="url(#metalGradient)" />
+                    <circle cx="15" cy="100" r="5" fill="url(#metalGradient)" />
+                    <circle cx="185" cy="100" r="5" fill="url(#metalGradient)" />
+                    <circle cx="40" cy="40" r="4" fill="url(#metalGradient)" />
+                    <circle cx="160" cy="40" r="4" fill="url(#metalGradient)" />
+                    <circle cx="40" cy="160" r="4" fill="url(#metalGradient)" />
+                    <circle cx="160" cy="160" r="4" fill="url(#metalGradient)" />
+
+                    <!-- Portal interior (energy swirl) -->
+                    <circle cx="100" cy="100" r="62" fill="url(#portalGlow)" class="portal-energy" />
+
+                    <!-- Energy swirl lines -->
+                    <ellipse cx="100" cy="100" rx="50" ry="20" fill="none" stroke="rgba(0,191,255,0.4)" stroke-width="2"
+                        transform="rotate(-30 100 100)" class="swirl-1" />
+                    <ellipse cx="100" cy="100" rx="40" ry="15" fill="none" stroke="rgba(0,191,255,0.3)"
+                        stroke-width="1.5" transform="rotate(45 100 100)" class="swirl-2" />
+                    <ellipse cx="100" cy="100" rx="55" ry="25" fill="none" stroke="rgba(100,200,255,0.2)"
+                        stroke-width="1" transform="rotate(10 100 100)" class="swirl-3" />
+                </svg>
+                <span class="portal-label">Ir a QDT</span>
+            </div>
+
+            <!-- Tartarus Prime - Lava Earth Planet -->
+            <div class="portal-wrapper" (click)="navigateToTartarus($event)">
+                <svg class="portal-svg lava-planet" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Lava glow effect -->
+                        <radialGradient id="lavaGlow" cx="30%" cy="30%" r="70%">
+                            <stop offset="0%" style="stop-color:#FF6B00;stop-opacity:1" />
+                            <stop offset="40%" style="stop-color:#CC3300;stop-opacity:1" />
+                            <stop offset="70%" style="stop-color:#660000;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#1A0000;stop-opacity:1" />
+                        </radialGradient>
+
+                        <!-- Continent gradient -->
+                        <linearGradient id="continentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#2D2D2D;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#1A1A1A;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0D0D0D;stop-opacity:1" />
+                        </linearGradient>
+
+                        <!-- Lava rivers gradient -->
+                        <linearGradient id="lavaRiver" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#FF4500;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FF4500;stop-opacity:1" />
+                        </linearGradient>
+
+                        <!-- Atmosphere -->
+                        <radialGradient id="atmosphere" cx="50%" cy="50%" r="50%">
+                            <stop offset="85%" style="stop-color:transparent;stop-opacity:0" />
+                            <stop offset="95%" style="stop-color:#FF4500;stop-opacity:0.3" />
+                            <stop offset="100%" style="stop-color:#FF6B00;stop-opacity:0.5" />
+                        </radialGradient>
+
+                        <filter id="lavaShadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#FF4500" flood-opacity="0.8" />
+                        </filter>
+
+                        <filter id="lavaFlow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="1" />
+                        </filter>
+
+                        <clipPath id="planetClip">
+                            <circle cx="100" cy="100" r="80" />
+                        </clipPath>
+                    </defs>
+
+                    <!-- Planet base (lava oceans) -->
+                    <circle cx="100" cy="100" r="80" fill="url(#lavaGlow)" filter="url(#lavaShadow)" />
+
+                    <!-- Clipped content for continents and features -->
+                    <g clip-path="url(#planetClip)">
+                        <!-- Dark continents -->
+                        <path d="M50 60 Q60 45, 85 50 Q100 40, 90 65 Q95 80, 75 85 Q60 90, 55 75 Z"
+                            fill="url(#continentGrad)" />
+                        <path d="M110 55 Q130 45, 150 60 Q155 80, 140 90 Q125 95, 115 85 Q100 75, 110 55 Z"
+                            fill="url(#continentGrad)" />
+                        <path d="M40 110 Q55 100, 75 105 Q85 115, 80 130 Q70 145, 50 140 Q35 130, 40 110 Z"
+                            fill="url(#continentGrad)" />
+                        <path d="M100 115 Q120 105, 145 115 Q160 130, 150 150 Q130 165, 110 155 Q95 140, 100 115 Z"
+                            fill="url(#continentGrad)" />
+                        <path d="M70 40 Q85 30, 95 35 Q90 50, 75 50 Z" fill="url(#continentGrad)" />
+
+                        <!-- Lava rivers on continents -->
+                        <path d="M55 65 Q65 60, 80 70 Q75 80, 60 78" fill="none" stroke="url(#lavaRiver)"
+                            stroke-width="2" filter="url(#lavaFlow)" class="lava-flow-1" />
+                        <path d="M115 60 Q130 55, 145 70 Q140 80, 125 78" fill="none" stroke="url(#lavaRiver)"
+                            stroke-width="2" filter="url(#lavaFlow)" class="lava-flow-2" />
+                        <path d="M50 120 Q60 115, 70 125 Q65 135, 55 130" fill="none" stroke="url(#lavaRiver)"
+                            stroke-width="1.5" filter="url(#lavaFlow)" class="lava-flow-3" />
+                        <path d="M110 125 Q130 115, 145 130 Q135 145, 115 140" fill="none" stroke="url(#lavaRiver)"
+                            stroke-width="2" filter="url(#lavaFlow)" class="lava-flow-4" />
+
+                        <!-- Volcanic hotspots -->
+                        <circle cx="70" cy="70" r="4" fill="#FFD700" class="volcano-glow" />
+                        <circle cx="130" cy="65" r="3" fill="#FF6B00" class="volcano-glow" />
+                        <circle cx="60" cy="125" r="3" fill="#FFD700" class="volcano-glow" />
+                        <circle cx="125" cy="135" r="4" fill="#FF6B00" class="volcano-glow" />
+                        <circle cx="90" cy="95" r="2" fill="#FF4500" class="volcano-glow" />
+                    </g>
+
+                    <!-- Atmosphere glow -->
+                    <circle cx="100" cy="100" r="85" fill="url(#atmosphere)" />
+
+                    <!-- Light reflection -->
+                    <ellipse cx="75" cy="65" rx="25" ry="15" fill="rgba(255,200,100,0.15)"
+                        transform="rotate(-30 75 65)" />
+                </svg>
+                <span class="portal-label tartarus-label">Tartarus Prime</span>
+            </div>
+        </div>
     </div>
 
     <!-- Vignette overlay -->

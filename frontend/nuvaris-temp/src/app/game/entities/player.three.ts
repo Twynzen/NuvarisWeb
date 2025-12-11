@@ -18,7 +18,7 @@ export class PlayerThree {
 
     private characterId: string;
 
-    // ========== MELEE ATTACK SYSTEM (Arcadio) ==========
+    // ========== MELEE ATTACK SYSTEM (Project A) ==========
     private isMeleeAttacking = false;
     private meleeAttackRange = 5; // Units
     private meleeAttackDamage = 40; // Base damage
@@ -43,19 +43,19 @@ export class PlayerThree {
     // Debug visualization group
     public debugGroup: THREE.Group | null = null;
 
-    constructor(scene: THREE.Scene, characterId: string = 'arcadio') {
+    constructor(scene: THREE.Scene, characterId: string = 'proyecto-a') {
         this.characterId = characterId;
         this.mesh = new THREE.Group();
 
         // Configure Stats
         switch (characterId) {
-            case 'arcadio':
+            case 'proyecto-a':
                 this.speed = 8; // Slow
                 break;
             case 'lars':
                 this.speed = 12; // Medium
                 break;
-            case 'yurany':
+            case 'proyecto-y':
                 this.speed = 18; // Fast
                 break;
         }
@@ -97,16 +97,13 @@ export class PlayerThree {
         let prefix = `${this.characterId}-`;
 
         // Handle folder naming inconsistencies if any
-        if (this.characterId === 'yurany') {
-            folder = 'proyecto-y';
-            prefix = 'y-';
+        if (this.characterId === 'proyecto-y') {
+            // Already correct
         }
 
         // Idle
         let idlePrefix = `${prefix}idle-`;
-        if (this.characterId === 'yurany') {
-            idlePrefix = 'y-idle-one-';
-        } else if (this.characterId === 'lars') {
+        if (this.characterId === 'lars') {
             idlePrefix = 'lars-idle-one-';
         }
 
@@ -363,7 +360,7 @@ export class PlayerThree {
         return new ProjectileThree(scene, this.mesh.position.x, this.mesh.position.z, direction, this.characterId);
     }
 
-    // ========== MELEE ATTACK (Arcadio) ==========
+    // ========== MELEE ATTACK (Project A) ==========
 
     /**
      * Perform a melee attack that damages all enemies in range
@@ -412,7 +409,7 @@ export class PlayerThree {
         }
 
         // Determine attack direction based on nearest enemy
-        // ARCADIO uses directional shoot animations (shoot-right, shoot-left, shoot-up, shoot-down)
+        // PROJECT A uses directional shoot animations (shoot-right, shoot-left, shoot-up, shoot-down)
         let attackAnim = this.facingRight ? 'shoot-right' : 'shoot-left';
 
         if (nearestEnemy) {
@@ -491,17 +488,17 @@ export class PlayerThree {
 
     /**
      * Check if this character uses melee attacks
-     * NOTE: Arcadio now uses curved projectile (hoz), not melee
+     * NOTE: Project A now uses curved projectile (hoz), not melee
      */
     public isMeleeCharacter(): boolean {
         return false; // Todos usan proyectiles ahora
     }
 
     /**
-     * Check if this character uses curved projectile (Arcadio's hoz)
+     * Check if this character uses curved projectile (Project A's hoz)
      */
     public usesCurvedProjectile(): boolean {
-        return this.characterId === 'arcadio';
+        return this.characterId === 'proyecto-a';
     }
 
     /**

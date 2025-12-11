@@ -3,7 +3,7 @@ import { CharacterAbilityThree } from './character-ability-three';
 import { PlayerThree } from '../entities/player.three';
 import { EnemyThree } from '../entities/enemy.three';
 import { ProjectileThree } from '../entities/projectile.three';
-import { YuranySkills } from './skills/yurany.skills';
+import { ProyectoYSkills } from './skills/proyecto-y.skills';
 
 /**
  * Yurany Ability - Three.js implementation
@@ -15,7 +15,7 @@ import { YuranySkills } from './skills/yurany.skills';
  * - NEW: Critical hit chance
  * - NEW: Dash ability
  */
-export class YuranyAbilityThree implements CharacterAbilityThree {
+export class ProyectoYAbilityThree implements CharacterAbilityThree {
     name = 'Chain Lightning';
     description = 'Attacks chain to nearby enemies.';
 
@@ -68,7 +68,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
         this.scene = scene;
         this.player = player;
         this.gameState = gameState;
-        console.log('[YURANY] Chain Lightning ability initialized');
+        console.log('[PROJECT Y] Chain Lightning ability initialized');
     }
 
     update(delta: number, scene: THREE.Scene, player: PlayerThree, enemies: EnemyThree[]): void {
@@ -115,7 +115,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
             finalDamage = damage * this.critMultiplier;
             isCrit = true;
             this.createCritEffect(enemy.mesh.position, scene);
-            console.log(`[YURANY] CRITICAL HIT! ${finalDamage.toFixed(1)} damage`);
+            console.log(`[PROJECT Y] CRITICAL HIT! ${finalDamage.toFixed(1)} damage`);
         }
 
         // Initialize chain tracking for this projectile if needed
@@ -150,7 +150,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
         // Apply stun effect if unlocked
         if (this.stunChance > 0 && Math.random() < this.stunChance) {
             closestEnemy.applyStun(this.stunDuration);
-            console.log('[YURANY] Chain stun applied!');
+            console.log('[PROJECT Y] Chain stun applied!');
         }
     }
 
@@ -168,7 +168,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
         if (Math.random() < this.dodgeChance) {
             // Dodged! Visual feedback
             this.createDodgeEffect(player, scene);
-            console.log('[YURANY] Dodge! Damage avoided');
+            console.log('[PROJECT Y] Dodge! Damage avoided');
             return 0; // No damage taken
         }
 
@@ -176,7 +176,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
     }
 
     getUpgrades(): any[] {
-        return YuranySkills;
+        return ProyectoYSkills;
     }
 
     // ========== DASH ABILITY ==========
@@ -186,12 +186,12 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
      */
     public executeDash(player: PlayerThree, direction: THREE.Vector3, scene: THREE.Scene): boolean {
         if (!this.canDash) {
-            console.log('[YURANY] Dash not unlocked');
+            console.log('[PROJECT Y] Dash not unlocked');
             return false;
         }
 
         if (this.dashCooldown > 0) {
-            console.log('[YURANY] Dash on cooldown');
+            console.log('[PROJECT Y] Dash on cooldown');
             return false;
         }
 
@@ -216,7 +216,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
         // Set cooldown
         this.dashCooldown = this.dashMaxCooldown;
 
-        console.log('[YURANY] Dash executed!');
+        console.log('[PROJECT Y] Dash executed!');
         return true;
     }
 
@@ -263,7 +263,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
         // Apply damage to target
         target.takeDamage(damage, scene);
 
-        console.log(`[YURANY] Chain lightning dealt ${damage.toFixed(1)} damage`);
+        console.log(`[PROJECT Y] Chain lightning dealt ${damage.toFixed(1)} damage`);
     }
 
     // ========== THUNDERSTORM (Legendaria) ==========
@@ -294,7 +294,7 @@ export class YuranyAbilityThree implements CharacterAbilityThree {
             }
         }
 
-        console.log('[YURANY] Thunderstorm strike!');
+        console.log('[PROJECT Y] Thunderstorm strike!');
     }
 
     // ========== VISUAL EFFECTS ==========

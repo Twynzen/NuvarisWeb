@@ -1,6 +1,6 @@
 import { AbilityOption } from '../ability-option';
 
-export const ArcadioSkills: AbilityOption[] = [
+export const ProyectoASkills: AbilityOption[] = [
     // ========== BASICA (63% probabilidad) ==========
     {
         id: 'iron_skin',
@@ -181,7 +181,7 @@ export const ArcadioSkills: AbilityOption[] = [
         effect: (scene: any) => {
             if (scene.player?.ability) {
                 scene.player.ability.canBerserk = true;
-                console.log('[ARCADIO] BERSERK MODE UNLOCKED! Kill 100 enemies then press Q!');
+                console.log('[PROJECT A] BERSERK MODE UNLOCKED! Kill 100 enemies then press Q!');
             }
         }
     },

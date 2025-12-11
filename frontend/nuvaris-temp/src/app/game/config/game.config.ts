@@ -70,18 +70,18 @@ export const GameConfig = {
 
   // Animations
   animations: {
-    // Arcadio
-    'arcadio-concept': Array.from({ length: 30 }, (_, i) => `arcadio-concept-${i + 1}`),
-    'arcadio-idle': Array.from({ length: 30 }, (_, i) => `arcadio-idle-${i + 1}`),
-    'arcadio-walk-down': Array.from({ length: 30 }, (_, i) => `arcadio-walk-down-${i + 1}`),
-    'arcadio-walk-up': Array.from({ length: 30 }, (_, i) => `arcadio-walk-up-${i + 1}`),
-    'arcadio-walk-left': Array.from({ length: 30 }, (_, i) => `arcadio-walk-right-${i + 1}`), // Reuse right, will flip
-    'arcadio-walk-right': Array.from({ length: 30 }, (_, i) => `arcadio-walk-right-${i + 1}`),
-    'arcadio-shoot-right': Array.from({ length: 30 }, (_, i) => `arcadio-shoot-right-${i + 1}`),
-    'arcadio-shoot-down': Array.from({ length: 30 }, (_, i) => `arcadio-shoot-down-${i + 1}`),
-    'arcadio-shoot-up': Array.from({ length: 30 }, (_, i) => `arcadio-shoot-up-${i + 1}`),
-    'arcadio-projectile': Array.from({ length: 30 }, (_, i) => `arcadio-projectile-${i + 1}`),
-    'arcadio-dead': Array.from({ length: 30 }, (_, i) => `arcadio-dead-${i + 1}`),
+    // Arcadio (Project A)
+    'proyecto-a-concept': Array.from({ length: 30 }, (_, i) => `proyecto-a-concept-${i + 1}`),
+    'proyecto-a-idle': Array.from({ length: 30 }, (_, i) => `proyecto-a-idle-${i + 1}`),
+    'proyecto-a-walk-down': Array.from({ length: 30 }, (_, i) => `proyecto-a-walk-down-${i + 1}`),
+    'proyecto-a-walk-up': Array.from({ length: 30 }, (_, i) => `proyecto-a-walk-up-${i + 1}`),
+    'proyecto-a-walk-left': Array.from({ length: 30 }, (_, i) => `proyecto-a-walk-right-${i + 1}`), // Reuse right, will flip
+    'proyecto-a-walk-right': Array.from({ length: 30 }, (_, i) => `proyecto-a-walk-right-${i + 1}`),
+    'proyecto-a-shoot-right': Array.from({ length: 30 }, (_, i) => `proyecto-a-shoot-right-${i + 1}`),
+    'proyecto-a-shoot-down': Array.from({ length: 30 }, (_, i) => `proyecto-a-shoot-down-${i + 1}`),
+    'proyecto-a-shoot-up': Array.from({ length: 30 }, (_, i) => `proyecto-a-shoot-up-${i + 1}`),
+    'proyecto-a-projectile': Array.from({ length: 30 }, (_, i) => `proyecto-a-projectile-${i + 1}`),
+    'proyecto-a-dead': Array.from({ length: 30 }, (_, i) => `proyecto-a-dead-${i + 1}`),
 
     // Lars
     'lars-concept': Array.from({ length: 30 }, (_, i) => `lars-concept-${i + 1}`),
@@ -96,22 +96,22 @@ export const GameConfig = {
     'lars-projectile': Array.from({ length: 30 }, (_, i) => `lars-projectile-${i + 1}`),
     'lars-dead': Array.from({ length: 30 }, (_, i) => `lars-dead-${i + 1}`),
 
-    // Yurany
-    'yurany-concept': Array.from({ length: 30 }, (_, i) => `yurany-concept-${i + 1}`),
-    'yurany-idle': Array.from({ length: 30 }, (_, i) => `yurany-idle-${i + 1}`),
-    'yurany-walk-down': Array.from({ length: 30 }, (_, i) => `yurany-walk-down-${i + 1}`),
-    'yurany-walk-up': Array.from({ length: 30 }, (_, i) => `yurany-walk-up-${i + 1}`),
-    'yurany-walk-left': Array.from({ length: 30 }, (_, i) => `yurany-walk-right-${i + 1}`),
-    'yurany-walk-right': Array.from({ length: 30 }, (_, i) => `yurany-walk-right-${i + 1}`),
-    'yurany-walk-down-left': ['yurany-walk-down-left-2'],
-    'yurany-walk-down-right': ['yurany-walk-down-right-1', 'yurany-walk-down-right-2'],
-    'yurany-walk-up-left': ['yurany-walk-up-left-1', 'yurany-walk-up-left-2'],
-    'yurany-walk-up-right': ['yurany-walk-up-right-1', 'yurany-walk-up-right-2'],
-    'yurany-shoot-right': Array.from({ length: 30 }, (_, i) => `yurany-shoot-right-${i + 1}`),
-    'yurany-shoot-down': Array.from({ length: 30 }, (_, i) => `yurany-shoot-down-${i + 1}`),
-    'yurany-shoot-up': Array.from({ length: 30 }, (_, i) => `yurany-shoot-up-${i + 1}`),
-    'yurany-projectile': Array.from({ length: 30 }, (_, i) => `yurany-projectile-${i + 1}`),
-    'yurany-dead': Array.from({ length: 30 }, (_, i) => `yurany-dead-${i + 1}`),
+    // Yurany (Project Y)
+    'proyecto-y-concept': Array.from({ length: 30 }, (_, i) => `proyecto-y-concept-${i + 1}`),
+    'proyecto-y-idle': Array.from({ length: 30 }, (_, i) => `proyecto-y-idle-${i + 1}`),
+    'proyecto-y-walk-down': Array.from({ length: 30 }, (_, i) => `proyecto-y-walk-down-${i + 1}`),
+    'proyecto-y-walk-up': Array.from({ length: 30 }, (_, i) => `proyecto-y-walk-up-${i + 1}`),
+    'proyecto-y-walk-left': Array.from({ length: 30 }, (_, i) => `proyecto-y-walk-right-${i + 1}`),
+    'proyecto-y-walk-right': Array.from({ length: 30 }, (_, i) => `proyecto-y-walk-right-${i + 1}`),
+    'proyecto-y-walk-down-left': ['proyecto-y-walk-down-left-2'],
+    'proyecto-y-walk-down-right': ['proyecto-y-walk-down-right-1', 'proyecto-y-walk-down-right-2'],
+    'proyecto-y-walk-up-left': ['proyecto-y-walk-up-left-1', 'proyecto-y-walk-up-left-2'],
+    'proyecto-y-walk-up-right': ['proyecto-y-walk-up-right-1', 'proyecto-y-walk-up-right-2'],
+    'proyecto-y-shoot-right': Array.from({ length: 30 }, (_, i) => `proyecto-y-shoot-right-${i + 1}`),
+    'proyecto-y-shoot-down': Array.from({ length: 30 }, (_, i) => `proyecto-y-shoot-down-${i + 1}`),
+    'proyecto-y-shoot-up': Array.from({ length: 30 }, (_, i) => `proyecto-y-shoot-up-${i + 1}`),
+    'proyecto-y-projectile': Array.from({ length: 30 }, (_, i) => `proyecto-y-projectile-${i + 1}`),
+    'proyecto-y-dead': Array.from({ length: 30 }, (_, i) => `proyecto-y-dead-${i + 1}`),
 
     // Enemies
     'worm-move': Array.from({ length: 30 }, (_, i) => `worm-move-${i + 1}`),

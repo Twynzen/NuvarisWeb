@@ -190,3 +190,190 @@ $ethereal-white: #e8e8f0;
         letter-spacing: 0.5rem;
     }
 }
+
+// Portal navigation styles
+.portal-container {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    margin-top: 3rem;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 1s ease-out;
+
+    &.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.portal-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+
+    &:hover {
+        transform: scale(1.1);
+        
+        .portal-label {
+            opacity: 1;
+            color: $ethereal-white;
+        }
+    }
+}
+
+.portal-svg {
+    width: 120px;
+    height: 120px;
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+}
+
+.portal-label {
+    margin-top: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: rgba($ethereal-white, 0.6);
+    letter-spacing: 0.15rem;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 10px rgba($ethereal-white, 0.3);
+}
+
+// Metallic Portal Animations
+.metallic-portal {
+    .portal-energy {
+        animation: portal-pulse 3s ease-in-out infinite;
+    }
+    
+    .swirl-1 {
+        animation: swirl-rotate 8s linear infinite;
+        transform-origin: 100px 100px;
+    }
+    
+    .swirl-2 {
+        animation: swirl-rotate 6s linear infinite reverse;
+        transform-origin: 100px 100px;
+    }
+    
+    .swirl-3 {
+        animation: swirl-rotate 10s linear infinite;
+        transform-origin: 100px 100px;
+    }
+    
+    &:hover {
+        .portal-energy {
+            animation: portal-pulse-fast 1.5s ease-in-out infinite;
+        }
+    }
+}
+
+@keyframes portal-pulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+}
+
+@keyframes portal-pulse-fast {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes swirl-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+// Lava Planet Animations
+.lava-planet {
+    .lava-flow-1, .lava-flow-2, .lava-flow-3, .lava-flow-4 {
+        animation: lava-flow 2s ease-in-out infinite;
+    }
+    
+    .lava-flow-2 { animation-delay: 0.5s; }
+    .lava-flow-3 { animation-delay: 1s; }
+    .lava-flow-4 { animation-delay: 1.5s; }
+    
+    .volcano-glow {
+        animation: volcano-pulse 1.5s ease-in-out infinite;
+    }
+    
+    &:hover {
+        filter: drop-shadow(0 0 20px rgba(255, 69, 0, 0.8));
+        
+        .volcano-glow {
+            animation: volcano-erupt 0.5s ease-in-out infinite;
+        }
+    }
+}
+
+@keyframes lava-flow {
+    0%, 100% { 
+        opacity: 0.8;
+        stroke-width: 2;
+    }
+    50% { 
+        opacity: 1;
+        stroke-width: 3;
+    }
+}
+
+@keyframes volcano-pulse {
+    0%, 100% { 
+        opacity: 0.7;
+        r: 3;
+    }
+    50% { 
+        opacity: 1;
+        r: 4;
+    }
+}
+
+@keyframes volcano-erupt {
+    0%, 100% { 
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.5);
+    }
+}
+
+.tartarus-label {
+    color: rgba(255, 100, 50, 0.7);
+    
+    .portal-wrapper:hover & {
+        color: #FF6B00;
+        text-shadow: 0 0 15px rgba(255, 69, 0, 0.6);
+    }
+}
+
+// Responsive adjustments for portals
+@media (max-width: 768px) {
+    .portal-container {
+        gap: 2rem;
+    }
+    
+    .portal-svg {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .portal-label {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .portal-container {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .portal-svg {
+        width: 80px;
+        height: 80px;
+    }
+}
+

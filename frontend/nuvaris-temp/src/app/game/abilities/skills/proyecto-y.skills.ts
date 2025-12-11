@@ -1,6 +1,6 @@
 import { AbilityOption } from '../ability-option';
 
-export const YuranySkills: AbilityOption[] = [
+export const ProyectoYSkills: AbilityOption[] = [
     // ==================== BASIC (63% chance) ====================
     {
         id: 'conductivity',

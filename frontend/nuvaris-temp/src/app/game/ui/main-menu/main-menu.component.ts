@@ -24,12 +24,12 @@ export class MainMenuComponent implements OnInit, OnDestroy {
 
   characters: Character[] = [
     {
-      id: 'arcadio',
-      name: 'PROJECT A (ARCADIO)',
+      id: 'proyecto-a',
+      name: 'PROJECT A',
       role: 'Bio-Tank',
       description: 'Heavily mutated biological experiment. High durability, slow movement.',
       stats: { hp: 100, speed: 30, damage: 80 },
-      conceptPath: 'assets/arcadio/concept/arcadio-concept-',
+      conceptPath: 'assets/proyecto-a/concept/proyecto-a-concept-',
       conceptFrames: 30
     },
     {
@@ -42,12 +42,12 @@ export class MainMenuComponent implements OnInit, OnDestroy {
       conceptFrames: 30
     },
     {
-      id: 'yurany',
-      name: 'PROJECT Y (YURANY)',
+      id: 'proyecto-y',
+      name: 'PROJECT Y',
       role: 'Spectral Assassin',
       description: 'Unstable molecular structure. Extremely fast but fragile.',
       stats: { hp: 30, speed: 100, damage: 90 },
-      conceptPath: 'assets/proyecto-y/concept/y-concept-',
+      conceptPath: 'assets/proyecto-y/concept/proyecto-y-concept-',
       conceptFrames: 30
     }
   ];
@@ -59,7 +59,7 @@ export class MainMenuComponent implements OnInit, OnDestroy {
   private animationInterval: any;
   private currentFrameIndex = 1;
 
-  constructor(private audioService: AudioService) {}
+  constructor(private audioService: AudioService) { }
 
   ngOnInit() {
     this.hoveredCharacter = this.characters[0];
