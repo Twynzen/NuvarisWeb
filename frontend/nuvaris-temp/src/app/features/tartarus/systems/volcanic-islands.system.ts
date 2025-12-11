@@ -136,98 +136,39 @@ export class VolcanicIslandsSystem implements PlanetLayer {
     });
   }
 
+    /**
+   * NEW IMPLEMENTATION: 4 Realistic Volcanic Cones at Continental Centers
+   *
+   * Replaces geometric formations with organic volcanoes positioned strategically
+   * at continental hotspots based on FBM noise sampling.
+   */
   private createMassiveFormations(): void {
-    const formations: MassiveFormationConfig[] = [];
+    // Find the 4 best positions for volcanoes (continental centers)
+    const volcanoPositions = this.findContinentalHotspots(4);
 
-    // === MAIN CITADEL === Capital (ECUADOR)
-    formations.push({
-      id: 'citadel',
-      theta: 0,
-      phi: Math.PI / 2,
-      baseRadius: 3.5,
-      peakHeight: this.coreRadius * 2.8,
-      peakCount: 5,
-      hasCity: true,
-      isMassive: true,
-      cityType: 'capital',
-      connectedTo: ['forge'],
-    });
-
-    // === THE FORGE === Industrial (NORTE)
-    formations.push({
-      id: 'forge',
-      theta: Math.PI * 0.4,
-      phi: Math.PI * 0.35, // Norte 63°
-      baseRadius: 2.8,
-      peakHeight: this.coreRadius * 2.2,
-      peakCount: 4,
-      hasCity: true,
-      isMassive: true,
-      cityType: 'industrial',
-      connectedTo: ['citadel'],
-    });
-
-    // === HAVEN === Residential (SUR)
-    formations.push({
-      id: 'haven',
-      theta: Math.PI * 1.2,
-      phi: Math.PI * 0.65, // Sur 117°
-      baseRadius: 2.5,
-      peakHeight: this.coreRadius * 2.0,
-      peakCount: 3,
-      hasCity: true,
-      isMassive: true,
-      cityType: 'residential',
-    });
-
-    // Distributed islands (SPHERICAL)
-    const sphericalIslands = [
-      { theta: Math.PI * 0.8, phi: Math.PI * 0.25, city: true, type: 'outpost' as const },  // Norte alto
-      { theta: Math.PI * 1.6, phi: Math.PI * 0.5, city: true, type: 'outpost' as const },   // Ecuador
-      { theta: Math.PI * -0.5, phi: Math.PI * 0.75, city: false, type: undefined },         // Sur bajo
-      { theta: Math.PI * 0.1, phi: Math.PI * 0.6, city: true, type: 'industrial' as const },// Hemisferio sur
+    // Create 4 organic volcanic cones
+    const volcanoConfigs = [
+      { name: 'citadel', cityType: 'capital' as const, hasCrater: true },
+      { name: 'forge', cityType: 'industrial' as const, hasCrater: true },
+      { name: 'haven', cityType: 'residential' as const, hasCrater: true },
+      { name: 'sanctuary', cityType: undefined, hasCrater: false }, // No city, just volcano
     ];
 
-    sphericalIslands.forEach((island, i) => {
-      formations.push({
-        id: `island_${i}`,
-        theta: island.theta,
-        phi: island.phi,
-        baseRadius: 1.4 + Math.random() * 0.4,
-        peakHeight: this.coreRadius * (0.8 + Math.random() * 0.3),
-        peakCount: 2,
-        hasCity: island.city,
-        isMassive: false,
-        cityType: island.type,
+    volcanoPositions.forEach((pos, i) => {
+      const config = volcanoConfigs[i];
+      const volcano = this.createRealisticVolcano({
+        id: config.name,
+        position: pos,
+        baseRadius: 5 + Math.random() * 2, // 5-7: Wide base, ~50-70% of planet radius for massive appearance
+        height: this.coreRadius * (2.5 + Math.random() * 0.5), // 2.5-3.0x: Taller for more dramatic presence
+        hasCrater: config.hasCrater,
+        hasCity: config.cityType !== undefined,
+        cityType: config.cityType,
       });
-    });
 
-    // Small outcrops (UNIFORM SPHERICAL DISTRIBUTION)
-    for (let i = 0; i < 5; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1); // Uniform sphere
-      formations.push({
-        id: `outcrop_${i}`,
-        theta,
-        phi,
-        baseRadius: 0.5 + Math.random() * 0.3,
-        peakHeight: this.coreRadius * (0.3 + Math.random() * 0.2),
-        peakCount: 1,
-        hasCity: false,
-        isMassive: false,
-      });
-    }
-
-    // Create all formations and store their world positions
-    formations.forEach(cfg => {
-      const formation = this.createFormation(cfg);
-      this.formations.push(formation);
-      this.mesh.add(formation);
-
-      // Store world position for bridge connections
-      const worldPos = new THREE.Vector3();
-      formation.getWorldPosition(worldPos);
-      this.formationPositions.set(cfg.id, formation.position.clone());
+      this.formations.push(volcano);
+      this.mesh.add(volcano);
+      this.formationPositions.set(config.name, volcano.position.clone());
     });
   }
 
@@ -1363,6 +1304,264 @@ export class VolcanicIslandsSystem implements PlanetLayer {
     const smoke = new THREE.Points(geometry, material);
     this.smokeMaterials.push(material);
     parent.add(smoke);
+  }
+
+
+  // ==================== NEW VOLCANIC CONE SYSTEM ====================
+
+  /**
+   * Samples the sphere surface to find positions with highest continental coverage
+   * Uses same FBM noise as volcanic-crust.system.ts for geological accuracy
+   */
+  private findContinentalHotspots(count: number): THREE.Vector3[] {
+    const candidates: Array<{ position: THREE.Vector3; theta: number; phi: number; score: number }> = [];
+    const samplesPerAxis = 16; // 16x16 = 256 sample points on sphere
+
+    // Sample sphere surface using spherical coordinates
+    for (let thetaStep = 0; thetaStep < samplesPerAxis; thetaStep++) {
+      for (let phiStep = 0; phiStep < samplesPerAxis; phiStep++) {
+        const theta = (thetaStep / samplesPerAxis) * Math.PI * 2;
+        const phi = (phiStep / samplesPerAxis) * Math.PI;
+
+        // Convert to Cartesian coordinates on sphere surface
+        const x = this.coreRadius * Math.sin(phi) * Math.cos(theta);
+        const y = this.coreRadius * Math.cos(phi);
+        const z = this.coreRadius * Math.sin(phi) * Math.sin(theta);
+
+        const worldPos = new THREE.Vector3(x, y, z);
+
+        // Sample continental noise at this position (same as crust shader)
+        const continentScore = this.sampleContinentNoise(worldPos);
+
+        candidates.push({
+          position: worldPos,
+          theta,
+          phi,
+          score: continentScore,
+        });
+      }
+    }
+
+    // Sort by continental coverage (highest first)
+    candidates.sort((a, b) => b.score - a.score);
+
+    // Select top N positions, ensuring they're not too close to each other
+    const selected: typeof candidates = [];
+    const minDistance = this.coreRadius * 1.5; // Minimum separation
+
+    for (const candidate of candidates) {
+      if (selected.length >= count) break;
+
+      // Check distance from already selected positions
+      const tooClose = selected.some(s =>
+        s.position.distanceTo(candidate.position) < minDistance
+      );
+
+      if (!tooClose) {
+        selected.push(candidate);
+      }
+    }
+
+    return selected.map(s => s.position);
+  }
+
+  /**
+   * Replicates the FBM (Fractal Brownian Motion) noise from volcanic-crust.system.ts
+   * to identify continental centers
+   */
+  private sampleContinentNoise(worldPos: THREE.Vector3): number {
+    const continentScale = 1.8;
+
+    // Normalize position for spherical sampling (same as shader)
+    const spherePos = worldPos.clone().normalize().multiplyScalar(continentScale);
+
+    // FBM with 5 octaves (matching shader)
+    let value = 0.0;
+    let amplitude = 0.5;
+    let frequency = 1.0;
+
+    // Rotation matrix for variation (matching shader rotation)
+    const cos877 = Math.cos(0.877);
+    const sin479 = Math.sin(0.479);
+
+    for (let i = 0; i < 5; i++) {
+      value += amplitude * this.noise3D(
+        spherePos.x * frequency,
+        spherePos.y * frequency,
+        spherePos.z * frequency
+      );
+
+      // Apply rotation (matching shader)
+      const newX = cos877 * spherePos.x + sin479 * spherePos.y;
+      const newY = -sin479 * spherePos.x + cos877 * spherePos.y;
+      spherePos.set(newX, newY, spherePos.z);
+      spherePos.multiplyScalar(2.02);
+
+      amplitude *= 0.5;
+      frequency *= 2.0;
+    }
+
+    // Add larger-scale variation (matching shader)
+    const spherePosLarge = worldPos.clone().normalize().multiplyScalar(continentScale * 0.5);
+    const largeScale = this.fbmNoise(spherePosLarge, 5) * 0.3;
+    value += largeScale;
+
+    return value;
+  }
+
+  /**
+   * Helper: Generic FBM noise function
+   */
+  private fbmNoise(pos: THREE.Vector3, octaves: number): number {
+    let value = 0.0;
+    let amplitude = 0.5;
+    let frequency = 1.0;
+
+    for (let i = 0; i < octaves; i++) {
+      value += amplitude * this.noise3D(pos.x * frequency, pos.y * frequency, pos.z * frequency);
+      amplitude *= 0.5;
+      frequency *= 2.0;
+    }
+
+    return value;
+  }
+
+  /**
+   * Creates a realistic organic volcanic cone (NOT geometric spikes)
+   */
+  private createRealisticVolcano(config: {
+    id: string;
+    position: THREE.Vector3;
+    baseRadius: number;
+    height: number;
+    hasCrater: boolean;
+    hasCity: boolean;
+    cityType?: 'capital' | 'industrial' | 'residential';
+  }): THREE.Group {
+    const group = new THREE.Group();
+    group.position.copy(config.position);
+    group.lookAt(0, 0, 0);
+    group.rotateX(Math.PI / 2);
+
+    group.userData = {
+      config: {
+        id: config.id,
+        baseRadius: config.baseRadius,
+        peakHeight: config.height,
+        hasCity: config.hasCity,
+        cityType: config.cityType,
+        isMassive: true,
+      }
+    };
+
+    // Main volcanic cone - organic shape
+    const coneGeometry = new THREE.ConeGeometry(
+      config.baseRadius,           // Base radius
+      config.height,                // Height
+      32,                           // Radial segments
+      16,                           // Height segments (increased for smoother taper) for terracing
+      false                         // Not open-ended
+    );
+
+    // Add subtle noise to vertices for organic irregularity
+    const positions = coneGeometry.attributes['position'].array as Float32Array;
+    for (let i = 0; i < positions.length; i += 3) {
+      const x = positions[i];
+      const y = positions[i + 1];
+      const z = positions[i + 2];
+
+      // Calculate distance from center for this vertex
+      const radius = Math.sqrt(x * x + z * z);
+      const heightFactor = (y + config.height * 0.5) / config.height; // 0 at base, 1 at top
+
+      // Apply subtle noise (stronger at mid-height, subtle at base/top)
+      const noiseFactor = Math.sin(heightFactor * Math.PI) * 0.1; // Peaks at mid-height
+      const noise = this.noise3D(x * 1.5, y * 1.5, z * 1.5) * noiseFactor * config.baseRadius; // Adjusted scale for larger baseRadius
+
+      if (radius > 0.001) { // Avoid center vertices
+        const angle = Math.atan2(z, x);
+        positions[i] = Math.cos(angle) * (radius + noise);
+        positions[i + 2] = Math.sin(angle) * (radius + noise);
+      }
+
+      // Add vertical irregularity (subtle lava flow terraces)
+      positions[i + 1] += this.noise3D(x * 2, y, z * 2) * 0.05 * config.height; // Gentler vertical variation
+    }
+
+    coneGeometry.computeVertexNormals();
+    const volcano = new THREE.Mesh(coneGeometry, this.materials.rock!);
+    volcano.position.y = config.height * 0.5; // Cone base starts at y=0
+    group.add(volcano);
+
+    // Crater at summit (if specified)
+    if (config.hasCrater) {
+      this.addVolcanoCrater(group, config);
+    }
+
+    // Lava glow and effects
+    this.addVolcanicGlow(group, {
+      baseRadius: config.baseRadius,
+      peakHeight: config.height,
+      isMassive: true,
+    } as any);
+
+    // City (if specified)
+    if (config.hasCity && config.cityType) {
+      this.createCity(group, group.userData['config']);
+    }
+
+    return group;
+  }
+
+  /**
+   * Adds a realistic crater to the volcano summit
+   */
+  private addVolcanoCrater(parent: THREE.Group, config: {
+    baseRadius: number;
+    height: number;
+  }): void {
+    const craterRadius = config.baseRadius * 0.12; // Smaller crater for better proportions
+    const craterDepth = config.height * 0.08;
+
+    // Crater rim (torus)
+    const torusGeometry = new THREE.TorusGeometry(
+      craterRadius,        // Radius
+      craterRadius * 0.2,  // Tube radius
+      16,                  // Radial segments
+      32                   // Tubular segments
+    );
+
+    // Add irregularity to crater rim
+    const torusPositions = torusGeometry.attributes['position'].array as Float32Array;
+    for (let i = 0; i < torusPositions.length; i += 3) {
+      const noise = this.noise3D(
+        torusPositions[i] * 5,
+        torusPositions[i + 1] * 5,
+        torusPositions[i + 2] * 5
+      );
+      const scale = 1 + noise * 0.15;
+      torusPositions[i] *= scale;
+      torusPositions[i + 1] *= scale;
+      torusPositions[i + 2] *= scale;
+    }
+    torusGeometry.computeVertexNormals();
+
+    const craterRim = new THREE.Mesh(torusGeometry, this.materials.darkRock!);
+    craterRim.position.y = config.height - craterDepth / 2;
+    craterRim.rotation.x = Math.PI / 2;
+    parent.add(craterRim);
+
+    // Magma pool inside crater (circle)
+    const poolGeometry = new THREE.CircleGeometry(craterRadius * 0.7, 32);
+    const magmaPool = new THREE.Mesh(poolGeometry, this.materials.lava!);
+    magmaPool.position.y = config.height - craterDepth;
+    magmaPool.rotation.x = -Math.PI / 2;
+    parent.add(magmaPool);
+
+    // Crater glow light
+    const craterLight = new THREE.PointLight(0xff4400, 2.0, config.height * 0.5);
+    craterLight.position.y = config.height - craterDepth / 2;
+    parent.add(craterLight);
   }
 
   // ==================== UPDATE & DISPOSE ====================
