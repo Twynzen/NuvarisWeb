@@ -4,7 +4,11 @@
       "Bash(find:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(perl -i -pe:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
