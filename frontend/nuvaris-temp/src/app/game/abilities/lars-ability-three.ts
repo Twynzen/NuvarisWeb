@@ -317,9 +317,9 @@ export class LarsAbilityThree implements CharacterAbilityThree {
 
     // ========== MENTAL ATTACK EFFECT (sin proyectil) ==========
     /**
-     * Crea efecto visual de ataque mental
+     * Crea efecto visual de ataque mental SIMPLIFICADO
      * - Linea de "mirada" desde Lars al enemigo
-     * - Aura purpura en el enemigo objetivo
+     * - Particulas de energia orbitando al enemigo (no barril)
      */
     public createMentalAttackEffect(
         playerPos: THREE.Vector3,
@@ -355,73 +355,86 @@ export class LarsAbilityThree implements CharacterAbilityThree {
         const mentalLine = new THREE.Line(lineGeometry, lineMaterial);
         scene.add(mentalLine);
 
-        // 2. Aura en el enemigo (circulo purpura pulsante)
-        const auraGeometry = new THREE.RingGeometry(0.8, 1.2, 16);
-        const auraMaterial = new THREE.MeshBasicMaterial({
-            color: 0x6600cc,
-            transparent: true,
-            opacity: 0.6,
-            side: THREE.DoubleSide
-        });
+        // 2. PARTICULAS DE ENERGIA orbitando al enemigo (mas organico)
+        const particles: THREE.Mesh[] = [];
+        const particleMaterials: THREE.MeshBasicMaterial[] = [];
+        const particleCount = 6;
+        const orbitRadius = 1.0;
 
-        const aura = new THREE.Mesh(auraGeometry, auraMaterial);
-        aura.rotation.x = -Math.PI / 2;
-        aura.position.copy(enemyPos);
-        aura.position.y = 0.2;
-        scene.add(aura);
+        const particleGeometry = new THREE.SphereGeometry(0.15, 8, 8);
 
-        // 3. Efecto de "ojos" en el enemigo (dos puntos brillantes)
-        const eyeGeometry = new THREE.CircleGeometry(0.15, 8);
-        const eyeMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff00ff, // Magenta brillante
-            transparent: true,
-            opacity: 1
-        });
+        for (let i = 0; i < particleCount; i++) {
+            const particleMaterial = new THREE.MeshBasicMaterial({
+                color: i % 2 === 0 ? 0x9900ff : 0xff00ff, // Alternar purpura/magenta
+                transparent: true,
+                opacity: 0.9
+            });
 
-        const eyeLeft = new THREE.Mesh(eyeGeometry, eyeMaterial.clone());
-        const eyeRight = new THREE.Mesh(eyeGeometry, eyeMaterial.clone());
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
 
-        eyeLeft.position.copy(enemyPos);
-        eyeLeft.position.y += 1.8;
-        eyeLeft.position.x -= 0.2;
+            // Posicion inicial distribuida en circulo
+            const startAngle = (i / particleCount) * Math.PI * 2;
+            const startHeight = 0.5 + (i % 3) * 0.7; // Alturas variadas
 
-        eyeRight.position.copy(enemyPos);
-        eyeRight.position.y += 1.8;
-        eyeRight.position.x += 0.2;
+            (particle as any).orbitAngle = startAngle;
+            (particle as any).orbitHeight = startHeight;
+            (particle as any).orbitSpeed = 0.15 + Math.random() * 0.1;
 
-        scene.add(eyeLeft);
-        scene.add(eyeRight);
+            particle.position.set(
+                enemyPos.x + Math.cos(startAngle) * orbitRadius,
+                startHeight,
+                enemyPos.z + Math.sin(startAngle) * orbitRadius
+            );
 
-        // Animacion de fade out
-        let opacity = 0.8;
+            scene.add(particle);
+            particles.push(particle);
+            particleMaterials.push(particleMaterial);
+        }
+
+        // Animacion (solo linea + esferas, sin glow)
+        let opacity = 1;
         const fadeInterval = setInterval(() => {
-            opacity -= 0.1;
+            opacity -= 0.05;
 
-            lineMaterial.opacity = Math.max(0, opacity);
-            auraMaterial.opacity = Math.max(0, opacity * 0.75);
-            (eyeLeft.material as THREE.MeshBasicMaterial).opacity = Math.max(0, opacity);
-            (eyeRight.material as THREE.MeshBasicMaterial).opacity = Math.max(0, opacity);
+            // Seguir al enemigo
+            const currentEnemyPos = enemy.mesh.position;
 
-            // Pulso del aura
-            const scale = 1 + (0.8 - opacity) * 0.5;
-            aura.scale.set(scale, scale, 1);
+            // Orbitar particulas alrededor del enemigo
+            for (const particle of particles) {
+                const angle = (particle as any).orbitAngle;
+                const height = (particle as any).orbitHeight;
+                const speed = (particle as any).orbitSpeed;
+
+                (particle as any).orbitAngle += speed;
+
+                particle.position.x = currentEnemyPos.x + Math.cos(angle) * orbitRadius;
+                particle.position.z = currentEnemyPos.z + Math.sin(angle) * orbitRadius;
+                particle.position.y = currentEnemyPos.y + height;
+            }
+
+            // Fade
+            lineMaterial.opacity = Math.max(0, opacity * 0.8);
+            for (const mat of particleMaterials) {
+                mat.opacity = Math.max(0, opacity * 0.9);
+            }
 
             if (opacity <= 0) {
                 scene.remove(mentalLine);
-                scene.remove(aura);
-                scene.remove(eyeLeft);
-                scene.remove(eyeRight);
 
                 lineGeometry.dispose();
                 lineMaterial.dispose();
-                auraGeometry.dispose();
-                auraMaterial.dispose();
-                eyeGeometry.dispose();
-                eyeMaterial.dispose();
+
+                for (const particle of particles) {
+                    scene.remove(particle);
+                }
+                for (const mat of particleMaterials) {
+                    mat.dispose();
+                }
+                particleGeometry.dispose();
 
                 clearInterval(fadeInterval);
             }
-        }, 40); // ~25fps para el efecto
+        }, 35); // ~28fps
     }
 
     private createExplosionEffect(position: THREE.Vector3, scene: THREE.Scene, color: number = 0x0066ff): void {

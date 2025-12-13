@@ -1205,7 +1205,7 @@ export class ThreeEngineService implements OnDestroy {
         // Check cooldown
         if (currentTime - this.lastShootTime < this.autoShootInterval) return;
 
-        // ========== ARCADIO: HOZ CURVA (rango corto) ==========
+        // ========== ARCADIO: ATAQUE DE ZONA (sin proyectil) ==========
         if (this.player.usesCurvedProjectile()) {
             // Arcadio solo ataca enemigos CERCANOS (rango 8 unidades)
             const arcadioRange = 8;
@@ -1213,13 +1213,66 @@ export class ThreeEngineService implements OnDestroy {
 
             if (!nearestEnemy) return; // No hay enemigo cerca, NO atacar
 
-            const projectile = this.player.shoot(this.scene, nearestEnemy.mesh.position);
-            if (projectile) {
-                this.projectiles.push(projectile);
-                this.lastShootTime = currentTime;
-                // Play shoot sound
-                this.audioService.playShoot(this.currentCharacterId);
+            // Ataque de zona instantaneo - SIN proyectil
+            this.lastShootTime = currentTime;
+
+            const attackDir = new THREE.Vector3()
+                .subVectors(nearestEnemy.mesh.position, this.player.mesh.position)
+                .normalize();
+
+            // Crear efecto de impacto melee (picos 3D + screen shake)
+            if (this.characterAbility) {
+                const arcadioAbility = this.characterAbility as any;
+                if (arcadioAbility.createMeleeImpactEffect) {
+                    arcadioAbility.createMeleeImpactEffect(
+                        this.player.mesh.position,
+                        attackDir,
+                        this.scene,
+                        arcadioRange,
+                        this.camera // Pasar camara para screen shake
+                    );
+                }
+
+                // Aplicar daño de zona a todos los enemigos en el abanico
+                const angleSpread = Math.PI * 0.8; // 144 grados (mismo que picos)
+                const baseAngle = Math.atan2(attackDir.z, attackDir.x);
+                const damage = arcadioAbility.damage || 40;
+
+                for (const enemy of this.enemies) {
+                    if (enemy.isDead || enemy.isMindControlled) continue;
+
+                    const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
+                    if (dist > arcadioRange) continue;
+
+                    // Verificar si está dentro del abanico
+                    const toEnemy = new THREE.Vector3()
+                        .subVectors(enemy.mesh.position, this.player.mesh.position);
+                    const enemyAngle = Math.atan2(toEnemy.z, toEnemy.x);
+                    let angleDiff = enemyAngle - baseAngle;
+
+                    // Normalizar angulo
+                    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                    if (Math.abs(angleDiff) <= angleSpread / 2) {
+                        enemy.takeDamage(damage, this.scene);
+
+                        // Aplicar knockback
+                        enemy.applyKnockback(this.player.mesh.position, 5);
+
+                        // Lifesteal de Arcadio
+                        if (arcadioAbility.applyLifesteal) {
+                            arcadioAbility.applyLifesteal(damage, 1);
+                        }
+                    }
+                }
             }
+
+            // Arcadio mira hacia el enemigo (sin animacion larga)
+            this.player.faceTarget(nearestEnemy.mesh.position);
+
+            // Play shoot sound
+            this.audioService.playShoot(this.currentCharacterId);
             return;
         }
 
@@ -1253,7 +1306,7 @@ export class ThreeEngineService implements OnDestroy {
             return;
         }
 
-        // ========== YURANY: RANGED ATTACK (rango largo) ==========
+        // ========== YURANY Y OTROS: RANGED ATTACK con proyectil ==========
         const nearestEnemy = this.findNearestEnemy();
         if (!nearestEnemy) return;
 

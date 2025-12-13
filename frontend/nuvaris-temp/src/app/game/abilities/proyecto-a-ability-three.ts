@@ -507,6 +507,281 @@ export class ProyectoAAbilityThree implements CharacterAbilityThree {
         return this.lifestealChance + this.bloodRageBonus;
     }
 
+    // ========== MELEE IMPACT EFFECT (golpe visual con picos 3D) ==========
+    /**
+     * Crea efecto visual de impacto melee EPICO
+     * - PICOS 3D (ConeGeometry) que emergen del suelo
+     * - Screen shake de la camara
+     * - Ondas de choque en el suelo
+     * - Particulas de escombros volando
+     */
+    public createMeleeImpactEffect(
+        playerPos: THREE.Vector3,
+        attackDirection: THREE.Vector3,
+        scene: THREE.Scene,
+        radius: number = 6,
+        camera?: THREE.Camera
+    ): void {
+        // 1. PICOS 3D que emergen del suelo
+        const spikes: THREE.Mesh[] = [];
+        const spikeMaterials: THREE.MeshBasicMaterial[] = [];
+        const spikeCount = 8;
+
+        for (let i = 0; i < spikeCount; i++) {
+            // Distribuir picos en abanico frente al jugador
+            const angleSpread = Math.PI * 0.8; // 144 grados
+            const angle = -angleSpread / 2 + (i / (spikeCount - 1)) * angleSpread;
+
+            // Rotar respecto a la direccion de ataque
+            const baseAngle = Math.atan2(attackDirection.z, attackDirection.x);
+            const finalAngle = baseAngle + angle;
+
+            // Distancia variable del centro
+            const distance = 1.5 + Math.random() * (radius - 2);
+
+            const spikeX = playerPos.x + Math.cos(finalAngle) * distance;
+            const spikeZ = playerPos.z + Math.sin(finalAngle) * distance;
+
+            // Crear pico (cono puntiagudo)
+            const spikeHeight = 1.5 + Math.random() * 1.5;
+            const spikeRadius = 0.3 + Math.random() * 0.2;
+            const spikeGeometry = new THREE.ConeGeometry(spikeRadius, spikeHeight, 6);
+            const spikeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x1a1a1a, // NEGRO
+                transparent: true,
+                opacity: 0.9
+            });
+
+            const spike = new THREE.Mesh(spikeGeometry, spikeMaterial);
+            spike.position.set(spikeX, -spikeHeight / 2, spikeZ); // Empieza bajo tierra
+            spike.rotation.x = (Math.random() - 0.5) * 0.3; // Ligera inclinacion aleatoria
+            spike.rotation.z = (Math.random() - 0.5) * 0.3;
+
+            // Guardar altura objetivo para animacion
+            (spike as any).targetY = spikeHeight / 2;
+            (spike as any).baseHeight = spikeHeight;
+
+            scene.add(spike);
+            spikes.push(spike);
+            spikeMaterials.push(spikeMaterial);
+        }
+
+        // 2. Grietas en el suelo (SOLO en zona del abanico donde salen los picos)
+        const cracks: THREE.Line[] = [];
+        const crackMaterials: THREE.LineBasicMaterial[] = [];
+        const crackCount = 8; // Menos grietas, solo en zona de daño
+        const baseAngle = Math.atan2(attackDirection.z, attackDirection.x);
+        const angleSpread = Math.PI * 0.8; // Mismo abanico que los picos (144 grados)
+
+        for (let i = 0; i < crackCount; i++) {
+            // Grietas solo dentro del abanico de ataque
+            const relativeAngle = -angleSpread / 2 + (i / (crackCount - 1)) * angleSpread;
+            const angle = baseAngle + relativeAngle;
+            const length = radius * 0.8 + Math.random() * radius * 0.4;
+
+            // Crear linea con zigzag
+            const crackPoints: THREE.Vector3[] = [];
+            const segments = 4;
+            for (let j = 0; j <= segments; j++) {
+                const t = j / segments;
+                const dist = t * length;
+                let x = playerPos.x + Math.cos(angle) * dist;
+                let z = playerPos.z + Math.sin(angle) * dist;
+
+                // Zigzag
+                if (j > 0 && j < segments) {
+                    const perpAngle = angle + Math.PI / 2;
+                    const offset = (Math.random() - 0.5) * 0.5;
+                    x += Math.cos(perpAngle) * offset;
+                    z += Math.sin(perpAngle) * offset;
+                }
+
+                crackPoints.push(new THREE.Vector3(x, 0.1, z));
+            }
+
+            const crackGeometry = new THREE.BufferGeometry().setFromPoints(crackPoints);
+            const crackMaterial = new THREE.LineBasicMaterial({
+                color: 0x000000, // NEGRO
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const crack = new THREE.Line(crackGeometry, crackMaterial);
+            scene.add(crack);
+            cracks.push(crack);
+            crackMaterials.push(crackMaterial);
+        }
+
+        // 3. Particulas de escombros volando (SOLO en zona del abanico)
+        const debris: THREE.Mesh[] = [];
+        const debrisGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+
+        for (let i = 0; i < 12; i++) {
+            const debrisMaterial = new THREE.MeshBasicMaterial({
+                color: Math.random() > 0.5 ? 0x1a1a1a : 0x0a0a0a, // NEGRO variado
+                transparent: true,
+                opacity: 1
+            });
+
+            const piece = new THREE.Mesh(debrisGeometry, debrisMaterial);
+
+            // Posicion inicial SOLO en zona del abanico
+            const relativeAngle = -angleSpread / 2 + Math.random() * angleSpread;
+            const spawnAngle = baseAngle + relativeAngle;
+            const spawnDist = 1 + Math.random() * (radius - 1);
+            piece.position.set(
+                playerPos.x + Math.cos(spawnAngle) * spawnDist,
+                0.5,
+                playerPos.z + Math.sin(spawnAngle) * spawnDist
+            );
+
+            // Velocidad de salida (hacia arriba y en direccion del ataque)
+            (piece as any).velocity = new THREE.Vector3(
+                attackDirection.x * 0.2 + (Math.random() - 0.5) * 0.2,
+                0.3 + Math.random() * 0.3,
+                attackDirection.z * 0.2 + (Math.random() - 0.5) * 0.2
+            );
+
+            // Rotacion aleatoria
+            (piece as any).rotSpeed = new THREE.Vector3(
+                Math.random() * 0.3,
+                Math.random() * 0.3,
+                Math.random() * 0.3
+            );
+
+            scene.add(piece);
+            debris.push(piece);
+        }
+
+        // 4. Flash de impacto (adelante, en zona de daño)
+        const flashGeometry = new THREE.CircleGeometry(1.5, 16);
+        const flashMaterial = new THREE.MeshBasicMaterial({
+            color: 0x333333, // Gris oscuro (contraste con negro)
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+        });
+        const flash = new THREE.Mesh(flashGeometry, flashMaterial);
+        flash.rotation.x = -Math.PI / 2;
+        // Posicionar adelante en direccion del ataque
+        flash.position.set(
+            playerPos.x + attackDirection.x * (radius * 0.4),
+            0.2,
+            playerPos.z + attackDirection.z * (radius * 0.4)
+        );
+        scene.add(flash);
+
+        // 5. SCREEN SHAKE - guardar referencia a la camara si existe
+        let shakeIntensity = 0.3;
+        let originalCameraPos: THREE.Vector3 | null = null;
+        if (camera) {
+            originalCameraPos = camera.position.clone();
+        }
+
+        // Animacion
+        let frame = 0;
+        const maxFrames = 25;
+        const animInterval = setInterval(() => {
+            frame++;
+            const progress = frame / maxFrames;
+
+            // Picos emergen del suelo (primeros frames) y luego bajan
+            for (const spike of spikes) {
+                const targetY = (spike as any).targetY;
+                if (progress < 0.4) {
+                    // Subiendo rapido
+                    spike.position.y = -targetY + (targetY * 2) * (progress / 0.4);
+                } else {
+                    // Bajando lento
+                    const downProgress = (progress - 0.4) / 0.6;
+                    spike.position.y = targetY * (1 - downProgress * 0.8);
+                }
+            }
+
+            // Fade de picos
+            for (const mat of spikeMaterials) {
+                if (progress > 0.6) {
+                    mat.opacity = Math.max(0, 0.9 * (1 - (progress - 0.6) / 0.4));
+                }
+            }
+
+            // Fade de grietas
+            for (const mat of crackMaterials) {
+                mat.opacity = Math.max(0, 0.8 * (1 - progress * 0.8));
+            }
+
+            // Escombros caen con gravedad
+            for (const piece of debris) {
+                const vel = (piece as any).velocity;
+                const rotSpeed = (piece as any).rotSpeed;
+
+                piece.position.add(vel);
+                vel.y -= 0.02; // Gravedad
+
+                piece.rotation.x += rotSpeed.x;
+                piece.rotation.y += rotSpeed.y;
+                piece.rotation.z += rotSpeed.z;
+
+                // Fade
+                (piece.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - progress);
+            }
+
+            // Flash expande y desvanece
+            flashMaterial.opacity = Math.max(0, 0.8 - progress * 2);
+            flash.scale.set(1 + progress * 3, 1 + progress * 3, 1);
+
+            // Screen shake (primeros frames)
+            if (camera && originalCameraPos && progress < 0.3) {
+                const shake = shakeIntensity * (1 - progress / 0.3);
+                camera.position.x = originalCameraPos.x + (Math.random() - 0.5) * shake;
+                camera.position.y = originalCameraPos.y + (Math.random() - 0.5) * shake * 0.5;
+                camera.position.z = originalCameraPos.z + (Math.random() - 0.5) * shake;
+            } else if (camera && originalCameraPos) {
+                // Restaurar posicion
+                camera.position.copy(originalCameraPos);
+            }
+
+            if (frame >= maxFrames) {
+                // Restaurar camara
+                if (camera && originalCameraPos) {
+                    camera.position.copy(originalCameraPos);
+                }
+
+                // Limpiar picos
+                for (const spike of spikes) {
+                    scene.remove(spike);
+                    spike.geometry.dispose();
+                }
+                for (const mat of spikeMaterials) {
+                    mat.dispose();
+                }
+
+                // Limpiar grietas
+                for (const crack of cracks) {
+                    scene.remove(crack);
+                    crack.geometry.dispose();
+                }
+                for (const mat of crackMaterials) {
+                    mat.dispose();
+                }
+
+                // Limpiar escombros
+                for (const piece of debris) {
+                    scene.remove(piece);
+                    (piece.material as THREE.MeshBasicMaterial).dispose();
+                }
+                debrisGeometry.dispose();
+
+                // Limpiar flash
+                scene.remove(flash);
+                flashGeometry.dispose();
+                flashMaterial.dispose();
+
+                clearInterval(animInterval);
+            }
+        }, 25); // ~40fps
+    }
+
     // ========== BERSERK VISUAL EFFECTS ==========
 
     private createBerserkReadyEffect(): void {
