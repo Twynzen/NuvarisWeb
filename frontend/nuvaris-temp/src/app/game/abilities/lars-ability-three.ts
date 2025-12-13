@@ -315,6 +315,115 @@ export class LarsAbilityThree implements CharacterAbilityThree {
 
     // ========== VISUAL EFFECTS ==========
 
+    // ========== MENTAL ATTACK EFFECT (sin proyectil) ==========
+    /**
+     * Crea efecto visual de ataque mental
+     * - Linea de "mirada" desde Lars al enemigo
+     * - Aura purpura en el enemigo objetivo
+     */
+    public createMentalAttackEffect(
+        playerPos: THREE.Vector3,
+        enemy: EnemyThree,
+        scene: THREE.Scene
+    ): void {
+        const enemyPos = enemy.mesh.position.clone();
+
+        // 1. Linea de conexion mental (purpura, ondulante)
+        const points: THREE.Vector3[] = [];
+        const segments = 8;
+
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const point = new THREE.Vector3().lerpVectors(playerPos, enemyPos, t);
+            point.y += 1.5; // A altura de ojos
+
+            // Ondulacion sutil en puntos medios
+            if (i > 0 && i < segments) {
+                point.x += (Math.random() - 0.5) * 0.3;
+                point.z += (Math.random() - 0.5) * 0.3;
+            }
+            points.push(point);
+        }
+
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+        const lineMaterial = new THREE.LineBasicMaterial({
+            color: 0x9900ff, // Purpura mental
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const mentalLine = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(mentalLine);
+
+        // 2. Aura en el enemigo (circulo purpura pulsante)
+        const auraGeometry = new THREE.RingGeometry(0.8, 1.2, 16);
+        const auraMaterial = new THREE.MeshBasicMaterial({
+            color: 0x6600cc,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide
+        });
+
+        const aura = new THREE.Mesh(auraGeometry, auraMaterial);
+        aura.rotation.x = -Math.PI / 2;
+        aura.position.copy(enemyPos);
+        aura.position.y = 0.2;
+        scene.add(aura);
+
+        // 3. Efecto de "ojos" en el enemigo (dos puntos brillantes)
+        const eyeGeometry = new THREE.CircleGeometry(0.15, 8);
+        const eyeMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff00ff, // Magenta brillante
+            transparent: true,
+            opacity: 1
+        });
+
+        const eyeLeft = new THREE.Mesh(eyeGeometry, eyeMaterial.clone());
+        const eyeRight = new THREE.Mesh(eyeGeometry, eyeMaterial.clone());
+
+        eyeLeft.position.copy(enemyPos);
+        eyeLeft.position.y += 1.8;
+        eyeLeft.position.x -= 0.2;
+
+        eyeRight.position.copy(enemyPos);
+        eyeRight.position.y += 1.8;
+        eyeRight.position.x += 0.2;
+
+        scene.add(eyeLeft);
+        scene.add(eyeRight);
+
+        // Animacion de fade out
+        let opacity = 0.8;
+        const fadeInterval = setInterval(() => {
+            opacity -= 0.1;
+
+            lineMaterial.opacity = Math.max(0, opacity);
+            auraMaterial.opacity = Math.max(0, opacity * 0.75);
+            (eyeLeft.material as THREE.MeshBasicMaterial).opacity = Math.max(0, opacity);
+            (eyeRight.material as THREE.MeshBasicMaterial).opacity = Math.max(0, opacity);
+
+            // Pulso del aura
+            const scale = 1 + (0.8 - opacity) * 0.5;
+            aura.scale.set(scale, scale, 1);
+
+            if (opacity <= 0) {
+                scene.remove(mentalLine);
+                scene.remove(aura);
+                scene.remove(eyeLeft);
+                scene.remove(eyeRight);
+
+                lineGeometry.dispose();
+                lineMaterial.dispose();
+                auraGeometry.dispose();
+                auraMaterial.dispose();
+                eyeGeometry.dispose();
+                eyeMaterial.dispose();
+
+                clearInterval(fadeInterval);
+            }
+        }, 40); // ~25fps para el efecto
+    }
+
     private createExplosionEffect(position: THREE.Vector3, scene: THREE.Scene, color: number = 0x0066ff): void {
         // Create expanding ring effect
         const ringGeometry = new THREE.RingGeometry(0.5, 1.5, 32);

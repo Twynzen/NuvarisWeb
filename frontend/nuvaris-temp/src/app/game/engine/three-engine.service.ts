@@ -1223,7 +1223,36 @@ export class ThreeEngineService implements OnDestroy {
             return;
         }
 
-        // ========== LARS & YURANY: RANGED ATTACK (rango largo) ==========
+        // ========== LARS: MENTAL ATTACK (sin proyectil) ==========
+        if (this.currentCharacterId === 'lars' && this.characterAbility) {
+            const larsAbility = this.characterAbility as any;
+            const nearestEnemy = this.findNearestEnemy();
+            if (!nearestEnemy) return;
+
+            // Ataque mental instantaneo - sin proyectil
+            this.lastShootTime = currentTime;
+
+            // Crear efecto visual de mirada mental
+            if (larsAbility.createMentalAttackEffect) {
+                larsAbility.createMentalAttackEffect(
+                    this.player.mesh.position,
+                    nearestEnemy,
+                    this.scene
+                );
+            }
+
+            // Aplicar logica de control mental directamente
+            const damage = 10; // Dano base de Lars
+            larsAbility.onProjectileHit(null, nearestEnemy, damage, this.scene, this.enemies);
+
+            // Animacion del jugador mirando al enemigo
+            this.player.shoot(this.scene, nearestEnemy.mesh.position);
+
+            this.audioService.playShoot(this.currentCharacterId);
+            return;
+        }
+
+        // ========== YURANY: RANGED ATTACK (rango largo) ==========
         const nearestEnemy = this.findNearestEnemy();
         if (!nearestEnemy) return;
 
