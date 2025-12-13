@@ -1245,8 +1245,9 @@ export class ThreeEngineService implements OnDestroy {
             const damage = 10; // Dano base de Lars
             larsAbility.onProjectileHit(null, nearestEnemy, damage, this.scene, this.enemies);
 
-            // Animacion del jugador mirando al enemigo
-            this.player.shoot(this.scene, nearestEnemy.mesh.position);
+            // Lars mira hacia el enemigo (sin animacion de 30 frames)
+            // Usa faceTarget en lugar de shoot para evitar lag visual
+            this.player.faceTarget(nearestEnemy.mesh.position);
 
             this.audioService.playShoot(this.currentCharacterId);
             return;

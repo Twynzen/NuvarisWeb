@@ -360,6 +360,36 @@ export class PlayerThree {
         return new ProjectileThree(scene, this.mesh.position.x, this.mesh.position.z, direction, this.characterId);
     }
 
+    // ========== FACE TARGET (for Lars mental attack) ==========
+    /**
+     * Make player face a target position without playing shoot animation
+     * Used for Lars mental attack which has no projectile
+     */
+    faceTarget(targetPosition: THREE.Vector3): void {
+        const direction = new THREE.Vector3()
+            .subVectors(targetPosition, this.mesh.position)
+            .normalize();
+
+        // Update facing direction
+        const absX = Math.abs(direction.x);
+        const absZ = Math.abs(direction.z);
+
+        if (absX >= absZ) {
+            // Horizontal dominant
+            this.facingRight = direction.x >= 0;
+        }
+
+        // Update last move direction for consistency
+        this.lastMoveDir.copy(direction);
+
+        // Play idle animation in facing direction (quick visual feedback)
+        const idleAnim = absZ > absX
+            ? (direction.z < 0 ? 'idle-up' : 'idle-down')
+            : (this.facingRight ? 'idle-right' : 'idle-left');
+
+        this.animator.play(idleAnim, true, 30);
+    }
+
     // ========== MELEE ATTACK (Project A) ==========
 
     /**

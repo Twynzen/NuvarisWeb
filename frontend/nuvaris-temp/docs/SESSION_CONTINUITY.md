@@ -113,12 +113,25 @@ onFrameReached(frameNum, callback)
 
 ---
 
-## COMMITS PENDIENTES
+## ESTADO POST-IMPLEMENTACION
 
-Antes de cerrar sesion, commitear:
-- Este documento
-- ATTACK_FEEL_IMPLEMENTATION_PLAN.md
-- Cualquier codigo de prototipo
+### Commits realizados:
+- `07e13c8` en development: sprites Proyecto Y + assets3D
+- `6780739` en feature/character-attack-feel: prototipo Lars
+
+### ERROR SHOOT VIEJO - CORREGIDO
+~~El prototipo Lars tenia un error visual relacionado con el "shoot viejo".~~
+
+**Solucion implementada (2025-12-13):**
+1. Agregado metodo `faceTarget(targetPosition)` en `player.three.ts:368`
+   - Hace que Lars mire hacia el enemigo
+   - Solo cambia direccion e idle animation
+   - NO ejecuta animacion de 30 frames
+2. Modificado `three-engine.service.ts:1250`
+   - Reemplazado `this.player.shoot()` con `this.player.faceTarget()`
+   - Lars ya no tiene lag de 1 segundo al atacar
+
+**Resultado:** Lars ahora ataca instantaneamente con efecto mental visible
 
 ---
 
