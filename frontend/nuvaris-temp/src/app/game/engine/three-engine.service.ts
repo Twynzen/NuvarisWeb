@@ -1349,109 +1349,18 @@ export class ThreeEngineService implements OnDestroy {
 
     /**
      * Create visual effects while Lars is charging
+     * NOTE: Visual effects disabled - charge animation on player sprite is sufficient
      */
     private createChargeVisualEffects(): void {
-        if (!this.player || !this.scene) return;
-
-        const playerPos = this.player.mesh.position;
-
-        // 1. Charge indicator circle on ground (grows with charge)
-        const circleGeometry = new THREE.RingGeometry(0.5, 0.8, 32);
-        const circleMaterial = new THREE.MeshBasicMaterial({
-            color: 0x9900ff,
-            transparent: true,
-            opacity: 0.5,
-            side: THREE.DoubleSide
-        });
-        this.chargeIndicator = new THREE.Mesh(circleGeometry, circleMaterial);
-        this.chargeIndicator.rotation.x = -Math.PI / 2;
-        this.chargeIndicator.position.set(playerPos.x, 0.1, playerPos.z);
-        this.scene.add(this.chargeIndicator);
-        this.chargeEffects.push(this.chargeIndicator);
-
-        // 2. Orbiting particles
-        const particleGeometry = new THREE.SphereGeometry(0.15, 8, 8);
-        for (let i = 0; i < 6; i++) {
-            const particleMaterial = new THREE.MeshBasicMaterial({
-                color: i % 2 === 0 ? 0x9900ff : 0xff00ff,
-                transparent: true,
-                opacity: 0.8
-            });
-            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-            (particle as any).orbitAngle = (i / 6) * Math.PI * 2;
-            (particle as any).orbitSpeed = 0.08 + Math.random() * 0.04;
-            (particle as any).orbitRadius = 1.5;
-            (particle as any).orbitHeight = 1.0 + (i % 3) * 0.3;
-
-            particle.position.set(
-                playerPos.x + Math.cos((particle as any).orbitAngle) * 1.5,
-                (particle as any).orbitHeight,
-                playerPos.z + Math.sin((particle as any).orbitAngle) * 1.5
-            );
-
-            this.scene.add(particle);
-            this.chargeParticles.push(particle);
-            this.chargeEffects.push(particle);
-        }
-
-        console.log('[LARS CHARGE] Visual effects created');
+        // Visual effects disabled - the charge animation provides enough feedback
     }
 
     /**
      * Update charge visual effects each frame
+     * NOTE: Visual effects disabled - charge animation on player sprite is sufficient
      */
     private updateChargeVisualEffects(): void {
-        if (!this.player || !this.player.isChargingAttack()) return;
-
-        const playerPos = this.player.mesh.position;
-        const chargeLevel = this.player.getChargeLevel();
-
-        // Update charge indicator
-        if (this.chargeIndicator) {
-            this.chargeIndicator.position.set(playerPos.x, 0.1, playerPos.z);
-
-            // Scale based on charge level (1x to 3x)
-            const scale = 1 + chargeLevel * 2;
-            this.chargeIndicator.scale.set(scale, scale, 1);
-
-            // Change color based on charge thresholds
-            const material = this.chargeIndicator.material as THREE.MeshBasicMaterial;
-            if (chargeLevel >= 1.0) {
-                material.color.setHex(0x00ff00); // Green = full charge
-                material.opacity = 0.8;
-            } else if (chargeLevel >= 0.66) {
-                material.color.setHex(0xffff00); // Yellow = level 2
-                material.opacity = 0.7;
-            } else if (chargeLevel >= 0.33) {
-                material.color.setHex(0xff9900); // Orange = level 1
-                material.opacity = 0.6;
-            } else {
-                material.color.setHex(0x9900ff); // Purple = charging
-                material.opacity = 0.5;
-            }
-        }
-
-        // Update orbiting particles
-        for (const particle of this.chargeParticles) {
-            (particle as any).orbitAngle += (particle as any).orbitSpeed;
-
-            // Orbit gets tighter as charge increases
-            const radius = (particle as any).orbitRadius * (1 - chargeLevel * 0.3);
-
-            particle.position.set(
-                playerPos.x + Math.cos((particle as any).orbitAngle) * radius,
-                (particle as any).orbitHeight + Math.sin((particle as any).orbitAngle * 2) * 0.2,
-                playerPos.z + Math.sin((particle as any).orbitAngle) * radius
-            );
-
-            // Particles get brighter with charge
-            const material = particle.material as THREE.MeshBasicMaterial;
-            material.opacity = 0.5 + chargeLevel * 0.5;
-
-            // Scale particles based on charge
-            const particleScale = 1 + chargeLevel * 0.5;
-            particle.scale.set(particleScale, particleScale, particleScale);
-        }
+        // Visual effects disabled
     }
 
     /**
@@ -2641,11 +2550,12 @@ export class ThreeEngineService implements OnDestroy {
                         const sprite = (this.player.mesh.children[0] as THREE.Sprite);
                         if (sprite && sprite.material) {
                             const material = sprite.material as THREE.SpriteMaterial;
-                            const originalColor = material.color.getHex();
+                            // Always restore to white (0xffffff) - the true original color
+                            // This prevents the bug where rapid damage would capture red as "original"
                             material.color.setHex(0xff3333); // Red flash
 
                             setTimeout(() => {
-                                material.color.setHex(originalColor);
+                                material.color.setHex(0xffffff); // Always restore to white
                             }, 100);
                         }
 
