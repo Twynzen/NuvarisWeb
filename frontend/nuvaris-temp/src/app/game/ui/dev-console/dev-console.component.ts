@@ -26,6 +26,9 @@ export class DevConsoleComponent implements AfterViewInit {
     commandHistory: string[] = [];
     historyIndex = -1;
 
+    // Track if game was paused before opening console
+    private wasGamePaused = false;
+
     // Persistence key
     private readonly STORAGE_KEY = 'nuvaris_dev_console_last_cmd';
 
@@ -73,10 +76,18 @@ export class DevConsoleComponent implements AfterViewInit {
     toggleVisibility() {
         this.isVisible = !this.isVisible;
         if (this.isVisible) {
+            // Store current pause state and pause game
+            this.wasGamePaused = this.engineService.gameState.isPaused;
+            this.engineService.pauseGame();
             setTimeout(() => {
                 this.inputField.nativeElement.focus();
                 this.scrollToBottom();
             }, 0);
+        } else {
+            // Only resume if game wasn't already paused before opening
+            if (!this.wasGamePaused) {
+                this.engineService.resumeGame();
+            }
         }
     }
 

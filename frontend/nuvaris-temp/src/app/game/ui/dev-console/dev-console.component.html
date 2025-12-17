@@ -1,21 +1,13 @@
-<div class="dev-console-overlay" *ngIf="isVisible">
-    <div class="console-window">
-        <div class="console-header">
-            <span class="title">Nuvaris Developer Console</span>
-            <span class="close-hint">Press Ctrl+K to close</span>
+<div class="dev-console" [class.visible]="isVisible">
+    <div class="console-body" #scrollContainer>
+        <div class="log-entry" *ngFor="let log of logs" [ngClass]="log.type">
+            <span class="message">{{ log.message }}</span>
         </div>
+    </div>
 
-        <div class="console-body" #scrollContainer>
-            <div class="log-entry" *ngFor="let log of logs" [ngClass]="log.type">
-                <span class="timestamp">[{{ log.timestamp }}]</span>
-                <span class="message">{{ log.message }}</span>
-            </div>
-        </div>
-
-        <div class="console-input-area">
-            <span class="prompt">></span>
-            <input #inputField type="text" [(ngModel)]="inputValue" (keydown.enter)="onSubmit()"
-                placeholder="Type a command..." spellcheck="false" autocomplete="off">
-        </div>
+    <div class="console-input-area">
+        <span class="prompt">]</span>
+        <input #inputField type="text" [(ngModel)]="inputValue" (keydown.enter)="onSubmit()"
+            placeholder="" spellcheck="false" autocomplete="off">
     </div>
 </div>

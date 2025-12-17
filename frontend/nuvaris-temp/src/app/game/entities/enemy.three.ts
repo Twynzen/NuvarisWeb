@@ -573,7 +573,7 @@ export class EnemyThree {
             this.mesh.visible = false;
             // Return XP and score based on enemy type
             const xpValue = this.enemyType === 'worm' ? 10 : 15;
-            const scoreValue = this.enemyType === 'worm' ? 50 : 100;
+            const scoreValue = 1; // +1 por cada enemigo eliminado
             return { xp: xpValue, score: scoreValue };
         } else {
             // Flash effect - use mind control color if controlled, otherwise red

@@ -699,7 +699,19 @@ export class ThreeEngineService implements OnDestroy {
 
         for (let i = 0; i < count; i++) {
             // Use portal system for spawn location
-            const spawnPos = this.portalSystem.getSpawnPoint(type === 'worm' ? 'worm' : 'spider');
+            let spawnPos = this.portalSystem.getSpawnPoint(type === 'worm' ? 'worm' : 'spider');
+
+            // If portal returns origin (no portals), spawn around player with spread
+            if (spawnPos.x === 0 && spawnPos.z === 0) {
+                const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+                const distance = 15 + Math.random() * 10; // 15-25 units from player
+                spawnPos = new THREE.Vector3(
+                    this.player.mesh.position.x + Math.cos(angle) * distance,
+                    0,
+                    this.player.mesh.position.z + Math.sin(angle) * distance
+                );
+            }
+
             const x = spawnPos.x;
             const z = spawnPos.z;
 
@@ -1451,8 +1463,15 @@ export class ThreeEngineService implements OnDestroy {
             this.scene
         );
 
-        // Apply damage
-        targetEnemy.takeDamage(damage, this.scene);
+        // Apply damage and handle rewards if enemy dies
+        const reward = targetEnemy.takeDamage(damage, this.scene);
+        if (reward) {
+            this.addXp(reward.xp);
+            this.gameState.score += reward.score;
+            // Remove dead enemy from array
+            const idx = this.enemies.indexOf(targetEnemy);
+            if (idx > -1) this.enemies.splice(idx, 1);
+        }
 
         // Attempt mind control with calculated chance
         if (!targetEnemy.isDead && !targetEnemy.isMindControlled) {
@@ -1580,7 +1599,12 @@ export class ThreeEngineService implements OnDestroy {
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
                     if (Math.abs(angleDiff) <= angleSpread / 2) {
-                        enemy.takeDamage(damage, this.scene);
+                        const reward = enemy.takeDamage(damage, this.scene);
+                        if (reward) {
+                            this.addXp(reward.xp);
+                            this.gameState.score += reward.score;
+                            // Enemy will be cleaned up in the main update loop
+                        }
 
                         // Aplicar knockback
                         enemy.applyKnockback(this.player.mesh.position, 5);
@@ -2432,6 +2456,12 @@ export class ThreeEngineService implements OnDestroy {
         this.gameState.isLevelingUp = false;
         this.gameState.isPaused = false;
         this.clock.getDelta(); // Reset delta to avoid huge jump
+    }
+
+    public pauseGame() {
+        this.gameState.isPaused = true;
+        this.audioService.stopWalking();
+        this.wasPlayerWalking = false;
     }
 
     public togglePause() {
