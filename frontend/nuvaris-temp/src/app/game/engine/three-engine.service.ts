@@ -103,6 +103,14 @@ export class ThreeEngineService implements OnDestroy {
     // Debug time scale (only in debug mode) - Ctrl+1, Ctrl+2, Ctrl+3
     private timeScale = 1.0; // 1.0 = normal, 0.5 = slow, 0.25 = very slow
 
+    // Camera zoom (mouse wheel)
+    private cameraZoom = 1.0;
+    private cameraZoomMin = 0.5;  // Zoom in max (closer view)
+    private cameraZoomMax = 2.0;  // Zoom out max (farther view)
+    private cameraZoomSpeed = 0.1;
+    private baseCameraY = 25;
+    private baseCameraZ = 20;
+
     // Game State
     public gameState = {
         health: 100,
@@ -170,6 +178,9 @@ export class ThreeEngineService implements OnDestroy {
         window.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         window.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+
+        // Camera zoom with mouse wheel
+        window.addEventListener('wheel', (e) => this.handleCameraZoom(e), { passive: false });
 
         // Touch support for mobile
         window.addEventListener('touchstart', (e) => this.handleTouchStart(e));
@@ -270,6 +281,29 @@ export class ThreeEngineService implements OnDestroy {
         if (this.isMouseDown && this.player?.isChargingAttack()) {
             this.updateChargeIndicatorDirection();
         }
+    }
+
+    /**
+     * Handle camera zoom with mouse wheel
+     * Scroll up = zoom in (closer), scroll down = zoom out (farther)
+     */
+    private handleCameraZoom(event: WheelEvent): void {
+        // Prevent page scroll
+        event.preventDefault();
+
+        // Don't zoom when game is paused or in menu
+        if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
+
+        // Calculate zoom direction: deltaY > 0 = scroll down = zoom out
+        const delta = event.deltaY > 0 ? this.cameraZoomSpeed : -this.cameraZoomSpeed;
+
+        // Apply zoom with limits
+        this.cameraZoom = Math.max(this.cameraZoomMin, Math.min(this.cameraZoomMax, this.cameraZoom + delta));
+
+        // Update camera position based on zoom level
+        // Higher zoom value = camera further away = smaller view
+        this.camera.position.y = this.baseCameraY * this.cameraZoom;
+        this.camera.position.z = this.baseCameraZ * this.cameraZoom;
     }
 
     /**
