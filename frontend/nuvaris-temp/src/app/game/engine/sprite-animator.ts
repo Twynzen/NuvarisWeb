@@ -21,6 +21,11 @@ export class SpriteAnimator {
     private loop = true;
     private spriteMaterial: THREE.SpriteMaterial;
 
+    // Subset loop properties (for hold effect when charge is complete)
+    private useSubset = false;
+    private subsetStart = 0;
+    private subsetEnd = 0;
+
     constructor(material: THREE.SpriteMaterial) {
         this.spriteMaterial = material;
     }
@@ -40,7 +45,12 @@ export class SpriteAnimator {
     }
 
     play(name: string, loop = true, frameRate = 10) {
-        if (this.currentAnimation === name) return;
+        if (this.currentAnimation === name && !this.useSubset) return;
+
+        // Exit subset mode when playing a new animation
+        this.useSubset = false;
+        this.subsetStart = 0;
+        this.subsetEnd = 0;
 
         if (this.animations[name]) {
             this.currentAnimation = name;
@@ -51,6 +61,47 @@ export class SpriteAnimator {
 
             this.spriteMaterial.map = this.animations[name][0];
         }
+    }
+
+    /**
+     * Play a subset of frames in a loop (for hold effect when charge is complete)
+     * @param name Animation name
+     * @param startFrame First frame of subset (0-indexed)
+     * @param endFrame Last frame of subset (0-indexed, inclusive)
+     * @param frameRate Frames per second
+     */
+    playSubsetLoop(name: string, startFrame: number, endFrame: number, frameRate: number = 12): void {
+        if (!this.animations[name]) return;
+
+        const frames = this.animations[name];
+        // Clamp to valid range
+        this.subsetStart = Math.max(0, Math.min(startFrame, frames.length - 1));
+        this.subsetEnd = Math.max(this.subsetStart, Math.min(endFrame, frames.length - 1));
+
+        this.currentAnimation = name;
+        this.currentFrameIndex = this.subsetStart;
+        this.frameDuration = 1 / frameRate;
+        this.timeSinceLastFrame = 0;
+        this.useSubset = true;
+        this.loop = true;
+
+        this.spriteMaterial.map = frames[this.subsetStart];
+    }
+
+    /**
+     * Stop subset loop mode
+     */
+    stopSubsetLoop(): void {
+        this.useSubset = false;
+        this.subsetStart = 0;
+        this.subsetEnd = 0;
+    }
+
+    /**
+     * Check if currently in subset loop mode
+     */
+    isInSubsetLoop(): boolean {
+        return this.useSubset;
     }
 
     update(delta: number) {
@@ -64,11 +115,15 @@ export class SpriteAnimator {
 
             const frames = this.animations[this.currentAnimation];
 
-            if (this.currentFrameIndex >= frames.length) {
+            // Determine loop boundaries based on subset mode
+            const maxFrame = this.useSubset ? this.subsetEnd : frames.length - 1;
+            const minFrame = this.useSubset ? this.subsetStart : 0;
+
+            if (this.currentFrameIndex > maxFrame) {
                 if (this.loop) {
-                    this.currentFrameIndex = 0;
+                    this.currentFrameIndex = minFrame;
                 } else {
-                    this.currentFrameIndex = frames.length - 1;
+                    this.currentFrameIndex = maxFrame;
                     // Animation finished
                 }
             }

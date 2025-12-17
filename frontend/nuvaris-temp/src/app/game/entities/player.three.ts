@@ -49,6 +49,11 @@ export class PlayerThree {
         full: 1.0      // 1.5s - 100% guaranteed
     };
 
+    // Hold loop state (loop final frames when charge is complete)
+    private inHoldLoop = false;
+    private readonly holdFrameStart = 24; // Frame 25 (0-indexed) - sphere fully visible
+    private readonly holdFrameEnd = 29;   // Frame 30 (0-indexed) - max energy
+
     // Debug mode - set to true to see flip/animation logs
     private DEBUG_FLIP = false;
 
@@ -611,7 +616,18 @@ export class PlayerThree {
         // Only switch animation if direction changed
         if (newChargeAnim !== this.currentChargeAnim) {
             this.currentChargeAnim = newChargeAnim;
-            this.animator.play(newChargeAnim);
+
+            // If we're in hold loop, apply it to the new animation
+            if (this.inHoldLoop) {
+                this.animator.playSubsetLoop(
+                    newChargeAnim,
+                    this.holdFrameStart,
+                    this.holdFrameEnd,
+                    12
+                );
+            } else {
+                this.animator.play(newChargeAnim);
+            }
             console.log(`[LARS] Charge animation switched to: ${newChargeAnim}`);
         }
     }
@@ -625,6 +641,18 @@ export class PlayerThree {
 
         const elapsed = (Date.now() - this.chargeStartTime) / 1000;
         this.chargeLevel = Math.min(elapsed / this.maxChargeTime, 1.0);
+
+        // Activate hold loop when charge is complete (100%) - loop final frames showing sphere
+        if (this.chargeLevel >= 1.0 && !this.inHoldLoop) {
+            this.animator.playSubsetLoop(
+                this.currentChargeAnim,
+                this.holdFrameStart,
+                this.holdFrameEnd,
+                12 // 12fps for smooth hold loop
+            );
+            this.inHoldLoop = true;
+            console.log('[LARS] Hold loop activated - ready to fire');
+        }
 
         return this.chargeLevel;
     }
@@ -641,6 +669,10 @@ export class PlayerThree {
         const finalChargeLevel = this.chargeLevel;
         this.isCharging = false;
         this.chargeLevel = 0;
+
+        // Reset hold loop state
+        this.inHoldLoop = false;
+        this.animator.stopSubsetLoop();
 
         // Get direction to target
         const direction = this.getDirection8ToTarget(targetPosition);
@@ -681,6 +713,10 @@ export class PlayerThree {
 
         this.isCharging = false;
         this.chargeLevel = 0;
+
+        // Reset hold loop state
+        this.inHoldLoop = false;
+        this.animator.stopSubsetLoop();
 
         // Return to idle
         this.animator.play('idle', true, 30);
