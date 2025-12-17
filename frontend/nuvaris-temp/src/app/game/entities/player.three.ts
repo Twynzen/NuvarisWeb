@@ -250,7 +250,8 @@ export class PlayerThree {
             });
         }
 
-        // === CHARGE ANIMATION (1 direction, used for all) ===
+        // === CHARGE ANIMATIONS (directional) ===
+        // Default charge (front/down facing)
         this.animator.loadAnimation({
             name: 'charge',
             texturePath: `assets/${folder}/charge`,
@@ -261,7 +262,18 @@ export class PlayerThree {
             loop: true
         });
 
-        console.log('[LARS] Loaded 8-directional movement + 8-directional attack + charge animations');
+        // Charge facing up (back view)
+        this.animator.loadAnimation({
+            name: 'charge-up',
+            texturePath: `assets/${folder}/charge-up`,
+            prefix: `${prefix}charge-up-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        console.log('[LARS] Loaded 8-directional movement + 8-directional attack + directional charge animations');
     }
 
     /**
@@ -561,6 +573,8 @@ export class PlayerThree {
      * Start charging attack (called on mouse down / touch start)
      * Only works for Lars
      */
+    private currentChargeAnim: 'charge' | 'charge-up' = 'charge';
+
     public startCharge(): boolean {
         if (this.characterId !== 'lars') return false;
         if (this.isCharging || this.isAttacking || this.isDead) return false;
@@ -568,12 +582,38 @@ export class PlayerThree {
         this.isCharging = true;
         this.chargeStartTime = Date.now();
         this.chargeLevel = 0;
+        this.currentChargeAnim = 'charge';
 
-        // Play charge animation (loops)
-        this.animator.play('charge', true, 30);
+        // Play default charge animation (loops)
+        this.animator.play('charge');
 
         console.log('[LARS] Charge started');
         return true;
+    }
+
+    /**
+     * Update charge animation based on target direction
+     * Call this while charging to update animation based on mouse/touch position
+     */
+    public updateChargeDirection(targetPosition: THREE.Vector3): void {
+        if (!this.isCharging) return;
+
+        const direction = this.getDirection8ToTarget(targetPosition);
+
+        // Determine which charge animation to use
+        let newChargeAnim: 'charge' | 'charge-up' = 'charge';
+
+        // Use charge-up for up, up-left, up-right directions
+        if (direction === 'up' || direction === 'up-left' || direction === 'up-right') {
+            newChargeAnim = 'charge-up';
+        }
+
+        // Only switch animation if direction changed
+        if (newChargeAnim !== this.currentChargeAnim) {
+            this.currentChargeAnim = newChargeAnim;
+            this.animator.play(newChargeAnim);
+            console.log(`[LARS] Charge animation switched to: ${newChargeAnim}`);
+        }
     }
 
     /**

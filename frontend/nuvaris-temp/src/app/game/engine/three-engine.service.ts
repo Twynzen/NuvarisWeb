@@ -1424,8 +1424,12 @@ export class ThreeEngineService implements OnDestroy {
      * Update charge indicator to point towards mouse position
      */
     private updateChargeIndicatorDirection(): void {
-        // Direction line could be added here for aiming preview
-        // For now, the visual effects follow the player
+        // Update player charge animation based on mouse direction
+        if (this.player && this.mousePosition) {
+            const worldPos = this.screenToWorld(this.mousePosition.x, this.mousePosition.y);
+            this.player.updateChargeDirection(worldPos);
+        }
+        // Update visual effects
         this.updateChargeVisualEffects();
     }
 
