@@ -2,8 +2,7 @@ import { Injectable, ElementRef, NgZone, OnDestroy, Inject } from '@angular/core
 import * as THREE from 'three';
 import { PlayerThree } from '../entities/player.three';
 import { MapGenerator } from '../world/map-generator';
-import { EnemyThree } from '../entities/enemy.three';
-import { XPOrb } from '../entities/xp-orb.three';
+import { EnemyThree, EnemyDeathReward } from '../entities/enemy.three';
 import { ProjectileThree } from '../entities/projectile.three';
 import { DebugVisualizer } from './debug-visualizer';
 import { PortalSystem, MapPortalData } from '../world/portal-system';
@@ -39,7 +38,6 @@ export class ThreeEngineService implements OnDestroy {
     // Game Entities
     private player!: PlayerThree;
     private enemies: EnemyThree[] = [];
-    private xpOrbs: XPOrb[] = [];
     private projectiles: ProjectileThree[] = [];
     private damageNumbers: DamageNumber[] = [];
     private lastSpawnTime = 0;
@@ -1426,25 +1424,23 @@ export class ThreeEngineService implements OnDestroy {
         // Calculate mind control chance based on charge level
         let mindControlChance: number;
         let damage: number;
-        let guaranteedControl = false;
 
         if (chargeLevel >= 1.0) {
-            // Full charge = 100% guaranteed mind control
-            mindControlChance = 1.0;
+            // Full charge = 40% max mind control chance
+            mindControlChance = 0.40;
             damage = 50;
-            guaranteedControl = true;
-            console.log('[LARS CHARGE] FULL CHARGE! Guaranteed mind control!');
+            console.log('[LARS CHARGE] FULL CHARGE! 40% mind control chance');
         } else if (chargeLevel >= 0.66) {
-            // Level 2 = 70% chance
-            mindControlChance = 0.70;
+            // Level 2 = 25% chance
+            mindControlChance = 0.25;
             damage = 35;
         } else if (chargeLevel >= 0.33) {
-            // Level 1 = 35% chance
-            mindControlChance = 0.35;
+            // Level 1 = 15% chance
+            mindControlChance = 0.15;
             damage = 25;
         } else {
-            // Quick tap = base 10% chance
-            mindControlChance = larsAbility.controlChance;
+            // Quick tap = 5% chance
+            mindControlChance = 0.05;
             damage = 15;
         }
 
@@ -1460,7 +1456,7 @@ export class ThreeEngineService implements OnDestroy {
 
         // Attempt mind control with calculated chance
         if (!targetEnemy.isDead && !targetEnemy.isMindControlled) {
-            if (guaranteedControl || Math.random() < mindControlChance) {
+            if (Math.random() < mindControlChance) {
                 const duration = 10 * larsAbility.minionDurationMult;
                 targetEnemy.mindControl(duration, larsAbility.minionHealthMult, larsAbility.minionDamageMult);
 
@@ -2327,9 +2323,11 @@ export class ThreeEngineService implements OnDestroy {
                             finalDamage *= projectAAbility.getDamageMultiplier();
                         }
 
-                        const orb = enemy.takeDamage(finalDamage, this.scene);
-                        if (orb) {
-                            this.xpOrbs.push(orb);
+                        const reward = enemy.takeDamage(finalDamage, this.scene);
+                        if (reward) {
+                            // Add XP and score directly (no orbs)
+                            this.addXp(reward.xp);
+                            this.gameState.score += reward.score;
                             this.enemies.splice(j, 1);
                             // Play enemy death sound
                             this.audioService.playEnemyDeath(enemyType);
@@ -2368,16 +2366,6 @@ export class ThreeEngineService implements OnDestroy {
                             break; // Projectile hit something, stop checking other enemies
                         }
                     }
-                }
-            }
-
-            // Update XP Orbs
-            for (let i = this.xpOrbs.length - 1; i >= 0; i--) {
-                const orb = this.xpOrbs[i];
-                const collected = orb.update(delta, this.player);
-                if (collected) {
-                    this.addXp(orb.value);
-                    this.xpOrbs.splice(i, 1);
                 }
             }
 
@@ -2691,11 +2679,6 @@ export class ThreeEngineService implements OnDestroy {
         });
         this.projectiles = [];
 
-        this.xpOrbs.forEach(orb => {
-            this.scene.remove(orb.mesh);
-        });
-        this.xpOrbs = [];
-
         this.damageNumbers.forEach(num => {
             num.destroy(this.scene);
         });
@@ -2751,11 +2734,6 @@ export class ThreeEngineService implements OnDestroy {
             this.scene.remove(proj.mesh);
         });
         this.projectiles = [];
-
-        this.xpOrbs.forEach(orb => {
-            this.scene.remove(orb.mesh);
-        });
-        this.xpOrbs = [];
 
         this.damageNumbers.forEach(num => {
             num.destroy(this.scene);

@@ -1,7 +1,12 @@
 import * as THREE from 'three';
 import { PlayerThree } from './player.three';
 import { SpriteAnimator } from '../engine/sprite-animator';
-import { XPOrb } from './xp-orb.three';
+
+// Return type when enemy dies - XP and score to award
+export interface EnemyDeathReward {
+    xp: number;
+    score: number;
+}
 
 export class EnemyThree {
     public mesh: THREE.Group;
@@ -557,7 +562,7 @@ export class EnemyThree {
         this.hasDealtDamageThisDash = true;
     }
 
-    takeDamage(amount: number, scene: THREE.Scene): XPOrb | null {
+    takeDamage(amount: number, scene: THREE.Scene): EnemyDeathReward | null {
         this.health -= amount;
 
         // Mostrar número de daño flotante en BLANCO encima del enemigo
@@ -566,7 +571,10 @@ export class EnemyThree {
         if (this.health <= 0) {
             this.isDead = true;
             this.mesh.visible = false;
-            return new XPOrb(scene, this.mesh.position.x, this.mesh.position.z, 20);
+            // Return XP and score based on enemy type
+            const xpValue = this.enemyType === 'worm' ? 10 : 15;
+            const scoreValue = this.enemyType === 'worm' ? 50 : 100;
+            return { xp: xpValue, score: scoreValue };
         } else {
             // Flash effect - use mind control color if controlled, otherwise red
             const flashColor = this.isMindControlled ? 0x00ffff : 0xff0000;
