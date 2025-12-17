@@ -38,6 +38,17 @@ export class PlayerThree {
     private lastAttackTime = 0;
     private attackCooldown = 0.3; // 300ms between attacks
 
+    // ========== LARS CHARGE ATTACK SYSTEM ==========
+    private isCharging = false;
+    private chargeStartTime = 0;
+    private chargeLevel = 0; // 0-1 representing charge progress
+    private maxChargeTime = 1.5; // Seconds to reach full charge
+    private chargeThresholds = {
+        level1: 0.33,  // 0.5s - 35% mind control
+        level2: 0.66,  // 1.0s - 70% mind control
+        full: 1.0      // 1.5s - 100% guaranteed
+    };
+
     // Debug mode - set to true to see flip/animation logs
     private DEBUG_FLIP = false;
 
@@ -239,7 +250,18 @@ export class PlayerThree {
             });
         }
 
-        console.log('[LARS] Loaded 8-directional movement + 8-directional attack animations');
+        // === CHARGE ANIMATION (1 direction, used for all) ===
+        this.animator.loadAnimation({
+            name: 'charge',
+            texturePath: `assets/${folder}/charge`,
+            prefix: `${prefix}charge-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        console.log('[LARS] Loaded 8-directional movement + 8-directional attack + charge animations');
     }
 
     /**
@@ -372,12 +394,17 @@ export class PlayerThree {
         }
 
         // Animation State Machine
-        // Priority: Attack > Melee/Shooting > Movement > Idle
+        // Priority: Attack > Charging > Melee/Shooting > Movement > Idle
         let animationPlayed = '';
 
         if (this.isAttacking) {
             // Attack animation is handled in playAttackAnimation() - don't override
             animationPlayed = 'attacking';
+        } else if (this.isCharging) {
+            // Charge animation is handled in startCharge() - don't override
+            // Update charge level each frame
+            this.updateCharge();
+            animationPlayed = 'charging';
         } else if (this.isMeleeAttacking) {
             // Melee animation is handled in meleeAttack() - don't override it
             animationPlayed = 'melee';
@@ -526,6 +553,127 @@ export class PlayerThree {
      */
     public isPlayingAttack(): boolean {
         return this.isAttacking;
+    }
+
+    // ========== LARS CHARGE ATTACK METHODS ==========
+
+    /**
+     * Start charging attack (called on mouse down / touch start)
+     * Only works for Lars
+     */
+    public startCharge(): boolean {
+        if (this.characterId !== 'lars') return false;
+        if (this.isCharging || this.isAttacking || this.isDead) return false;
+
+        this.isCharging = true;
+        this.chargeStartTime = Date.now();
+        this.chargeLevel = 0;
+
+        // Play charge animation (loops)
+        this.animator.play('charge', true, 30);
+
+        console.log('[LARS] Charge started');
+        return true;
+    }
+
+    /**
+     * Update charge level (called every frame while charging)
+     * Returns current charge level 0-1
+     */
+    public updateCharge(): number {
+        if (!this.isCharging) return 0;
+
+        const elapsed = (Date.now() - this.chargeStartTime) / 1000;
+        this.chargeLevel = Math.min(elapsed / this.maxChargeTime, 1.0);
+
+        return this.chargeLevel;
+    }
+
+    /**
+     * Release charge and execute attack (called on mouse up / touch end)
+     * @param targetPosition Position to attack towards
+     * @returns Object with charge level and direction for the engine to process
+     */
+    public releaseCharge(targetPosition: THREE.Vector3): { chargeLevel: number; direction: Direction8 } | null {
+        if (!this.isCharging) return null;
+        if (this.characterId !== 'lars') return null;
+
+        const finalChargeLevel = this.chargeLevel;
+        this.isCharging = false;
+        this.chargeLevel = 0;
+
+        // Get direction to target
+        const direction = this.getDirection8ToTarget(targetPosition);
+        this.lastDirection8 = direction;
+
+        // Update facing based on direction
+        if (direction.includes('right')) {
+            this.facingRight = true;
+        } else if (direction.includes('left')) {
+            this.facingRight = false;
+        }
+
+        // Play attack animation in the correct direction
+        this.isAttacking = true;
+        this.lastAttackTime = Date.now();
+
+        const attackAnim = `attack-${direction}`;
+        this.animator.play(attackAnim, false, 30);
+
+        console.log(`[LARS] Charge released! Level: ${(finalChargeLevel * 100).toFixed(0)}%, Direction: ${direction}`);
+
+        // Reset attacking state after animation completes
+        setTimeout(() => {
+            this.isAttacking = false;
+        }, this.larsAttackDuration);
+
+        return {
+            chargeLevel: finalChargeLevel,
+            direction: direction
+        };
+    }
+
+    /**
+     * Cancel charge without attacking (e.g., if player gets hit)
+     */
+    public cancelCharge(): void {
+        if (!this.isCharging) return;
+
+        this.isCharging = false;
+        this.chargeLevel = 0;
+
+        // Return to idle
+        this.animator.play('idle', true, 30);
+
+        console.log('[LARS] Charge cancelled');
+    }
+
+    /**
+     * Check if Lars is currently charging
+     */
+    public isChargingAttack(): boolean {
+        return this.isCharging;
+    }
+
+    /**
+     * Get current charge level (0-1)
+     */
+    public getChargeLevel(): number {
+        return this.chargeLevel;
+    }
+
+    /**
+     * Get charge thresholds for UI/effects
+     */
+    public getChargeThresholds(): { level1: number; level2: number; full: number } {
+        return { ...this.chargeThresholds };
+    }
+
+    /**
+     * Check if charge is at a specific threshold
+     */
+    public isChargeAtThreshold(threshold: 'level1' | 'level2' | 'full'): boolean {
+        return this.chargeLevel >= this.chargeThresholds[threshold];
     }
 
     /**

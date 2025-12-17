@@ -76,6 +76,13 @@ export class ThreeEngineService implements OnDestroy {
     private autoShootInterval = 1.1; // seconds between shots (30 frames @ 30 FPS = 1.0s + 0.1s buffer)
     private autoShootRange = 20; // max range to detect enemies
 
+    // ========== LARS CHARGE ATTACK SYSTEM ==========
+    private isMouseDown = false;
+    private mousePosition = { x: 0, y: 0 };
+    private chargeEffects: THREE.Object3D[] = []; // Visual effects during charge
+    private chargeIndicator: THREE.Mesh | null = null;
+    private chargeParticles: THREE.Mesh[] = [];
+
     // Enemy damage configuration
     private enemyDamage = 10; // damage per second when touching enemy
 
@@ -158,6 +165,136 @@ export class ThreeEngineService implements OnDestroy {
             // NOTE: Ctrl+D disabled - debug mode now controlled via Ctrl+K console 'debug toggle' command
         });
         window.addEventListener('keyup', (e) => this.keys[e.key.toLowerCase()] = false);
+
+        // ========== LARS CHARGE ATTACK - Mouse/Touch Input ==========
+        window.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        window.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+
+        // Touch support for mobile
+        window.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+        window.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+        window.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+    }
+
+    // ========== MOUSE/TOUCH HANDLERS FOR LARS CHARGE ==========
+
+    private handleMouseDown(e: MouseEvent): void {
+        // Only left click, and only for Lars
+        if (e.button !== 0) return;
+        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
+
+        this.isMouseDown = true;
+        this.mousePosition = { x: e.clientX, y: e.clientY };
+
+        // Start charging
+        if (this.player.startCharge()) {
+            this.createChargeVisualEffects();
+        }
+    }
+
+    private handleMouseUp(e: MouseEvent): void {
+        if (e.button !== 0) return;
+        if (!this.isMouseDown) return;
+
+        this.isMouseDown = false;
+
+        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
+
+        // Get world position from mouse
+        const worldPos = this.screenToWorld(e.clientX, e.clientY);
+
+        // Release charge and get result
+        const result = this.player.releaseCharge(worldPos);
+
+        if (result) {
+            // Execute the attack based on charge level
+            this.executeLarsChargeAttack(result.chargeLevel, worldPos);
+        }
+
+        // Clean up visual effects
+        this.clearChargeVisualEffects();
+    }
+
+    private handleMouseMove(e: MouseEvent): void {
+        this.mousePosition = { x: e.clientX, y: e.clientY };
+
+        // Update charge indicator direction if charging
+        if (this.isMouseDown && this.player?.isChargingAttack()) {
+            this.updateChargeIndicatorDirection();
+        }
+    }
+
+    private handleTouchStart(e: TouchEvent): void {
+        if (e.touches.length === 0) return;
+        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
+
+        // Use first touch
+        const touch = e.touches[0];
+        this.isMouseDown = true;
+        this.mousePosition = { x: touch.clientX, y: touch.clientY };
+
+        if (this.player.startCharge()) {
+            this.createChargeVisualEffects();
+        }
+    }
+
+    private handleTouchEnd(e: TouchEvent): void {
+        if (!this.isMouseDown) return;
+
+        this.isMouseDown = false;
+
+        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
+
+        // Use last known mouse position
+        const worldPos = this.screenToWorld(this.mousePosition.x, this.mousePosition.y);
+
+        const result = this.player.releaseCharge(worldPos);
+
+        if (result) {
+            this.executeLarsChargeAttack(result.chargeLevel, worldPos);
+        }
+
+        this.clearChargeVisualEffects();
+    }
+
+    private handleTouchMove(e: TouchEvent): void {
+        if (e.touches.length === 0) return;
+        const touch = e.touches[0];
+        this.mousePosition = { x: touch.clientX, y: touch.clientY };
+
+        if (this.isMouseDown && this.player?.isChargingAttack()) {
+            this.updateChargeIndicatorDirection();
+        }
+    }
+
+    /**
+     * Convert screen coordinates to world position (on the ground plane y=0)
+     */
+    private screenToWorld(screenX: number, screenY: number): THREE.Vector3 {
+        if (!this.camera || !this.canvas) {
+            return new THREE.Vector3(0, 0, 0);
+        }
+
+        // Normalize screen coordinates
+        const rect = this.canvas.getBoundingClientRect();
+        const x = ((screenX - rect.left) / rect.width) * 2 - 1;
+        const y = -((screenY - rect.top) / rect.height) * 2 + 1;
+
+        // Create raycaster
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+
+        // Intersect with ground plane (y = 0)
+        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const intersection = new THREE.Vector3();
+        raycaster.ray.intersectPlane(groundPlane, intersection);
+
+        return intersection || new THREE.Vector3(0, 0, 0);
     }
 
     /**
@@ -1174,6 +1311,251 @@ export class ThreeEngineService implements OnDestroy {
         });
     }
 
+    // ========== LARS CHARGE ATTACK VISUAL EFFECTS ==========
+
+    /**
+     * Create visual effects while Lars is charging
+     */
+    private createChargeVisualEffects(): void {
+        if (!this.player || !this.scene) return;
+
+        const playerPos = this.player.mesh.position;
+
+        // 1. Charge indicator circle on ground (grows with charge)
+        const circleGeometry = new THREE.RingGeometry(0.5, 0.8, 32);
+        const circleMaterial = new THREE.MeshBasicMaterial({
+            color: 0x9900ff,
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+        });
+        this.chargeIndicator = new THREE.Mesh(circleGeometry, circleMaterial);
+        this.chargeIndicator.rotation.x = -Math.PI / 2;
+        this.chargeIndicator.position.set(playerPos.x, 0.1, playerPos.z);
+        this.scene.add(this.chargeIndicator);
+        this.chargeEffects.push(this.chargeIndicator);
+
+        // 2. Orbiting particles
+        const particleGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+        for (let i = 0; i < 6; i++) {
+            const particleMaterial = new THREE.MeshBasicMaterial({
+                color: i % 2 === 0 ? 0x9900ff : 0xff00ff,
+                transparent: true,
+                opacity: 0.8
+            });
+            const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+            (particle as any).orbitAngle = (i / 6) * Math.PI * 2;
+            (particle as any).orbitSpeed = 0.08 + Math.random() * 0.04;
+            (particle as any).orbitRadius = 1.5;
+            (particle as any).orbitHeight = 1.0 + (i % 3) * 0.3;
+
+            particle.position.set(
+                playerPos.x + Math.cos((particle as any).orbitAngle) * 1.5,
+                (particle as any).orbitHeight,
+                playerPos.z + Math.sin((particle as any).orbitAngle) * 1.5
+            );
+
+            this.scene.add(particle);
+            this.chargeParticles.push(particle);
+            this.chargeEffects.push(particle);
+        }
+
+        console.log('[LARS CHARGE] Visual effects created');
+    }
+
+    /**
+     * Update charge visual effects each frame
+     */
+    private updateChargeVisualEffects(): void {
+        if (!this.player || !this.player.isChargingAttack()) return;
+
+        const playerPos = this.player.mesh.position;
+        const chargeLevel = this.player.getChargeLevel();
+
+        // Update charge indicator
+        if (this.chargeIndicator) {
+            this.chargeIndicator.position.set(playerPos.x, 0.1, playerPos.z);
+
+            // Scale based on charge level (1x to 3x)
+            const scale = 1 + chargeLevel * 2;
+            this.chargeIndicator.scale.set(scale, scale, 1);
+
+            // Change color based on charge thresholds
+            const material = this.chargeIndicator.material as THREE.MeshBasicMaterial;
+            if (chargeLevel >= 1.0) {
+                material.color.setHex(0x00ff00); // Green = full charge
+                material.opacity = 0.8;
+            } else if (chargeLevel >= 0.66) {
+                material.color.setHex(0xffff00); // Yellow = level 2
+                material.opacity = 0.7;
+            } else if (chargeLevel >= 0.33) {
+                material.color.setHex(0xff9900); // Orange = level 1
+                material.opacity = 0.6;
+            } else {
+                material.color.setHex(0x9900ff); // Purple = charging
+                material.opacity = 0.5;
+            }
+        }
+
+        // Update orbiting particles
+        for (const particle of this.chargeParticles) {
+            (particle as any).orbitAngle += (particle as any).orbitSpeed;
+
+            // Orbit gets tighter as charge increases
+            const radius = (particle as any).orbitRadius * (1 - chargeLevel * 0.3);
+
+            particle.position.set(
+                playerPos.x + Math.cos((particle as any).orbitAngle) * radius,
+                (particle as any).orbitHeight + Math.sin((particle as any).orbitAngle * 2) * 0.2,
+                playerPos.z + Math.sin((particle as any).orbitAngle) * radius
+            );
+
+            // Particles get brighter with charge
+            const material = particle.material as THREE.MeshBasicMaterial;
+            material.opacity = 0.5 + chargeLevel * 0.5;
+
+            // Scale particles based on charge
+            const particleScale = 1 + chargeLevel * 0.5;
+            particle.scale.set(particleScale, particleScale, particleScale);
+        }
+    }
+
+    /**
+     * Update charge indicator to point towards mouse position
+     */
+    private updateChargeIndicatorDirection(): void {
+        // Direction line could be added here for aiming preview
+        // For now, the visual effects follow the player
+        this.updateChargeVisualEffects();
+    }
+
+    /**
+     * Clear all charge visual effects
+     */
+    private clearChargeVisualEffects(): void {
+        for (const effect of this.chargeEffects) {
+            this.scene.remove(effect);
+            if ((effect as THREE.Mesh).geometry) {
+                (effect as THREE.Mesh).geometry.dispose();
+            }
+            if ((effect as THREE.Mesh).material) {
+                const material = (effect as THREE.Mesh).material;
+                if (Array.isArray(material)) {
+                    material.forEach(m => m.dispose());
+                } else {
+                    material.dispose();
+                }
+            }
+        }
+
+        this.chargeEffects = [];
+        this.chargeParticles = [];
+        this.chargeIndicator = null;
+
+        console.log('[LARS CHARGE] Visual effects cleared');
+    }
+
+    /**
+     * Execute Lars charge attack based on charge level
+     */
+    private executeLarsChargeAttack(chargeLevel: number, targetPosition: THREE.Vector3): void {
+        if (!this.player || !this.characterAbility) return;
+
+        const larsAbility = this.characterAbility as LarsAbilityThree;
+
+        // Find enemy at or near target position
+        let targetEnemy = this.findEnemyNearPosition(targetPosition, 5);
+
+        // If no enemy near target, find nearest enemy in range
+        if (!targetEnemy) {
+            targetEnemy = this.findNearestEnemy();
+        }
+
+        if (!targetEnemy) {
+            console.log('[LARS CHARGE] No valid target found');
+            return;
+        }
+
+        // Calculate mind control chance based on charge level
+        let mindControlChance: number;
+        let damage: number;
+        let guaranteedControl = false;
+
+        if (chargeLevel >= 1.0) {
+            // Full charge = 100% guaranteed mind control
+            mindControlChance = 1.0;
+            damage = 50;
+            guaranteedControl = true;
+            console.log('[LARS CHARGE] FULL CHARGE! Guaranteed mind control!');
+        } else if (chargeLevel >= 0.66) {
+            // Level 2 = 70% chance
+            mindControlChance = 0.70;
+            damage = 35;
+        } else if (chargeLevel >= 0.33) {
+            // Level 1 = 35% chance
+            mindControlChance = 0.35;
+            damage = 25;
+        } else {
+            // Quick tap = base 10% chance
+            mindControlChance = larsAbility.controlChance;
+            damage = 15;
+        }
+
+        // Create enhanced mental attack effect
+        larsAbility.createMentalAttackEffect(
+            this.player.mesh.position,
+            targetEnemy,
+            this.scene
+        );
+
+        // Apply damage
+        targetEnemy.takeDamage(damage, this.scene);
+
+        // Attempt mind control with calculated chance
+        if (!targetEnemy.isDead && !targetEnemy.isMindControlled) {
+            if (guaranteedControl || Math.random() < mindControlChance) {
+                const duration = 10 * larsAbility.minionDurationMult;
+                targetEnemy.mindControl(duration, larsAbility.minionHealthMult, larsAbility.minionDamageMult);
+
+                if (larsAbility.onMindControlCallback) {
+                    larsAbility.onMindControlCallback();
+                }
+
+                console.log(`[LARS CHARGE] Mind control SUCCESS! (${(mindControlChance * 100).toFixed(0)}% chance)`);
+            } else {
+                console.log(`[LARS CHARGE] Mind control failed (${(mindControlChance * 100).toFixed(0)}% chance)`);
+
+                // Check for fail effects (explosion, fear) from ability upgrades
+                if (larsAbility.explodeOnFailChance > 0 && Math.random() < larsAbility.explodeOnFailChance) {
+                    // Trigger fail explosion (handled by ability)
+                }
+            }
+        }
+
+        // Play sound
+        this.audioService.playShoot(this.currentCharacterId);
+    }
+
+    /**
+     * Find enemy near a world position
+     */
+    private findEnemyNearPosition(position: THREE.Vector3, maxDistance: number): EnemyThree | null {
+        let nearest: EnemyThree | null = null;
+        let nearestDist = maxDistance;
+
+        for (const enemy of this.enemies) {
+            if (enemy.isDead || enemy.isMindControlled) continue;
+
+            const dist = enemy.mesh.position.distanceTo(position);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = enemy;
+            }
+        }
+
+        return nearest;
+    }
+
     // Find the nearest enemy within range (excludes minions)
     private findNearestEnemy(): EnemyThree | null {
         if (this.enemies.length === 0) return null;
@@ -1276,33 +1658,10 @@ export class ThreeEngineService implements OnDestroy {
             return;
         }
 
-        // ========== LARS: MENTAL ATTACK (sin proyectil) ==========
-        if (this.currentCharacterId === 'lars' && this.characterAbility) {
-            const larsAbility = this.characterAbility as any;
-            const nearestEnemy = this.findNearestEnemy();
-            if (!nearestEnemy) return;
-
-            // Ataque mental instantaneo - sin proyectil
-            this.lastShootTime = currentTime;
-
-            // Crear efecto visual de mirada mental
-            if (larsAbility.createMentalAttackEffect) {
-                larsAbility.createMentalAttackEffect(
-                    this.player.mesh.position,
-                    nearestEnemy,
-                    this.scene
-                );
-            }
-
-            // Aplicar logica de control mental directamente
-            const damage = 10; // Dano base de Lars
-            larsAbility.onProjectileHit(null, nearestEnemy, damage, this.scene, this.enemies);
-
-            // Lars mira hacia el enemigo (sin animacion de 30 frames)
-            // Usa faceTarget en lugar de shoot para evitar lag visual
-            this.player.faceTarget(nearestEnemy.mesh.position);
-
-            this.audioService.playShoot(this.currentCharacterId);
+        // ========== LARS: Uses manual charge attack system ==========
+        // Lars no longer uses auto-shoot - controlled via mouse click/hold
+        if (this.currentCharacterId === 'lars') {
+            // Skip auto-shoot for Lars - uses new charge system
             return;
         }
 
@@ -1830,7 +2189,12 @@ export class ThreeEngineService implements OnDestroy {
                 this.characterAbility.update(delta, this.scene, this.player, this.enemies);
             }
 
-            // Auto-shoot at nearest enemy
+            // Update Lars charge visual effects (if charging)
+            if (this.currentCharacterId === 'lars' && this.player.isChargingAttack()) {
+                this.updateChargeVisualEffects();
+            }
+
+            // Auto-shoot at nearest enemy (not used by Lars - uses manual charge system)
             this.autoShoot();
 
             // Enemy collision with player (ONLY from enemy attacks)
@@ -2207,6 +2571,14 @@ export class ThreeEngineService implements OnDestroy {
 
                     // Apply damage to player
                     this.gameState.health -= damageAmount;
+
+                    // Cancel Lars charge if hit while charging
+                    if (this.currentCharacterId === 'lars' && this.player.isChargingAttack()) {
+                        this.player.cancelCharge();
+                        this.clearChargeVisualEffects();
+                        this.isMouseDown = false;
+                        console.log('[LARS] Charge cancelled due to damage!');
+                    }
 
                     // Play hit sounds
                     this.audioService.playHit(this.currentCharacterId);
