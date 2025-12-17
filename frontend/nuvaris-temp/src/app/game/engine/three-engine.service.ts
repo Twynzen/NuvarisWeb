@@ -96,6 +96,14 @@ export class ThreeEngineService implements OnDestroy {
     // Debug time scale (only in debug mode) - Ctrl+1, Ctrl+2, Ctrl+3
     private timeScale = 1.0; // 1.0 = normal, 0.5 = slow, 0.25 = very slow
 
+    // Camera zoom (mouse wheel)
+    private cameraZoom = 1.0; // 1.0 = default
+    private cameraZoomMin = 0.5; // Zoomed in (closer)
+    private cameraZoomMax = 2.0; // Zoomed out (further)
+    private cameraZoomSpeed = 0.1;
+    private baseCameraY = 25; // Base camera height
+    private baseCameraZ = 20; // Base camera Z offset
+
     // Game State
     public gameState = {
         health: 100,
@@ -108,6 +116,8 @@ export class ThreeEngineService implements OnDestroy {
         isLevelingUp: false,
         isPaused: false,
         isGameOver: false,
+        isLoading: true, // Show loading screen until textures are preloaded
+        loadingProgress: 0,
         debugMode: false
     };
 
@@ -1425,29 +1435,71 @@ export class ThreeEngineService implements OnDestroy {
         });
 
         // Load default map asynchronously
-        this.loadMapByName(DEFAULT_MAP_NAME).then(() => {
+        this.loadMapByName(DEFAULT_MAP_NAME).then(async () => {
             // Player - created after map loads to use correct spawn position
             const spawnPos = this.mapLoader.getPlayerSpawnPosition(this.mapLoader.getCurrentMapData()!);
             this.player = new PlayerThree(this.scene, characterId);
             this.player.mesh.position.set(spawnPos.x, 0, spawnPos.z);
 
+            // Preload all player textures to avoid stuttering
+            console.log('[Game] Preloading player textures...');
+            await this.player.preloadTextures();
+
+            // Loading complete - hide loading screen
+            this.gameState.isLoading = false;
+            this.gameState.loadingProgress = 100;
+
             // Initialize Character Ability based on selected character
             this.initializeCharacterAbility(characterId);
 
             console.log(`[Game] Started with map: ${this.currentMapName}`);
-        }).catch((err) => {
+        }).catch(async (err) => {
             // Fallback to legacy hardcoded map if loading fails
             console.warn('[Game] Failed to load default map, using legacy fallback', err);
             this.loadLegacyMap();
 
             // Player at center
             this.player = new PlayerThree(this.scene, characterId);
+
+            // Preload all player textures to avoid stuttering
+            console.log('[Game] Preloading player textures...');
+            await this.player.preloadTextures();
+
+            // Loading complete - hide loading screen
+            this.gameState.isLoading = false;
+            this.gameState.loadingProgress = 100;
+
             this.initializeCharacterAbility(characterId);
         });
 
         this.animate();
 
         window.addEventListener('resize', () => this.resize());
+
+        // Camera zoom with mouse wheel
+        this.canvas.addEventListener('wheel', (e) => this.handleCameraZoom(e), { passive: false });
+    }
+
+    /**
+     * Handle camera zoom with mouse wheel
+     */
+    private handleCameraZoom(event: WheelEvent): void {
+        // Prevent browser zoom
+        event.preventDefault();
+
+        // Don't zoom during loading, pause, level up, or game over
+        if (this.gameState.isLoading || this.gameState.isPaused ||
+            this.gameState.isLevelingUp || this.gameState.isGameOver) {
+            return;
+        }
+
+        // Adjust zoom based on scroll direction
+        const delta = event.deltaY > 0 ? this.cameraZoomSpeed : -this.cameraZoomSpeed;
+        this.cameraZoom = Math.max(this.cameraZoomMin, Math.min(this.cameraZoomMax, this.cameraZoom + delta));
+
+        // Apply zoom to camera position
+        this.camera.position.y = this.baseCameraY * this.cameraZoom;
+        this.camera.position.z = this.baseCameraZ * this.cameraZoom;
     }
 
     // ============================================
@@ -2400,6 +2452,8 @@ export class ThreeEngineService implements OnDestroy {
             isLevelingUp: false,
             isPaused: false,
             isGameOver: false,
+            isLoading: false, // Already loaded on reset
+            loadingProgress: 100,
             debugMode: false
         };
 
@@ -2461,6 +2515,8 @@ export class ThreeEngineService implements OnDestroy {
             isLevelingUp: false,
             isPaused: false,
             isGameOver: false,
+            isLoading: false, // Already loaded on restart
+            loadingProgress: 100,
             debugMode: false
         };
 

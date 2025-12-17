@@ -34,7 +34,7 @@ export class PlayerThree {
     private pendingMeleeCallback: (() => void) | null = null;
 
     // ========== LARS ATTACK SYSTEM ==========
-    private larsAttackDuration = 100; // 3 frames @ 30fps = ~100ms
+    private larsAttackDuration = 200; // 3 frames @ 15fps = 200ms
     private lastAttackTime = 0;
     private attackCooldown = 0.3; // 300ms between attacks
 
@@ -84,10 +84,10 @@ export class PlayerThree {
 
         scene.add(this.mesh);
 
-        // Animator
+        // Animator - animations loaded but NOT played until preload completes
         this.animator = new SpriteAnimator(material);
         this.loadAnimations();
-        this.animator.play('idle');
+        // Don't play idle here - wait for preloadTextures() to complete first
     }
 
     private loadAnimations() {
@@ -106,7 +106,7 @@ export class PlayerThree {
             prefix: idlePrefix,
             suffix: '.png',
             frameCount: 30,
-            frameRate: 30,
+            frameRate: 10, // Slow idle for relaxed breathing (3s cycle)
             loop: true
         });
 
@@ -234,7 +234,7 @@ export class PlayerThree {
                 prefix: `${prefix}attack-${dir}-`,
                 suffix: '.png',
                 frameCount: 3,
-                frameRate: 30, // 3 frames @ 30fps = 100ms
+                frameRate: 15, // 3 frames @ 15fps = 200ms (snappy attack)
                 loop: false
             });
         }
@@ -392,7 +392,7 @@ export class PlayerThree {
                 animationPlayed = this.playCardinalMovementAnimation(moveX, moveZ);
             }
         } else {
-            this.animator.play('idle', true, 30);
+            this.animator.play('idle'); // Uses 10fps from config
             animationPlayed = 'idle';
         }
 
@@ -438,7 +438,7 @@ export class PlayerThree {
                 break;
         }
 
-        this.animator.play(animName, true, 30);
+        this.animator.play(animName); // Uses frameRate from config (30fps)
         return animName;
     }
 
@@ -458,7 +458,7 @@ export class PlayerThree {
             animName = 'down';
         }
 
-        this.animator.play(animName, true, 30);
+        this.animator.play(animName); // Uses frameRate from config (30fps)
         return animName;
     }
 
@@ -507,13 +507,13 @@ export class PlayerThree {
 
             // Play attack animation
             const attackAnim = `attack-${direction}`;
-            this.animator.play(attackAnim, false, 30);
+            this.animator.play(attackAnim); // Uses frameRate from config (15fps = 200ms)
 
             if (this.DEBUG_FLIP) {
                 console.log(`[LARS ATTACK] direction=${direction}, anim=${attackAnim}`);
             }
 
-            // Reset attacking state after animation completes (100ms for 3 frames @ 30fps)
+            // Reset attacking state after animation completes (200ms for 3 frames @ 15fps)
             setTimeout(() => {
                 this.isAttacking = false;
                 resolve();
@@ -797,6 +797,24 @@ export class PlayerThree {
 
         // Play death animation once
         this.animator.play('dead', false, 15); // Slower for dramatic effect
+    }
+
+    /**
+     * Preload all player textures to avoid stuttering at game start
+     * Starts idle animation after preload completes
+     * @returns Promise that resolves when all textures are loaded
+     */
+    public async preloadTextures(): Promise<void> {
+        await this.animator.preloadAll();
+        // Now that textures are loaded, start idle animation
+        this.animator.play('idle');
+    }
+
+    /**
+     * Get texture loading progress (0-1)
+     */
+    public getLoadingProgress(): number {
+        return this.animator.getLoadingProgress();
     }
 
     /**

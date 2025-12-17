@@ -1,7 +1,18 @@
 <div id="game-container">
     <canvas #rendererCanvas id="renderCanvas"></canvas>
 
-    <div id="hud">
+    <!-- Loading Screen -->
+    <div class="loading-screen" *ngIf="gameState.isLoading">
+        <div class="loading-content">
+            <div class="loading-title">LOADING</div>
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+            <div class="loading-text">Preparing textures...</div>
+        </div>
+    </div>
+
+    <div id="hud" [class.hidden]="gameState.isLoading">
         <div class="hud-top-left">
             <div class="stat-box">
                 <span class="label">LEVEL</span>
