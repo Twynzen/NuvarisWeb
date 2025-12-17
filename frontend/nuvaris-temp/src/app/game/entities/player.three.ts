@@ -3,6 +3,9 @@ import { SpriteAnimator } from '../engine/sprite-animator';
 import { ProjectileThree } from './projectile.three';
 import { EnemyThree } from './enemy.three';
 
+// 8-directional movement/attack directions
+export type Direction8 = 'up' | 'down' | 'left' | 'right' | 'up-left' | 'up-right' | 'down-left' | 'down-right';
+
 export class PlayerThree {
     public mesh: THREE.Group;
     private sprite: THREE.Sprite;
@@ -12,8 +15,10 @@ export class PlayerThree {
     // State
     private isMoving = false;
     private isShooting = false;
+    private isAttacking = false; // For Lars 3-frame attack animations
     private facingRight = true;
     private lastMoveDir = new THREE.Vector3(1, 0, 0);
+    private lastDirection8: Direction8 = 'right'; // Track 8-directional facing
     public isDead = false;
 
     private characterId: string;
@@ -27,6 +32,11 @@ export class PlayerThree {
     private lastMeleeAttackTime = 0;
     private meleeAnimationDuration = 0.5; // Damage applies at 500ms into animation
     private pendingMeleeCallback: (() => void) | null = null;
+
+    // ========== LARS ATTACK SYSTEM ==========
+    private larsAttackDuration = 100; // 3 frames @ 30fps = ~100ms
+    private lastAttackTime = 0;
+    private attackCooldown = 0.3; // 300ms between attacks
 
     // Debug mode - set to true to see flip/animation logs
     private DEBUG_FLIP = false;
@@ -72,18 +82,6 @@ export class PlayerThree {
         this.sprite.scale.set(4.5, 4.5, 1);
         this.mesh.add(this.sprite);
 
-        // Shadow removed as per user request
-        // const shadowGeo = new THREE.CircleGeometry(0.8, 32);
-        // const shadowMat = new THREE.MeshBasicMaterial({
-        //     color: 0x000000,
-        //     transparent: true,
-        //     opacity: 0.3
-        // });
-        // const shadow = new THREE.Mesh(shadowGeo, shadowMat);
-        // shadow.rotation.x = -Math.PI / 2;
-        // shadow.position.y = 0.05;
-        // this.mesh.add(shadow);
-
         scene.add(this.mesh);
 
         // Animator
@@ -93,15 +91,10 @@ export class PlayerThree {
     }
 
     private loadAnimations() {
-        let folder = this.characterId;
-        let prefix = `${this.characterId}-`;
+        const folder = this.characterId;
+        const prefix = `${this.characterId}-`;
 
-        // Handle folder naming inconsistencies if any
-        if (this.characterId === 'proyecto-y') {
-            // Already correct
-        }
-
-        // Idle
+        // === IDLE ===
         let idlePrefix = `${prefix}idle-`;
         if (this.characterId === 'lars') {
             idlePrefix = 'lars-idle-one-';
@@ -117,7 +110,7 @@ export class PlayerThree {
             loop: true
         });
 
-        // Run (Right)
+        // === CARDINAL MOVEMENT (all characters) ===
         this.animator.loadAnimation({
             name: 'run-right',
             texturePath: `assets/${folder}/right`,
@@ -128,7 +121,6 @@ export class PlayerThree {
             loop: true
         });
 
-        // Run (Left) - Pre-flipped frames
         this.animator.loadAnimation({
             name: 'run-left',
             texturePath: `assets/${folder}/left`,
@@ -139,51 +131,6 @@ export class PlayerThree {
             loop: true
         });
 
-        // Shoot (Right)
-        this.animator.loadAnimation({
-            name: 'shoot-right',
-            texturePath: `assets/${folder}/shoot/right`,
-            prefix: `${prefix}shoot-right-`,
-            suffix: '.png',
-            frameCount: 30,
-            frameRate: 30,
-            loop: false
-        });
-
-        // Shoot (Left) - Pre-flipped frames
-        this.animator.loadAnimation({
-            name: 'shoot-left',
-            texturePath: `assets/${folder}/shoot/left`,
-            prefix: `${prefix}shoot-left-`,
-            suffix: '.png',
-            frameCount: 30,
-            frameRate: 30,
-            loop: false
-        });
-
-        // Shoot (Up)
-        this.animator.loadAnimation({
-            name: 'shoot-up',
-            texturePath: `assets/${folder}/shoot/up`,
-            prefix: `${prefix}shoot-up-`,
-            suffix: '.png',
-            frameCount: 30,
-            frameRate: 30,
-            loop: false
-        });
-
-        // Shoot (Down)
-        this.animator.loadAnimation({
-            name: 'shoot-down',
-            texturePath: `assets/${folder}/shoot/down`,
-            prefix: `${prefix}shoot-down-`,
-            suffix: '.png',
-            frameCount: 30,
-            frameRate: 30,
-            loop: false
-        });
-
-        // Walk Up
         this.animator.loadAnimation({
             name: 'up',
             texturePath: `assets/${folder}/up`,
@@ -194,7 +141,6 @@ export class PlayerThree {
             loop: true
         });
 
-        // Walk Down
         this.animator.loadAnimation({
             name: 'down',
             texturePath: `assets/${folder}/down`,
@@ -205,7 +151,7 @@ export class PlayerThree {
             loop: true
         });
 
-        // Dead
+        // === DEAD (all characters) ===
         this.animator.loadAnimation({
             name: 'dead',
             texturePath: `assets/${folder}/dead`,
@@ -215,6 +161,177 @@ export class PlayerThree {
             frameRate: 30,
             loop: false
         });
+
+        // === LARS-SPECIFIC ANIMATIONS ===
+        if (this.characterId === 'lars') {
+            this.loadLarsAnimations();
+        } else {
+            // Other characters use shoot animations (30 frames)
+            this.loadShootAnimations(folder, prefix);
+        }
+    }
+
+    /**
+     * Load Lars-specific animations:
+     * - 4 diagonal movement animations (30 frames each)
+     * - 8 attack animations (3 frames each)
+     */
+    private loadLarsAnimations() {
+        const folder = 'lars';
+        const prefix = 'lars-';
+
+        // === DIAGONAL MOVEMENT (30 frames each) ===
+        this.animator.loadAnimation({
+            name: 'run-up-left',
+            texturePath: `assets/${folder}/up-left`,
+            prefix: `${prefix}walk-up-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-up-right',
+            texturePath: `assets/${folder}/up-right`,
+            prefix: `${prefix}walk-up-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-down-left',
+            texturePath: `assets/${folder}/down-left`,
+            prefix: `${prefix}walk-down-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-down-right',
+            texturePath: `assets/${folder}/down-right`,
+            prefix: `${prefix}walk-down-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // === ATTACK ANIMATIONS (3 frames each, 8 directions) ===
+        const attackDirections: Direction8[] = [
+            'up', 'down', 'left', 'right',
+            'up-left', 'up-right', 'down-left', 'down-right'
+        ];
+
+        for (const dir of attackDirections) {
+            this.animator.loadAnimation({
+                name: `attack-${dir}`,
+                texturePath: `assets/${folder}/attack/${dir}`,
+                prefix: `${prefix}attack-${dir}-`,
+                suffix: '.png',
+                frameCount: 3,
+                frameRate: 30, // 3 frames @ 30fps = 100ms
+                loop: false
+            });
+        }
+
+        console.log('[LARS] Loaded 8-directional movement + 8-directional attack animations');
+    }
+
+    /**
+     * Load shoot animations for non-Lars characters
+     */
+    private loadShootAnimations(folder: string, prefix: string) {
+        this.animator.loadAnimation({
+            name: 'shoot-right',
+            texturePath: `assets/${folder}/shoot/right`,
+            prefix: `${prefix}shoot-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        this.animator.loadAnimation({
+            name: 'shoot-left',
+            texturePath: `assets/${folder}/shoot/left`,
+            prefix: `${prefix}shoot-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        this.animator.loadAnimation({
+            name: 'shoot-up',
+            texturePath: `assets/${folder}/shoot/up`,
+            prefix: `${prefix}shoot-up-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+
+        this.animator.loadAnimation({
+            name: 'shoot-down',
+            texturePath: `assets/${folder}/shoot/down`,
+            prefix: `${prefix}shoot-down-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: false
+        });
+    }
+
+    /**
+     * Calculate 8-directional direction from movement input
+     */
+    private getDirection8FromMovement(moveX: number, moveZ: number): Direction8 {
+        if (moveX > 0 && moveZ < 0) return 'up-right';
+        if (moveX > 0 && moveZ > 0) return 'down-right';
+        if (moveX < 0 && moveZ < 0) return 'up-left';
+        if (moveX < 0 && moveZ > 0) return 'down-left';
+        if (moveX > 0) return 'right';
+        if (moveX < 0) return 'left';
+        if (moveZ < 0) return 'up';
+        if (moveZ > 0) return 'down';
+        return this.lastDirection8; // Default to last direction
+    }
+
+    /**
+     * Calculate 8-directional direction to a target position
+     */
+    private getDirection8ToTarget(targetPosition: THREE.Vector3): Direction8 {
+        const direction = new THREE.Vector3()
+            .subVectors(targetPosition, this.mesh.position)
+            .normalize();
+
+        const absX = Math.abs(direction.x);
+        const absZ = Math.abs(direction.z);
+
+        // Use 22.5 degree threshold for diagonal detection
+        // tan(22.5°) ≈ 0.414, so if ratio > 0.414 both components are significant
+        const ratio = Math.min(absX, absZ) / Math.max(absX, absZ);
+        const isDiagonal = ratio > 0.414;
+
+        if (isDiagonal) {
+            // Diagonal direction
+            if (direction.x > 0 && direction.z < 0) return 'up-right';
+            if (direction.x > 0 && direction.z > 0) return 'down-right';
+            if (direction.x < 0 && direction.z < 0) return 'up-left';
+            if (direction.x < 0 && direction.z > 0) return 'down-left';
+        }
+
+        // Cardinal direction (dominant axis)
+        if (absZ > absX) {
+            return direction.z < 0 ? 'up' : 'down';
+        } else {
+            return direction.x < 0 ? 'left' : 'right';
+        }
     }
 
     update(delta: number, keys: { [key: string]: boolean }) {
@@ -237,6 +354,9 @@ export class PlayerThree {
             this.mesh.position.add(moveDir.multiplyScalar(this.speed * delta));
             this.lastMoveDir.copy(moveDir);
 
+            // Update 8-directional facing
+            this.lastDirection8 = this.getDirection8FromMovement(moveX, moveZ);
+
             // Face direction - only update on horizontal movement
             if (moveX > 0) this.facingRight = true;
             else if (moveX < 0) this.facingRight = false;
@@ -252,34 +372,24 @@ export class PlayerThree {
         }
 
         // Animation State Machine
-        // Priority: Melee/Shooting > Horizontal Movement > Vertical Movement > Idle
-        // Uses separate left/right animations instead of scale flip
+        // Priority: Attack > Melee/Shooting > Movement > Idle
         let animationPlayed = '';
 
-        if (this.isMeleeAttacking) {
+        if (this.isAttacking) {
+            // Attack animation is handled in playAttackAnimation() - don't override
+            animationPlayed = 'attacking';
+        } else if (this.isMeleeAttacking) {
             // Melee animation is handled in meleeAttack() - don't override it
             animationPlayed = 'melee';
         } else if (this.isShooting) {
             // Shooting animation is handled in shoot()
             animationPlayed = 'shooting';
         } else if (this.isMoving) {
-            // Prioritize horizontal movement for run animation
-            if (moveX > 0) {
-                // Moving right
-                this.animator.play('run-right', true, 30);
-                animationPlayed = 'run-right';
-            } else if (moveX < 0) {
-                // Moving left - use pre-flipped left animation
-                this.animator.play('run-left', true, 30);
-                animationPlayed = 'run-left';
-            } else if (moveZ < 0) {
-                // Pure vertical up movement
-                this.animator.play('up', true, 30);
-                animationPlayed = 'up';
-            } else if (moveZ > 0) {
-                // Pure vertical down movement
-                this.animator.play('down', true, 30);
-                animationPlayed = 'down';
+            // Movement animations - Lars uses 8-directional
+            if (this.characterId === 'lars') {
+                animationPlayed = this.playLarsMovementAnimation(moveX, moveZ);
+            } else {
+                animationPlayed = this.playCardinalMovementAnimation(moveX, moveZ);
             }
         } else {
             this.animator.play('idle', true, 30);
@@ -288,14 +398,151 @@ export class PlayerThree {
 
         // Debug log for animation state (throttled - only when moving)
         if (this.DEBUG_FLIP && this.isMoving) {
-            console.log(`[ANIM] moveX=${moveX}, moveZ=${moveZ}, anim=${animationPlayed}, facingRight=${this.facingRight}`);
+            console.log(`[ANIM] moveX=${moveX}, moveZ=${moveZ}, anim=${animationPlayed}, dir8=${this.lastDirection8}`);
         }
 
         this.animator.update(delta);
     }
 
+    /**
+     * Play Lars 8-directional movement animation
+     */
+    private playLarsMovementAnimation(moveX: number, moveZ: number): string {
+        const dir = this.getDirection8FromMovement(moveX, moveZ);
+        let animName = '';
+
+        switch (dir) {
+            case 'up-right':
+                animName = 'run-up-right';
+                break;
+            case 'up-left':
+                animName = 'run-up-left';
+                break;
+            case 'down-right':
+                animName = 'run-down-right';
+                break;
+            case 'down-left':
+                animName = 'run-down-left';
+                break;
+            case 'right':
+                animName = 'run-right';
+                break;
+            case 'left':
+                animName = 'run-left';
+                break;
+            case 'up':
+                animName = 'up';
+                break;
+            case 'down':
+                animName = 'down';
+                break;
+        }
+
+        this.animator.play(animName, true, 30);
+        return animName;
+    }
+
+    /**
+     * Play cardinal (4-directional) movement animation for other characters
+     */
+    private playCardinalMovementAnimation(moveX: number, moveZ: number): string {
+        let animName = '';
+
+        if (moveX > 0) {
+            animName = 'run-right';
+        } else if (moveX < 0) {
+            animName = 'run-left';
+        } else if (moveZ < 0) {
+            animName = 'up';
+        } else if (moveZ > 0) {
+            animName = 'down';
+        }
+
+        this.animator.play(animName, true, 30);
+        return animName;
+    }
+
+    // ========== LARS ATTACK ANIMATION (3 frames, 8 directions) ==========
+
+    /**
+     * Play Lars attack animation towards a target
+     * Uses 3-frame attack animations in 8 directions
+     * @param targetPosition Position to attack towards
+     * @returns Promise that resolves when attack animation completes
+     */
+    public playAttackAnimation(targetPosition: THREE.Vector3): Promise<void> {
+        return new Promise((resolve) => {
+            if (this.characterId !== 'lars') {
+                // Non-Lars characters don't have attack animations
+                resolve();
+                return;
+            }
+
+            // Check cooldown
+            const now = Date.now();
+            if (now - this.lastAttackTime < this.attackCooldown * 1000) {
+                resolve();
+                return;
+            }
+
+            this.isAttacking = true;
+            this.lastAttackTime = now;
+
+            // Get 8-directional direction to target
+            const direction = this.getDirection8ToTarget(targetPosition);
+            this.lastDirection8 = direction;
+
+            // Update facing based on direction
+            if (direction.includes('right')) {
+                this.facingRight = true;
+            } else if (direction.includes('left')) {
+                this.facingRight = false;
+            }
+
+            // Update last move direction for consistency
+            const dirVector = new THREE.Vector3()
+                .subVectors(targetPosition, this.mesh.position)
+                .normalize();
+            this.lastMoveDir.copy(dirVector);
+
+            // Play attack animation
+            const attackAnim = `attack-${direction}`;
+            this.animator.play(attackAnim, false, 30);
+
+            if (this.DEBUG_FLIP) {
+                console.log(`[LARS ATTACK] direction=${direction}, anim=${attackAnim}`);
+            }
+
+            // Reset attacking state after animation completes (100ms for 3 frames @ 30fps)
+            setTimeout(() => {
+                this.isAttacking = false;
+                resolve();
+            }, this.larsAttackDuration);
+        });
+    }
+
+    /**
+     * Check if currently playing attack animation
+     */
+    public isPlayingAttack(): boolean {
+        return this.isAttacking;
+    }
+
+    /**
+     * Get the last 8-directional facing direction
+     */
+    public getLastDirection8(): Direction8 {
+        return this.lastDirection8;
+    }
+
     shoot(scene: THREE.Scene, targetPosition?: THREE.Vector3): ProjectileThree | null {
         if (this.isShooting) return null;
+
+        // Lars doesn't use projectile shooting - uses mental attack instead
+        if (this.characterId === 'lars') {
+            console.warn('[PLAYER] Lars should use playAttackAnimation() instead of shoot()');
+            return null;
+        }
 
         this.isShooting = true;
 
@@ -360,12 +607,20 @@ export class PlayerThree {
         return new ProjectileThree(scene, this.mesh.position.x, this.mesh.position.z, direction, this.characterId);
     }
 
-    // ========== FACE TARGET (for Lars mental attack) ==========
+    // ========== FACE TARGET (for Lars mental attack - legacy support) ==========
     /**
-     * Make player face a target position without playing shoot animation
+     * Make player face a target and play attack animation
      * Used for Lars mental attack which has no projectile
+     * @deprecated Use playAttackAnimation() instead for full 8-directional support
      */
     faceTarget(targetPosition: THREE.Vector3): void {
+        // For Lars, trigger attack animation
+        if (this.characterId === 'lars') {
+            this.playAttackAnimation(targetPosition);
+            return;
+        }
+
+        // Legacy behavior for other characters
         const direction = new THREE.Vector3()
             .subVectors(targetPosition, this.mesh.position)
             .normalize();
@@ -381,13 +636,6 @@ export class PlayerThree {
 
         // Update last move direction for consistency
         this.lastMoveDir.copy(direction);
-
-        // Play idle animation in facing direction (quick visual feedback)
-        const idleAnim = absZ > absX
-            ? (direction.z < 0 ? 'idle-up' : 'idle-down')
-            : (this.facingRight ? 'idle-right' : 'idle-left');
-
-        this.animator.play(idleAnim, true, 30);
     }
 
     // ========== MELEE ATTACK (Project A) ==========
@@ -545,6 +793,7 @@ export class PlayerThree {
         this.isDead = true;
         this.isMoving = false;
         this.isShooting = false;
+        this.isAttacking = false;
 
         // Play death animation once
         this.animator.play('dead', false, 15); // Slower for dramatic effect
