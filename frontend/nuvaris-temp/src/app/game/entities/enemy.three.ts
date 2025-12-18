@@ -152,6 +152,14 @@ export class EnemyThree {
         this.patrolRadius = portal.homeRange;
     }
 
+    /**
+     * Set patrol area for enemy (used by EntityManager)
+     */
+    public setPatrolArea(center: THREE.Vector3, radius: number): void {
+        this.patrolCenter = center.clone();
+        this.patrolRadius = radius;
+    }
+
     update(delta: number, player: PlayerThree, mapBounds: number = 98, currentTime: number = 0, isPlayerInvisible: boolean = false, allEnemies: EnemyThree[] = []) {
         if (this.isDead) return;
 

@@ -23,6 +23,7 @@ import { CharacterCursor } from '../ui/character-cursor';
 import { GameState, createInitialGameState } from '../models/game-state.interface';
 import { SpatialGrid } from '../systems/spatial-grid';
 import { DisposableManager } from '../systems/disposable.manager';
+import { CombatSystem, EntityManager, gameEventBus, GameEventType } from '../core';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -141,11 +142,31 @@ export class ThreeEngineService implements OnDestroy {
         private ngZone: NgZone,
         private mapLoader: MapLoaderService,
         private roomTemplateLoader: RoomTemplateLoader,
-        public audioService: AudioService
+        public audioService: AudioService,
+        private combatSystem: CombatSystem,
+        private entityManager: EntityManager
     ) {
         this.setupInput();
         // Create RoomVisibilityManager (will be initialized in createScene)
         this.roomVisibilityManager = new RoomVisibilityManager(this.roomTemplateLoader);
+
+        // Subscribe to combat events for audio feedback
+        this.setupEventListeners();
+    }
+
+    /**
+     * Setup event listeners for decoupled systems
+     */
+    private setupEventListeners(): void {
+        // Play sound on enemy kill
+        gameEventBus.on(GameEventType.ENEMY_KILLED).subscribe((event: any) => {
+            this.audioService.playEnemyDeath(event.enemyType);
+        });
+
+        // Play sound on player damage
+        gameEventBus.on(GameEventType.PLAYER_DAMAGED).subscribe(() => {
+            this.audioService.playHit(this.currentCharacterId);
+        });
     }
 
     private setupInput() {
@@ -1704,6 +1725,10 @@ export class ThreeEngineService implements OnDestroy {
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0a0f);
+
+        // Initialize core game systems
+        this.combatSystem.initialize();
+        this.entityManager.initialize(this.scene);
 
         // Initialize player-centered fog system
         this.playerFogSystem = new PlayerFogSystem(this.scene, {
