@@ -11,7 +11,7 @@ type Rarity = 'basica' | 'epica' | 'legendaria';
 
 interface RouletteUpgrade extends AbilityOption {
     displayClass: string;
-    icon: SkillIcon;
+    skillIcon: SkillIcon;
 }
 
 interface SlotLane {
@@ -225,7 +225,7 @@ export class LevelUpComponent implements OnInit, OnDestroy {
         return {
             ...ability,
             displayClass: this.getRarityClass(ability.rarity),
-            icon: getSkillIcon(ability.id, this.characterId)
+            skillIcon: getSkillIcon(ability.id, this.characterId)
         };
     }
 
@@ -304,8 +304,8 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     /**
      * Sanitize SVG for rendering
      */
-    getSafeSvg(icon: SkillIcon): SafeHtml {
-        const svgString = `<svg viewBox="${icon.viewBox}" xmlns="http://www.w3.org/2000/svg">${icon.svg}</svg>`;
+    getSafeSvg(skillIcon: SkillIcon): SafeHtml {
+        const svgString = `<svg viewBox="${skillIcon.viewBox}" xmlns="http://www.w3.org/2000/svg">${skillIcon.svg}</svg>`;
         return this.sanitizer.bypassSecurityTrustHtml(svgString);
     }
 

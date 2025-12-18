@@ -19,7 +19,7 @@
             <div class="slot-reel">
               <!-- Current visible item -->
               <div class="slot-item" [ngClass]="getLaneCurrentItem(lane).displayClass">
-                <div class="item-icon" [innerHTML]="getSafeSvg(getLaneCurrentItem(lane).icon)"></div>
+                <div class="item-icon" [innerHTML]="getSafeSvg(getLaneCurrentItem(lane).skillIcon)"></div>
                 <span class="item-name">{{ getLaneCurrentItem(lane).name }}</span>
                 <span class="item-rarity">{{ getRarityText(getLaneCurrentItem(lane).rarity) }}</span>
               </div>
@@ -50,7 +50,7 @@
 
       <div class="winner-card" [ngClass]="finalSelection.displayClass">
         <div class="winner-glow"></div>
-        <div class="winner-icon" [innerHTML]="getSafeSvg(finalSelection.icon)"></div>
+        <div class="winner-icon" [innerHTML]="getSafeSvg(finalSelection.skillIcon)"></div>
         <h2 class="winner-name">{{ finalSelection.name }}</h2>
         <p class="winner-description">{{ finalSelection.description }}</p>
         <span class="winner-rarity">{{ getRarityText(finalSelection.rarity) }}</span>
