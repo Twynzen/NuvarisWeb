@@ -234,61 +234,48 @@ export class EnemyThree {
         }
     }
 
-    private updateChaseBehavior(delta: number, player: PlayerThree, distToPlayer: number, mapBounds: number, currentTime: number) {
+    /**
+     * Core chase logic shared by both portal-based and legacy enemies.
+     * Handles dash, telegraph, attack, and movement systems.
+     */
+    private updateChaseCore(delta: number, player: PlayerThree, distToPlayer: number, mapBounds: number, currentTime: number): void {
         const direction = new THREE.Vector3()
             .subVectors(player.mesh.position, this.mesh.position)
             .normalize();
 
         // Dash system
         if (this.isDashing) {
-            // Dashing: Move at high speed in stored direction
             this.mesh.position.add(this.dashDirection.clone().multiplyScalar(this.dashSpeed * delta));
-
             this.dashDuration -= delta;
             if (this.dashDuration <= 0) {
                 this.isDashing = false;
-                this.hasDealtDamageThisDash = false; // Reset dash damage flag when dash ends
-                // Restore color after dash
+                this.hasDealtDamageThisDash = false;
                 (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
             }
-
-            // Skip normal movement and attack logic
             this.animator.update(delta);
-            // Clamp position to map bounds even during dash
-            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            this.clampToMapBounds(mapBounds);
             return;
         }
 
         // Telegraph system
         if (this.isTelegraphing) {
             this.telegraphDuration -= delta;
-
-            // Flash effect during telegraph
             this.telegraphFlashTimer += delta;
             if (this.telegraphFlashTimer >= this.telegraphFlashInterval) {
                 this.telegraphFlashTimer = 0;
-                // Toggle between white and original color
                 const currentColor = (this.sprite.material as THREE.SpriteMaterial).color.getHex();
-                if (currentColor === 0xffffff) {
-                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
-                } else {
-                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffffff);
-                }
+                (this.sprite.material as THREE.SpriteMaterial).color.setHex(
+                    currentColor === 0xffffff ? this.originalColor : 0xffffff
+                );
             }
-
             if (this.telegraphDuration <= 0) {
                 this.isTelegraphing = false;
                 this.startDash(player.mesh.position);
             }
-
-            // Slow movement during telegraph
             const moveSpeed = this.speed * 0.2 * this.speedMultiplier;
             this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
             this.animator.update(delta);
-            // Clamp position to map bounds
-            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            this.clampToMapBounds(mapBounds);
             return;
         }
 
@@ -297,17 +284,15 @@ export class EnemyThree {
             this.dashCooldown -= delta;
         }
 
-        // Dash trigger check (before normal attack check)
+        // Dash trigger check
         if (this.dashCooldown <= 0 && !this.isAttacking && distToPlayer >= this.dashTriggerMin && distToPlayer <= this.dashTriggerMax) {
             this.startTelegraph(player.mesh.position);
             this.animator.update(delta);
-            // Clamp position to map bounds
-            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+            this.clampToMapBounds(mapBounds);
             return;
         }
 
-        // Check if should attack
+        // Attack check
         if (distToPlayer < this.attackRange && (currentTime - this.lastAttackTime) > this.attackCooldown) {
             this.startAttack(currentTime);
         }
@@ -317,8 +302,7 @@ export class EnemyThree {
             const attackElapsed = currentTime - this.attackStartTime;
             if (attackElapsed > this.attackDuration) {
                 this.isAttacking = false;
-                this.hasDealtDamageThisAttack = false; // Reset for next attack
-                // Restore original color
+                this.hasDealtDamageThisAttack = false;
                 (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
             }
         }
@@ -326,164 +310,62 @@ export class EnemyThree {
         // Movement - slower during attack, affected by slow effect
         const moveSpeed = (this.isAttacking ? this.speed * 0.3 : this.speed) * this.speedMultiplier;
         this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
-
-        // Clamp position to map bounds (wall collision)
-        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
-
+        this.clampToMapBounds(mapBounds);
         this.animator.update(delta);
     }
 
+    /**
+     * Clamp enemy position to map bounds
+     */
+    private clampToMapBounds(mapBounds: number): void {
+        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
+        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
+    }
+
+    private updateChaseBehavior(delta: number, player: PlayerThree, distToPlayer: number, mapBounds: number, currentTime: number) {
+        this.updateChaseCore(delta, player, distToPlayer, mapBounds, currentTime);
+    }
+
     private updateReturnBehavior(delta: number, mapBounds: number) {
-        // Move back towards home portal
         const directionToHome = new THREE.Vector3()
             .subVectors(this.patrolCenter, this.mesh.position)
             .normalize();
 
-        const moveSpeed = this.speed * 0.8 * this.speedMultiplier; // 80% speed while returning, affected by slow
+        const moveSpeed = this.speed * 0.8 * this.speedMultiplier;
         this.mesh.position.add(directionToHome.multiplyScalar(moveSpeed * delta));
-
-        // Clamp to map bounds
-        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
-
+        this.clampToMapBounds(mapBounds);
         this.animator.update(delta);
     }
 
     private updatePatrolBehavior(delta: number, mapBounds: number) {
-        // Random walk around patrol center
         this.patrolTimer += delta;
 
         if (this.patrolTimer >= this.patrolUpdateInterval) {
             this.patrolTimer = 0;
-            // Change direction randomly
             const angle = Math.random() * Math.PI * 2;
             const moveDistance = this.speed * delta;
             const newX = this.mesh.position.x + Math.cos(angle) * moveDistance;
             const newZ = this.mesh.position.z + Math.sin(angle) * moveDistance;
             const newPos = new THREE.Vector3(newX, 0, newZ);
-            const distFromCenter = newPos.distanceTo(this.patrolCenter);
 
-            // Only move if within patrol radius
-            if (distFromCenter < this.patrolRadius) {
+            if (newPos.distanceTo(this.patrolCenter) < this.patrolRadius) {
                 this.mesh.position.x = newX;
                 this.mesh.position.z = newZ;
             }
         }
 
-        // Clamp to map bounds
-        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
-
+        this.clampToMapBounds(mapBounds);
         this.animator.update(delta);
     }
 
     private updateLegacyBehavior(delta: number, player: PlayerThree, distToPlayer: number, mapBounds: number, currentTime: number, isPlayerInvisible: boolean) {
-        // Original simple chase behavior (for enemies without portals)
-        // If player is invisible, just wander aimlessly
+        // If player is invisible, just idle
         if (isPlayerInvisible) {
-            // Random idle behavior when player is invisible
             this.animator.update(delta);
             return;
         }
-
-        const direction = new THREE.Vector3()
-            .subVectors(player.mesh.position, this.mesh.position)
-            .normalize();
-
-        // Dash system
-        if (this.isDashing) {
-            // Dashing: Move at high speed in stored direction
-            this.mesh.position.add(this.dashDirection.clone().multiplyScalar(this.dashSpeed * delta));
-
-            this.dashDuration -= delta;
-            if (this.dashDuration <= 0) {
-                this.isDashing = false;
-                this.hasDealtDamageThisDash = false; // Reset dash damage flag when dash ends
-                // Restore color after dash
-                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
-            }
-
-            // Skip normal movement and attack logic
-            this.animator.update(delta);
-            // Clamp position to map bounds even during dash
-            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
-            return;
-        }
-
-        // Telegraph system
-        if (this.isTelegraphing) {
-            this.telegraphDuration -= delta;
-
-            // Flash effect during telegraph
-            this.telegraphFlashTimer += delta;
-            if (this.telegraphFlashTimer >= this.telegraphFlashInterval) {
-                this.telegraphFlashTimer = 0;
-                // Toggle between white and original color
-                const currentColor = (this.sprite.material as THREE.SpriteMaterial).color.getHex();
-                if (currentColor === 0xffffff) {
-                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
-                } else {
-                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(0xffffff);
-                }
-            }
-
-            if (this.telegraphDuration <= 0) {
-                this.isTelegraphing = false;
-                this.startDash(player.mesh.position);
-            }
-
-            // Slow movement during telegraph
-            const moveSpeed = this.speed * 0.2 * this.speedMultiplier;
-            this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
-            this.animator.update(delta);
-            // Clamp position to map bounds
-            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
-            return;
-        }
-
-        // Dash cooldown
-        if (this.dashCooldown > 0) {
-            this.dashCooldown -= delta;
-        }
-
-        // Dash trigger check (before normal attack check)
-        if (this.dashCooldown <= 0 && !this.isAttacking && distToPlayer >= this.dashTriggerMin && distToPlayer <= this.dashTriggerMax) {
-            this.startTelegraph(player.mesh.position);
-            this.animator.update(delta);
-            // Clamp position to map bounds
-            this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-            this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
-            return;
-        }
-
-        // Check if should attack
-        if (distToPlayer < this.attackRange && (currentTime - this.lastAttackTime) > this.attackCooldown) {
-            this.startAttack(currentTime);
-        }
-
-        // Update attack visual
-        if (this.isAttacking) {
-            const attackElapsed = currentTime - this.attackStartTime;
-            if (attackElapsed > this.attackDuration) {
-                this.isAttacking = false;
-                this.hasDealtDamageThisAttack = false; // Reset for next attack
-                // Restore original color
-                (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
-            }
-        }
-
-        // Movement - slower during attack, affected by slow effect
-        const moveSpeed = (this.isAttacking ? this.speed * 0.3 : this.speed) * this.speedMultiplier;
-        this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
-
-        // Clamp position to map bounds (wall collision)
-        this.mesh.position.x = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.x));
-        this.mesh.position.z = Math.max(-mapBounds, Math.min(mapBounds, this.mesh.position.z));
-
-        this.animator.update(delta);
+        // Delegate to shared chase logic
+        this.updateChaseCore(delta, player, distToPlayer, mapBounds, currentTime);
     }
 
     /**
