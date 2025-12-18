@@ -81,6 +81,10 @@ export class EnemyThree {
     public isStunned: boolean = false;
     private stunDuration: number = 0;
 
+    // ========== SLOW EFFECT SYSTEM (Lars Ability) ==========
+    public slowTimer: number = 0;
+    public speedMultiplier: number = 1.0;
+
     constructor(scene: THREE.Scene, x: number, z: number, type: 'spider' | 'worm' = 'spider') {
         this.enemyType = type;
         this.mesh = new THREE.Group();
@@ -160,6 +164,20 @@ export class EnemyThree {
             // Don't move or attack while stunned, just animate
             this.animator.update(delta);
             return;
+        }
+
+        // ========== SLOW EFFECT CHECK ==========
+        if (this.slowTimer > 0) {
+            this.slowTimer -= delta;
+            if (this.slowTimer <= 0) {
+                this.speedMultiplier = 1.0;
+                // Restore original color (unless mind controlled)
+                if (!this.isMindControlled) {
+                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.originalColor);
+                } else {
+                    (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.mindControlColor);
+                }
+            }
         }
 
         // ========== MIND CONTROL (PERMANENT) ==========
@@ -265,7 +283,7 @@ export class EnemyThree {
             }
 
             // Slow movement during telegraph
-            const moveSpeed = this.speed * 0.2;
+            const moveSpeed = this.speed * 0.2 * this.speedMultiplier;
             this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
             this.animator.update(delta);
             // Clamp position to map bounds
@@ -305,8 +323,8 @@ export class EnemyThree {
             }
         }
 
-        // Movement - slower during attack
-        const moveSpeed = this.isAttacking ? this.speed * 0.3 : this.speed;
+        // Movement - slower during attack, affected by slow effect
+        const moveSpeed = (this.isAttacking ? this.speed * 0.3 : this.speed) * this.speedMultiplier;
         this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
 
         // Clamp position to map bounds (wall collision)
@@ -322,7 +340,7 @@ export class EnemyThree {
             .subVectors(this.patrolCenter, this.mesh.position)
             .normalize();
 
-        const moveSpeed = this.speed * 0.8; // 80% speed while returning
+        const moveSpeed = this.speed * 0.8 * this.speedMultiplier; // 80% speed while returning, affected by slow
         this.mesh.position.add(directionToHome.multiplyScalar(moveSpeed * delta));
 
         // Clamp to map bounds
@@ -417,7 +435,7 @@ export class EnemyThree {
             }
 
             // Slow movement during telegraph
-            const moveSpeed = this.speed * 0.2;
+            const moveSpeed = this.speed * 0.2 * this.speedMultiplier;
             this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
             this.animator.update(delta);
             // Clamp position to map bounds
@@ -457,8 +475,8 @@ export class EnemyThree {
             }
         }
 
-        // Movement - slower during attack
-        const moveSpeed = this.isAttacking ? this.speed * 0.3 : this.speed;
+        // Movement - slower during attack, affected by slow effect
+        const moveSpeed = (this.isAttacking ? this.speed * 0.3 : this.speed) * this.speedMultiplier;
         this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
 
         // Clamp position to map bounds (wall collision)
@@ -760,8 +778,8 @@ export class EnemyThree {
             }
         }
 
-        // Movement - chase enemy
-        const moveSpeed = this.isAttacking ? this.speed * 0.3 : this.speed;
+        // Movement - chase enemy, affected by slow effect
+        const moveSpeed = (this.isAttacking ? this.speed * 0.3 : this.speed) * this.speedMultiplier;
         this.mesh.position.add(direction.multiplyScalar(moveSpeed * delta));
 
         // Clamp to map bounds
@@ -810,6 +828,22 @@ export class EnemyThree {
                 (this.sprite.material as THREE.SpriteMaterial).color.setHex(this.mindControlColor);
             }
         }, 200);
+    }
+
+    // ========== SLOW EFFECT METHOD (Lars Ability) ==========
+
+    /**
+     * Apply slow effect to this enemy
+     * @param duration How long the slow lasts
+     * @param slowAmount Percentage of speed reduction (0.5 = 50% slower)
+     */
+    public applySlow(duration: number, slowAmount: number): void {
+        this.slowTimer = duration;
+        this.speedMultiplier = 1 - slowAmount;
+
+        // Visual: Purple tint
+        (this.sprite.material as THREE.SpriteMaterial).color.setHex(0x8800ff);
+        // Color will be restored when slowTimer expires in update()
     }
 
     // ========== KNOCKBACK METHOD (Arcadio Ability) ==========

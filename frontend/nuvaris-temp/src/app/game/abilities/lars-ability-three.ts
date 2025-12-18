@@ -68,20 +68,12 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     }
 
     update(delta: number, scene: THREE.Scene, player: PlayerThree, enemies: EnemyThree[]): void {
-        // Update slow timers on enemies
+        // NOTE: Slow effect is now handled by EnemyThree.update() with typed properties
+        // Only need to update fear timers here
         for (const enemy of enemies) {
             if (enemy.isDead) continue;
 
-            // Update slow effect
-            if ((enemy as any).slowTimer > 0) {
-                (enemy as any).slowTimer -= delta;
-                if ((enemy as any).slowTimer <= 0) {
-                    // Restore speed
-                    (enemy as any).speedMultiplier = 1;
-                }
-            }
-
-            // Update fear effect
+            // Update fear effect (still using dynamic property for now)
             if ((enemy as any).fearTimer > 0) {
                 (enemy as any).fearTimer -= delta;
                 if ((enemy as any).fearTimer <= 0) {
@@ -154,25 +146,11 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     }
 
     /**
-     * Apply slow effect to enemy
+     * Apply slow effect to enemy (using typed method)
      */
     private applySlowEffect(enemy: EnemyThree): void {
-        (enemy as any).slowTimer = this.slowDuration;
-        (enemy as any).speedMultiplier = 1 - this.slowAmount;
-
-        // Visual: Purple tint
-        const sprite = enemy.mesh.children[0] as THREE.Sprite;
-        if (sprite && sprite.material) {
-            const originalColor = (sprite.material as THREE.SpriteMaterial).color.getHex();
-            (sprite.material as THREE.SpriteMaterial).color.setHex(0x9900ff);
-
-            setTimeout(() => {
-                if (!enemy.isDead && !enemy.isMindControlled) {
-                    (sprite.material as THREE.SpriteMaterial).color.setHex(originalColor);
-                }
-            }, 300);
-        }
-
+        // Use the new typed method on EnemyThree
+        enemy.applySlow(this.slowDuration, this.slowAmount);
         console.log(`[LARS] Enemy slowed by ${this.slowAmount * 100}%!`);
     }
 
