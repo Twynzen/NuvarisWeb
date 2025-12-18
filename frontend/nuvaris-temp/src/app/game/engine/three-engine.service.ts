@@ -21,6 +21,7 @@ import { PlayerFogSystem } from '../world/player-fog.system';
 import { AudioService } from '../services/audio.service';
 import { CharacterCursor } from '../ui/character-cursor';
 import { GameState, createInitialGameState } from '../models/game-state.interface';
+import { SpatialGrid } from '../systems/spatial-grid';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -91,6 +92,7 @@ export class ThreeEngineService implements OnDestroy {
 
     // Collision optimization - Broad phase culling
     private maxCollisionCheckDistance = 35; // Only check enemies within this distance
+    private enemySpatialGrid = new SpatialGrid<EnemyThree>(8); // 8-unit cells for enemy lookup
 
     // Collision visualization
     private damageFlashColor = 0xff3333; // Red for damage
@@ -2320,7 +2322,10 @@ export class ThreeEngineService implements OnDestroy {
             // Clean up enemies killed by mind-controlled allies
             this.enemies = this.enemies.filter(e => !e.isDead);
 
-            // Update Projectiles & Collision
+            // Update spatial grid for optimized collision detection (O(n+m) instead of O(n×m))
+            this.enemySpatialGrid.update(this.enemies);
+
+            // Update Projectiles & Collision (using spatial grid)
             for (let i = this.projectiles.length - 1; i >= 0; i--) {
                 const proj = this.projectiles[i];
                 proj.update(delta);
@@ -2330,12 +2335,15 @@ export class ThreeEngineService implements OnDestroy {
                     continue;
                 }
 
-                // Collision with Enemies
-                for (let j = this.enemies.length - 1; j >= 0; j--) {
-                    const enemy = this.enemies[j];
+                // Collision with Enemies - use spatial grid for O(1) lookup
+                const nearbyEnemies = this.enemySpatialGrid.getNearby(proj.mesh.position, 3);
+                let projectileHit = false;
+
+                for (const enemy of nearbyEnemies) {
+                    if (projectileHit) break;
 
                     // Skip mind-controlled enemies (minions) - don't damage allies!
-                    if (enemy.isMindControlled) continue;
+                    if (enemy.isMindControlled || enemy.isDead) continue;
 
                     if (proj.mesh.position.distanceTo(enemy.mesh.position) < 1.5) {
                         // Apply damage multiplier if set
@@ -2373,7 +2381,7 @@ export class ThreeEngineService implements OnDestroy {
                             // Add XP and score directly (no orbs)
                             this.addXp(reward.xp);
                             this.gameState.score += reward.score;
-                            this.enemies.splice(j, 1);
+                            // Enemy is marked as dead, will be filtered next frame
                             // Play enemy death sound
                             this.audioService.playEnemyDeath(enemyType);
 
@@ -2408,7 +2416,7 @@ export class ThreeEngineService implements OnDestroy {
                             // Destroy projectile
                             proj.mesh.visible = false;
                             this.projectiles.splice(i, 1);
-                            break; // Projectile hit something, stop checking other enemies
+                            projectileHit = true;
                         }
                     }
                 }
