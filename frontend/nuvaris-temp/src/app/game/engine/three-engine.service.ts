@@ -19,6 +19,7 @@ import { SimpleTween } from '../utils/simple-tween';
 import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.converter';
 import { PlayerFogSystem } from '../world/player-fog.system';
 import { AudioService } from '../services/audio.service';
+import { CharacterCursor } from '../ui/character-cursor';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -69,6 +70,9 @@ export class ThreeEngineService implements OnDestroy {
 
     // Character Abilities System
     private characterAbility!: CharacterAbilityThree;
+
+    // Character Cursor (3D cursor that follows mouse)
+    private characterCursor: CharacterCursor | null = null;
 
     // Auto-shoot configuration
     private autoShootInterval = 1.1; // seconds between shots (30 frames @ 30 FPS = 1.0s + 0.1s buffer)
@@ -1669,6 +1673,9 @@ export class ThreeEngineService implements OnDestroy {
         if (this.frameId != null) {
             cancelAnimationFrame(this.frameId);
         }
+        if (this.characterCursor) {
+            this.characterCursor.dispose();
+        }
         if (this.renderer) {
             this.renderer.dispose();
             this.renderer.forceContextLoss();
@@ -1760,6 +1767,9 @@ export class ThreeEngineService implements OnDestroy {
             // Initialize Character Ability based on selected character
             this.initializeCharacterAbility(characterId);
 
+            // Initialize character cursor (3D targeting reticle)
+            this.characterCursor = new CharacterCursor(this.scene, characterId);
+
             console.log(`[Game] Started with map: ${this.currentMapName}`);
         }).catch((err) => {
             // Fallback to legacy hardcoded map if loading fails
@@ -1769,6 +1779,9 @@ export class ThreeEngineService implements OnDestroy {
             // Player at center
             this.player = new PlayerThree(this.scene, characterId);
             this.initializeCharacterAbility(characterId);
+
+            // Initialize character cursor (3D targeting reticle)
+            this.characterCursor = new CharacterCursor(this.scene, characterId);
         });
 
         this.animate();
@@ -2101,6 +2114,19 @@ export class ThreeEngineService implements OnDestroy {
             this.render();
         });
 
+        // Handle cursor visibility based on game state
+        const shouldShowGameCursor = !this.gameState.isLevelingUp && !this.gameState.isPaused && !this.gameState.isGameOver;
+        if (this.characterCursor) {
+            this.characterCursor.setVisible(shouldShowGameCursor);
+        }
+        if (this.canvas) {
+            this.canvas.style.cursor = shouldShowGameCursor ? 'none' : 'default';
+            // Also set on parent container for when overlays are shown
+            if (this.canvas.parentElement) {
+                this.canvas.parentElement.style.cursor = shouldShowGameCursor ? 'none' : 'default';
+            }
+        }
+
         if (this.gameState.isLevelingUp || this.gameState.isPaused || this.gameState.isGameOver) return;
 
         let delta = this.clock.getDelta();
@@ -2134,6 +2160,12 @@ export class ThreeEngineService implements OnDestroy {
             }
             this.wasPlayerWalking = isCurrentlyWalking;
             // ========================================
+
+            // Update character cursor (3D targeting reticle)
+            if (this.characterCursor) {
+                const worldPos = this.screenToWorld(this.mousePosition.x, this.mousePosition.y);
+                this.characterCursor.update(worldPos, delta);
+            }
 
             // Update player-centered fog system
             if (this.playerFogSystem) {
@@ -2801,6 +2833,12 @@ export class ThreeEngineService implements OnDestroy {
 
         // Reinitialize character ability for new player
         this.initializeCharacterAbility(this.currentCharacterId);
+
+        // Recreate character cursor
+        if (this.characterCursor) {
+            this.characterCursor.dispose();
+        }
+        this.characterCursor = new CharacterCursor(this.scene, this.currentCharacterId);
 
         // Reset timers and states
         this.lastSpawnTime = 0;

@@ -42,7 +42,7 @@ export class PlayerThree {
     private isCharging = false;
     private chargeStartTime = 0;
     private chargeLevel = 0; // 0-1 representing charge progress
-    private maxChargeTime = 1.5; // Seconds to reach full charge
+    private maxChargeTime = 1.125; // Seconds to reach full charge (25% faster than original 1.5s)
     private chargeThresholds = {
         level1: 0.33,  // 0.5s - 35% mind control
         level2: 0.66,  // 1.0s - 70% mind control
@@ -263,7 +263,7 @@ export class PlayerThree {
             prefix: `${prefix}charge-`,
             suffix: '.png',
             frameCount: 30,
-            frameRate: 30,
+            frameRate: 38, // 25% faster than original 30fps
             loop: true
         });
 
@@ -274,7 +274,7 @@ export class PlayerThree {
             prefix: `${prefix}charge-up-`,
             suffix: '.png',
             frameCount: 30,
-            frameRate: 30,
+            frameRate: 38, // 25% faster than original 30fps
             loop: true
         });
 
@@ -623,7 +623,7 @@ export class PlayerThree {
                     newChargeAnim,
                     this.holdFrameStart,
                     this.holdFrameEnd,
-                    12
+                    15 // 25% faster than original 12fps
                 );
             } else {
                 this.animator.play(newChargeAnim);
@@ -648,7 +648,7 @@ export class PlayerThree {
                 this.currentChargeAnim,
                 this.holdFrameStart,
                 this.holdFrameEnd,
-                12 // 12fps for smooth hold loop
+                15 // 25% faster than original 12fps
             );
             this.inHoldLoop = true;
             console.log('[LARS] Hold loop activated - ready to fire');
