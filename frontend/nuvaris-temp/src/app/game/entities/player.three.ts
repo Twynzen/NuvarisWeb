@@ -191,9 +191,11 @@ export class PlayerThree {
             loop: false
         });
 
-        // === LARS-SPECIFIC ANIMATIONS ===
+        // === CHARACTER-SPECIFIC ANIMATIONS ===
         if (this.characterId === 'lars') {
             this.loadLarsAnimations();
+        } else if (this.characterId === 'proyecto-y') {
+            this.loadProyectoYAnimations();
         } else {
             // Other characters use shoot animations (30 frames)
             this.loadShootAnimations(folder, prefix);
@@ -325,6 +327,62 @@ export class PlayerThree {
         });
 
         console.log('[LARS] Loaded 8-directional movement + 8-directional attack + 4-directional charge + 360° rotation animations');
+    }
+
+    /**
+     * Load Proyecto-Y specific animations:
+     * - 4 diagonal movement animations (30 frames each)
+     * - Shoot animations
+     */
+    private loadProyectoYAnimations() {
+        const folder = 'proyecto-y';
+        const prefix = 'proyecto-y-';
+
+        // === DIAGONAL MOVEMENT (30 frames each) ===
+        this.animator.loadAnimation({
+            name: 'run-up-left',
+            texturePath: `assets/${folder}/up-left`,
+            prefix: `${prefix}walk-up-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-up-right',
+            texturePath: `assets/${folder}/up-right`,
+            prefix: `${prefix}walk-up-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-down-left',
+            texturePath: `assets/${folder}/down-left`,
+            prefix: `${prefix}walk-down-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-down-right',
+            texturePath: `assets/${folder}/down-right`,
+            prefix: `${prefix}walk-down-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // === SHOOT ANIMATIONS ===
+        this.loadShootAnimations(folder, prefix);
+
+        console.log('[PROYECTO-Y] Loaded 8-directional movement + shoot animations');
     }
 
     /**
@@ -481,9 +539,9 @@ export class PlayerThree {
             // Shooting animation is handled in shoot()
             animationPlayed = 'shooting';
         } else if (this.isMoving) {
-            // Movement animations - Lars uses 8-directional
-            if (this.characterId === 'lars') {
-                animationPlayed = this.playLarsMovementAnimation(moveX, moveZ);
+            // Movement animations - Lars and Proyecto-Y use 8-directional
+            if (this.characterId === 'lars' || this.characterId === 'proyecto-y') {
+                animationPlayed = this.play8DirectionalMovement(moveX, moveZ);
             } else {
                 animationPlayed = this.playCardinalMovementAnimation(moveX, moveZ);
             }
@@ -501,9 +559,9 @@ export class PlayerThree {
     }
 
     /**
-     * Play Lars 8-directional movement animation
+     * Play 8-directional movement animation (used by Lars and Proyecto-Y)
      */
-    private playLarsMovementAnimation(moveX: number, moveZ: number): string {
+    private play8DirectionalMovement(moveX: number, moveZ: number): string {
         const dir = this.getDirection8FromMovement(moveX, moveZ);
         let animName = '';
 
