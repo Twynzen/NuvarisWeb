@@ -22,6 +22,7 @@ import { AudioService } from '../services/audio.service';
 import { CharacterCursor } from '../ui/character-cursor';
 import { GameState, createInitialGameState } from '../models/game-state.interface';
 import { SpatialGrid } from '../systems/spatial-grid';
+import { DisposableManager } from '../systems/disposable.manager';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -93,6 +94,9 @@ export class ThreeEngineService implements OnDestroy {
     // Collision optimization - Broad phase culling
     private maxCollisionCheckDistance = 35; // Only check enemies within this distance
     private enemySpatialGrid = new SpatialGrid<EnemyThree>(8); // 8-unit cells for enemy lookup
+
+    // Memory management - tracks Three.js resources for proper disposal
+    private disposableManager = new DisposableManager();
 
     // Collision visualization
     private damageFlashColor = 0xff3333; // Red for damage
@@ -1667,6 +1671,10 @@ export class ThreeEngineService implements OnDestroy {
         if (this.characterCursor) {
             this.characterCursor.dispose();
         }
+        // Dispose all tracked Three.js resources to prevent memory leaks
+        if (this.scene) {
+            this.disposableManager.disposeAll(this.scene);
+        }
         if (this.renderer) {
             this.renderer.dispose();
             this.renderer.forceContextLoss();
@@ -1713,11 +1721,13 @@ export class ThreeEngineService implements OnDestroy {
         // Lighting - ambient + directional for better visibility
         const ambientLight = new THREE.AmbientLight(0x222244, 0.7);
         this.scene.add(ambientLight);
+        this.disposableManager.track(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(50, 100, 50);
         directionalLight.castShadow = true;
         this.scene.add(directionalLight);
+        this.disposableManager.track(directionalLight);
 
         // Ground
         this.createGround();
@@ -2070,6 +2080,7 @@ export class ThreeEngineService implements OnDestroy {
         innerFloor.receiveShadow = true;
         this.scene.add(innerFloor);
         this.mapFloor = innerFloor;
+        this.disposableManager.track(innerFloor);
 
         // Outer background (dark) - also with fog
         const outerFloorGeo = new THREE.PlaneGeometry(400, 400, 50, 50);
@@ -2086,6 +2097,7 @@ export class ThreeEngineService implements OnDestroy {
         outerFloor.position.y = -0.01;
         outerFloor.receiveShadow = true;
         this.scene.add(outerFloor);
+        this.disposableManager.track(outerFloor);
     }
 
     animate(): void {
