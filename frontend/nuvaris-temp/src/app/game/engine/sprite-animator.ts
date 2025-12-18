@@ -26,6 +26,9 @@ export class SpriteAnimator {
     private subsetStart = 0;
     private subsetEnd = 0;
 
+    // Static frame mode (for 360 rotation - display specific frame without animation)
+    private isStaticMode = false;
+
     constructor(material: THREE.SpriteMaterial) {
         this.spriteMaterial = material;
     }
@@ -45,12 +48,13 @@ export class SpriteAnimator {
     }
 
     play(name: string, loop = true, frameRate = 10) {
-        if (this.currentAnimation === name && !this.useSubset) return;
+        if (this.currentAnimation === name && !this.useSubset && !this.isStaticMode) return;
 
-        // Exit subset mode when playing a new animation
+        // Exit subset mode and static mode when playing a new animation
         this.useSubset = false;
         this.subsetStart = 0;
         this.subsetEnd = 0;
+        this.isStaticMode = false;
 
         if (this.animations[name]) {
             this.currentAnimation = name;
@@ -61,6 +65,34 @@ export class SpriteAnimator {
 
             this.spriteMaterial.map = this.animations[name][0];
         }
+    }
+
+    /**
+     * Display a specific frame without animation (for 360 rotation hold)
+     * @param name Animation name to get frame from
+     * @param frameIndex Frame to display (0-indexed)
+     */
+    setStaticFrame(name: string, frameIndex: number): void {
+        if (!this.animations[name]) return;
+
+        const frames = this.animations[name];
+        const clampedIndex = Math.max(0, Math.min(frameIndex, frames.length - 1));
+
+        // Stop any ongoing animation modes
+        this.useSubset = false;
+        this.isStaticMode = true;
+        this.currentAnimation = name;
+        this.currentFrameIndex = clampedIndex;
+
+        // Set texture directly
+        this.spriteMaterial.map = frames[clampedIndex];
+    }
+
+    /**
+     * Check if currently in static frame mode
+     */
+    isInStaticMode(): boolean {
+        return this.isStaticMode;
     }
 
     /**
@@ -84,6 +116,7 @@ export class SpriteAnimator {
         this.timeSinceLastFrame = 0;
         this.useSubset = true;
         this.loop = true;
+        this.isStaticMode = false; // Exit static mode to allow animation
 
         this.spriteMaterial.map = frames[this.subsetStart];
     }
@@ -105,7 +138,8 @@ export class SpriteAnimator {
     }
 
     update(delta: number) {
-        if (!this.currentAnimation) return;
+        // Don't update if no animation or in static mode (manual frame control)
+        if (!this.currentAnimation || this.isStaticMode) return;
 
         this.timeSinceLastFrame += delta;
 

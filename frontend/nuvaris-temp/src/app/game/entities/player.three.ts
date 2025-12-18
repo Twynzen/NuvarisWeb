@@ -42,7 +42,7 @@ export class PlayerThree {
     private isCharging = false;
     private chargeStartTime = 0;
     private chargeLevel = 0; // 0-1 representing charge progress
-    private maxChargeTime = 1.125; // Seconds to reach full charge (25% faster than original 1.5s)
+    private maxChargeTime = 0.75; // Seconds to reach full charge (slightly longer than animation to ensure it completes)
     private chargeThresholds = {
         level1: 0.33,  // 0.5s - 35% mind control
         level2: 0.66,  // 1.0s - 70% mind control
@@ -53,6 +53,19 @@ export class PlayerThree {
     private inHoldLoop = false;
     private readonly holdFrameStart = 24; // Frame 25 (0-indexed) - sphere fully visible
     private readonly holdFrameEnd = 29;   // Frame 30 (0-indexed) - max energy
+
+    // ========== 360 ROTATION HOLD SYSTEM ==========
+    private inRotationHold = false;           // True when using 360 rotation sprites
+    private inDownHoldLoop = false;           // True when holding in "down" direction (uses charge-down hold loop)
+    private currentRotationFrame = 0;         // Current frame being displayed (float for interpolation)
+    private targetRotationFrame = 0;          // Target frame to interpolate to
+    private lastChargeTarget: THREE.Vector3 | null = null; // Last mouse/touch position during charge
+    private chargeFullyLoaded = false;        // True when charge animation completed and ready for rotation
+    // Based on visual analysis: 360° rotation spans ~20 frames (frames 0-19)
+    // Frame 0=DOWN(0°), Frame 5=RIGHT(90°), Frame 10=UP(180°), Frame 15=LEFT(270°)
+    private readonly ROTATION_FRAME_COUNT = 20;  // Effective frames for 360° rotation
+    private readonly DEGREES_PER_FRAME = 18;     // 360 / 20 = 18 degrees per frame
+    private readonly ROTATION_LERP_SPEED = 12;   // Frames per second of interpolation (smoother)
 
     // Debug mode - set to true to see flip/animation logs
     private DEBUG_FLIP = false;
@@ -255,16 +268,16 @@ export class PlayerThree {
             });
         }
 
-        // === CHARGE ANIMATIONS (4-directional) ===
-        // Charge facing down (front view)
+        // === CHARGE ANIMATIONS ===
+        // Charge facing down (front view) - only animation used during 0-99% charge
         this.animator.loadAnimation({
             name: 'charge-down',
             texturePath: `assets/${folder}/charge-down`,
             prefix: `${prefix}charge-down-`,
             suffix: '.png',
             frameCount: 30,
-            frameRate: 38, // 25% faster than original 30fps
-            loop: true
+            frameRate: 45, // ~0.67s to complete animation
+            loop: false   // NO loop - plays once, stays on last frame until rotation activates
         });
 
         // Charge facing up (back view)
@@ -300,7 +313,18 @@ export class PlayerThree {
             loop: true
         });
 
-        console.log('[LARS] Loaded 8-directional movement + 8-directional attack + 4-directional charge animations');
+        // === CHARGE ROTATION (360° rotation at 100% charge) ===
+        this.animator.loadAnimation({
+            name: 'charge-rotation',
+            texturePath: `assets/${folder}/charge-rotation`,
+            prefix: 'charge-rotation-',
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30, // Not used - we control frames manually
+            loop: false
+        });
+
+        console.log('[LARS] Loaded 8-directional movement + 8-directional attack + 4-directional charge + 360° rotation animations');
     }
 
     /**
@@ -443,6 +467,12 @@ export class PlayerThree {
             // Charge animation is handled in startCharge() - don't override
             // Update charge level each frame
             this.updateCharge();
+
+            // Update 360° rotation interpolation if in rotation hold
+            if (this.inRotationHold) {
+                this.updateRotationInterpolation(delta);
+            }
+
             animationPlayed = 'charging';
         } else if (this.isMeleeAttacking) {
             // Melee animation is handled in meleeAttack() - don't override it
@@ -625,48 +655,47 @@ export class PlayerThree {
     public updateChargeDirection(targetPosition: THREE.Vector3): void {
         if (!this.isCharging) return;
 
+        // Store target position for rotation hold initialization
+        this.lastChargeTarget = targetPosition.clone();
+
+        // During charge (0-99%), always face down - no direction changes allowed
+        if (!this.chargeFullyLoaded) return;
+
+        // Charge is fully loaded - check direction to decide hold mode
         const direction = this.getDirection8ToTarget(targetPosition);
+        const isPointingDown = direction === 'down' || direction === 'down-left' || direction === 'down-right';
 
-        // Determine which charge animation to use (4-directional)
-        let newChargeAnim: 'charge-down' | 'charge-up' | 'charge-left' | 'charge-right' = 'charge-down';
-
-        // Map 8 directions to 4 charge animations
-        switch (direction) {
-            case 'up':
-            case 'up-left':
-            case 'up-right':
-                newChargeAnim = 'charge-up';
-                break;
-            case 'left':
-                newChargeAnim = 'charge-left';
-                break;
-            case 'right':
-                newChargeAnim = 'charge-right';
-                break;
-            case 'down':
-            case 'down-left':
-            case 'down-right':
-            default:
-                newChargeAnim = 'charge-down';
-                break;
-        }
-
-        // Only switch animation if direction changed
-        if (newChargeAnim !== this.currentChargeAnim) {
-            this.currentChargeAnim = newChargeAnim;
-
-            // If we're in hold loop, apply it to the new animation
-            if (this.inHoldLoop) {
+        if (isPointingDown) {
+            // Pointing down/front - use charge-down hold loop (energy stabilizing)
+            if (!this.inDownHoldLoop) {
+                this.inDownHoldLoop = true;
+                this.inRotationHold = false;
                 this.animator.playSubsetLoop(
-                    newChargeAnim,
+                    'charge-down',
                     this.holdFrameStart,
                     this.holdFrameEnd,
-                    15 // 25% faster than original 12fps
+                    15 // Slower oscillation for "stabilizing" effect
                 );
-            } else {
-                this.animator.play(newChargeAnim);
+                console.log('[LARS] Down hold loop - energy stabilizing');
             }
-            console.log(`[LARS] Charge animation switched to: ${newChargeAnim}`);
+        } else {
+            // Pointing other direction - use 360° rotation
+            if (!this.inRotationHold) {
+                this.inDownHoldLoop = false;
+                this.inRotationHold = true;
+                this.animator.stopSubsetLoop();
+
+                // Initialize rotation frame
+                const angle = this.getAngleToTarget(targetPosition);
+                this.currentRotationFrame = this.angleToFrame(angle);
+                this.targetRotationFrame = this.currentRotationFrame;
+                this.animator.setStaticFrame('charge-rotation', Math.round(this.currentRotationFrame));
+                console.log('[LARS] 360° rotation activated');
+            } else {
+                // Already in rotation mode - update target
+                const angle = this.getAngleToTarget(targetPosition);
+                this.targetRotationFrame = this.angleToFrame(angle);
+            }
         }
     }
 
@@ -680,16 +709,19 @@ export class PlayerThree {
         const elapsed = (Date.now() - this.chargeStartTime) / 1000;
         this.chargeLevel = Math.min(elapsed / this.maxChargeTime, 1.0);
 
-        // Activate hold loop when charge is complete (100%) - loop final frames showing sphere
-        if (this.chargeLevel >= 1.0 && !this.inHoldLoop) {
+        // Activate hold mode when charge is complete (100%)
+        if (this.chargeLevel >= 1.0 && !this.chargeFullyLoaded) {
+            this.chargeFullyLoaded = true;
+
+            // Default: start with down hold loop (energy stabilizing)
+            this.inDownHoldLoop = true;
             this.animator.playSubsetLoop(
-                this.currentChargeAnim,
+                'charge-down',
                 this.holdFrameStart,
                 this.holdFrameEnd,
-                15 // 25% faster than original 12fps
+                15
             );
-            this.inHoldLoop = true;
-            console.log('[LARS] Hold loop activated - ready to fire');
+            console.log('[LARS] Charge complete - energy stabilizing (down hold)');
         }
 
         return this.chargeLevel;
@@ -708,7 +740,15 @@ export class PlayerThree {
         this.isCharging = false;
         this.chargeLevel = 0;
 
-        // Reset hold loop state
+        // Reset all hold states
+        this.inRotationHold = false;
+        this.inDownHoldLoop = false;
+        this.chargeFullyLoaded = false;
+        this.currentRotationFrame = 0;
+        this.targetRotationFrame = 0;
+        this.lastChargeTarget = null;
+
+        // Reset legacy hold loop state
         this.inHoldLoop = false;
         this.animator.stopSubsetLoop();
 
@@ -752,7 +792,15 @@ export class PlayerThree {
         this.isCharging = false;
         this.chargeLevel = 0;
 
-        // Reset hold loop state
+        // Reset all hold states
+        this.inRotationHold = false;
+        this.inDownHoldLoop = false;
+        this.chargeFullyLoaded = false;
+        this.currentRotationFrame = 0;
+        this.targetRotationFrame = 0;
+        this.lastChargeTarget = null;
+
+        // Reset legacy hold loop state
         this.inHoldLoop = false;
         this.animator.stopSubsetLoop();
 
@@ -795,6 +843,101 @@ export class PlayerThree {
      */
     public getLastDirection8(): Direction8 {
         return this.lastDirection8;
+    }
+
+    // ========== 360 ROTATION HOLD METHODS ==========
+
+    /**
+     * Activate 360° rotation hold mode when charge reaches 100%
+     */
+    private activateRotationHold(): void {
+        this.inRotationHold = true;
+        this.inHoldLoop = false; // Disable old hold system
+        this.animator.stopSubsetLoop();
+
+        // Initialize rotation frame based on current target direction
+        const angle = this.lastChargeTarget
+            ? this.getAngleToTarget(this.lastChargeTarget)
+            : 0;
+        this.currentRotationFrame = this.angleToFrame(angle);
+        this.targetRotationFrame = this.currentRotationFrame;
+
+        // Set initial frame
+        this.animator.setStaticFrame('charge-rotation', Math.round(this.currentRotationFrame));
+
+        console.log('[LARS] 360° rotation hold activated');
+    }
+
+    /**
+     * Convert angle (degrees) to frame index (0-29)
+     * Frame 0 = 0 degrees (front/down)
+     * Rotation is clockwise
+     */
+    private angleToFrame(angleDegrees: number): number {
+        // Normalize angle to 0-360
+        let normalized = angleDegrees % 360;
+        if (normalized < 0) normalized += 360;
+
+        // Convert to frame (clockwise rotation)
+        return normalized / this.DEGREES_PER_FRAME;
+    }
+
+    /**
+     * Calculate angle from player to target in degrees (0-360, clockwise from down/front)
+     */
+    private getAngleToTarget(targetPosition: THREE.Vector3): number {
+        const direction = new THREE.Vector3()
+            .subVectors(targetPosition, this.mesh.position);
+
+        // Calculate angle using atan2
+        // In game coordinates: +X = right, +Z = down (front)
+        // atan2(x, z) gives angle from +Z axis, counter-clockwise
+        const angleRad = Math.atan2(direction.x, direction.z);
+
+        // Convert to degrees
+        let angleDeg = angleRad * (180 / Math.PI);
+
+        // Normalize to 0-360
+        if (angleDeg < 0) angleDeg += 360;
+
+        return angleDeg;
+    }
+
+    /**
+     * Interpolate rotation frame smoothly with wrap-around handling
+     * Called every frame during rotation hold
+     */
+    private updateRotationInterpolation(delta: number): void {
+        if (!this.inRotationHold) return;
+
+        // Calculate shortest path considering wrap-around
+        let diff = this.targetRotationFrame - this.currentRotationFrame;
+
+        // Handle wrap-around (take shortest path)
+        // If diff > half the frames, going the other way is shorter
+        const halfFrames = this.ROTATION_FRAME_COUNT / 2; // 10 frames
+        if (diff > halfFrames) {
+            diff -= this.ROTATION_FRAME_COUNT; // Go backwards
+        } else if (diff < -halfFrames) {
+            diff += this.ROTATION_FRAME_COUNT; // Go forwards
+        }
+
+        // Smooth interpolation
+        const maxMove = this.ROTATION_LERP_SPEED * delta;
+        const move = Math.sign(diff) * Math.min(Math.abs(diff), maxMove);
+
+        this.currentRotationFrame += move;
+
+        // Normalize to 0-19.999... range (20 frames for 360°)
+        if (this.currentRotationFrame >= this.ROTATION_FRAME_COUNT) {
+            this.currentRotationFrame -= this.ROTATION_FRAME_COUNT;
+        } else if (this.currentRotationFrame < 0) {
+            this.currentRotationFrame += this.ROTATION_FRAME_COUNT;
+        }
+
+        // Update sprite to nearest frame (clamped to valid range 0-19)
+        const displayFrame = Math.round(this.currentRotationFrame) % this.ROTATION_FRAME_COUNT;
+        this.animator.setStaticFrame('charge-rotation', displayFrame);
     }
 
     shoot(scene: THREE.Scene, targetPosition?: THREE.Vector3): ProjectileThree | null {
