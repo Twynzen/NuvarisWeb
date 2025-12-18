@@ -255,12 +255,12 @@ export class PlayerThree {
             });
         }
 
-        // === CHARGE ANIMATIONS (directional) ===
-        // Default charge (front/down facing)
+        // === CHARGE ANIMATIONS (4-directional) ===
+        // Charge facing down (front view)
         this.animator.loadAnimation({
-            name: 'charge',
-            texturePath: `assets/${folder}/charge`,
-            prefix: `${prefix}charge-`,
+            name: 'charge-down',
+            texturePath: `assets/${folder}/charge-down`,
+            prefix: `${prefix}charge-down-`,
             suffix: '.png',
             frameCount: 30,
             frameRate: 38, // 25% faster than original 30fps
@@ -278,7 +278,29 @@ export class PlayerThree {
             loop: true
         });
 
-        console.log('[LARS] Loaded 8-directional movement + 8-directional attack + directional charge animations');
+        // Charge facing left (will use charge-down as fallback until assets provided)
+        this.animator.loadAnimation({
+            name: 'charge-left',
+            texturePath: `assets/${folder}/charge-left`,
+            prefix: `${prefix}charge-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 38,
+            loop: true
+        });
+
+        // Charge facing right (will use charge-down as fallback until assets provided)
+        this.animator.loadAnimation({
+            name: 'charge-right',
+            texturePath: `assets/${folder}/charge-right`,
+            prefix: `${prefix}charge-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 38,
+            loop: true
+        });
+
+        console.log('[LARS] Loaded 8-directional movement + 8-directional attack + 4-directional charge animations');
     }
 
     /**
@@ -578,7 +600,7 @@ export class PlayerThree {
      * Start charging attack (called on mouse down / touch start)
      * Only works for Lars
      */
-    private currentChargeAnim: 'charge' | 'charge-up' = 'charge';
+    private currentChargeAnim: 'charge-down' | 'charge-up' | 'charge-left' | 'charge-right' = 'charge-down';
 
     public startCharge(): boolean {
         if (this.characterId !== 'lars') return false;
@@ -587,10 +609,10 @@ export class PlayerThree {
         this.isCharging = true;
         this.chargeStartTime = Date.now();
         this.chargeLevel = 0;
-        this.currentChargeAnim = 'charge';
+        this.currentChargeAnim = 'charge-down';
 
         // Play default charge animation (loops)
-        this.animator.play('charge');
+        this.animator.play('charge-down');
 
         console.log('[LARS] Charge started');
         return true;
@@ -605,12 +627,28 @@ export class PlayerThree {
 
         const direction = this.getDirection8ToTarget(targetPosition);
 
-        // Determine which charge animation to use
-        let newChargeAnim: 'charge' | 'charge-up' = 'charge';
+        // Determine which charge animation to use (4-directional)
+        let newChargeAnim: 'charge-down' | 'charge-up' | 'charge-left' | 'charge-right' = 'charge-down';
 
-        // Use charge-up for up, up-left, up-right directions
-        if (direction === 'up' || direction === 'up-left' || direction === 'up-right') {
-            newChargeAnim = 'charge-up';
+        // Map 8 directions to 4 charge animations
+        switch (direction) {
+            case 'up':
+            case 'up-left':
+            case 'up-right':
+                newChargeAnim = 'charge-up';
+                break;
+            case 'left':
+                newChargeAnim = 'charge-left';
+                break;
+            case 'right':
+                newChargeAnim = 'charge-right';
+                break;
+            case 'down':
+            case 'down-left':
+            case 'down-right':
+            default:
+                newChargeAnim = 'charge-down';
+                break;
         }
 
         // Only switch animation if direction changed
