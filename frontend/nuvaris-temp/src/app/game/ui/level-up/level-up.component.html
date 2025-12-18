@@ -1,32 +1,64 @@
-<div class="level-up-overlay">
+<div class="level-up-overlay" [class.show-result]="showFinalResult">
   <div class="container">
-    <h1 class="title">SYSTEM UPGRADE DETECTED</h1>
+    <!-- Title -->
+    <h1 class="title">SYSTEM UPGRADE</h1>
+    <p class="subtitle" *ngIf="!allLanesStopped">ANALYZING NEURAL PATHWAYS...</p>
+    <p class="subtitle" *ngIf="allLanesStopped && !showFinalResult">PROCESSING...</p>
 
-    <!-- Spinning Phase -->
-    <div class="roulette-container" *ngIf="isSpinning && currentSpinUpgrade">
-      <div class="spin-indicator">ANALYZING NEURAL PATHWAYS...</div>
-      <div class="roulette-card spinning" [ngClass]="currentSpinUpgrade.displayClass">
-        <div class="icon">{{getAbilityIcon(currentSpinUpgrade)}}</div>
-        <h2 class="name">{{currentSpinUpgrade.name}}</h2>
-        <p class="description">{{currentSpinUpgrade.description}}</p>
-        <span class="rarity-badge">{{getRarityText(currentSpinUpgrade.rarity)}}</span>
+    <!-- Slot Machine Container -->
+    <div class="slot-machine" *ngIf="!showFinalResult">
+      <!-- Lane indicators -->
+      <div class="lane-container">
+        <div class="slot-lane"
+             *ngFor="let lane of lanes; let i = index"
+             [class.spinning]="lane.isSpinning"
+             [class.stopped]="!lane.isSpinning">
+
+          <!-- Slot viewport -->
+          <div class="slot-viewport">
+            <div class="slot-reel">
+              <!-- Current visible item -->
+              <div class="slot-item" [ngClass]="getLaneCurrentItem(lane).displayClass">
+                <div class="item-icon" [innerHTML]="getSafeSvg(getLaneCurrentItem(lane).icon)"></div>
+                <span class="item-name">{{ getLaneCurrentItem(lane).name }}</span>
+                <span class="item-rarity">{{ getRarityText(getLaneCurrentItem(lane).rarity) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lane number indicator -->
+          <div class="lane-indicator">{{ i + 1 }}</div>
+
+          <!-- Stopped indicator -->
+          <div class="stopped-badge" *ngIf="!lane.isSpinning">
+            <span class="checkmark">&#10003;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selection pointer -->
+      <div class="selection-pointer">
+        <div class="pointer-arrow"></div>
       </div>
     </div>
 
-    <!-- Result Phase -->
-    <div class="result-container" *ngIf="showResult && selectedUpgrade">
-      <div class="result-banner" [ngClass]="selectedUpgrade.displayClass">
-        UPGRADE ACQUIRED!
+    <!-- Final Result -->
+    <div class="final-result" *ngIf="showFinalResult && finalSelection">
+      <div class="result-banner" [ngClass]="finalSelection.displayClass">
+        UPGRADE ACQUIRED
       </div>
-      <div class="roulette-card winner" [ngClass]="selectedUpgrade.displayClass">
-        <div class="icon winner-icon">{{getAbilityIcon(selectedUpgrade)}}</div>
-        <h2 class="name">{{selectedUpgrade.name}}</h2>
-        <p class="description">{{selectedUpgrade.description}}</p>
-        <span class="rarity-badge">{{getRarityText(selectedUpgrade.rarity)}}</span>
+
+      <div class="winner-card" [ngClass]="finalSelection.displayClass">
+        <div class="winner-glow"></div>
+        <div class="winner-icon" [innerHTML]="getSafeSvg(finalSelection.icon)"></div>
+        <h2 class="winner-name">{{ finalSelection.name }}</h2>
+        <p class="winner-description">{{ finalSelection.description }}</p>
+        <span class="winner-rarity">{{ getRarityText(finalSelection.rarity) }}</span>
       </div>
-      <button class="accept-btn" [ngClass]="selectedUpgrade.displayClass" (click)="acceptUpgrade()">
-        INSTALL UPGRADE
-      </button>
+
+      <div class="auto-apply-indicator">
+        <span class="loading-dots">INSTALLING</span>
+      </div>
     </div>
   </div>
 </div>

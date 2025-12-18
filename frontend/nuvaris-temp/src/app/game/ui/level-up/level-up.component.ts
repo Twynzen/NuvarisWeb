@@ -1,14 +1,25 @@
 import { Component, EventEmitter, Output, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AbilityOption } from '../../abilities/ability-option';
 import { ProyectoASkills } from '../../abilities/skills/proyecto-a.skills';
 import { LarsSkills } from '../../abilities/skills/lars.skills';
 import { ProyectoYSkills } from '../../abilities/skills/proyecto-y.skills';
+import { getSkillIcon, SkillIcon } from '../../abilities/skill-icons';
 
 type Rarity = 'basica' | 'epica' | 'legendaria';
 
 interface RouletteUpgrade extends AbilityOption {
-    displayClass: string; // For CSS styling
+    displayClass: string;
+    icon: SkillIcon;
+}
+
+interface SlotLane {
+    items: RouletteUpgrade[];
+    currentIndex: number;
+    isSpinning: boolean;
+    winner: RouletteUpgrade | null;
+    offset: number; // For smooth animation
 }
 
 @Component({
@@ -22,14 +33,13 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     @Input() characterId: string = 'proyecto-a';
     @Output() upgradeSelected = new EventEmitter<AbilityOption>();
 
-    // Roulette state
-    isSpinning = true;
-    showResult = false;
-    selectedUpgrade: RouletteUpgrade | null = null;
-    spinningUpgrades: RouletteUpgrade[] = [];
-    currentSpinIndex = 0;
+    // Slot machine state
+    lanes: SlotLane[] = [];
+    finalSelection: RouletteUpgrade | null = null;
+    showFinalResult = false;
+    allLanesStopped = false;
 
-    // Available upgrades for this character
+    // Character upgrades pool
     private characterUpgrades: AbilityOption[] = [];
 
     // Probabilities: 63% basica, 32% epica, 5% legendaria
@@ -37,19 +47,24 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     private readonly EPIC_CHANCE = 0.32;
     private readonly LEGENDARY_CHANCE = 0.05;
 
-    // Spin animation timing
-    private spinInterval: ReturnType<typeof setInterval> | null = null;
-    private spinDuration = 3000; // 3 seconds of spinning
-    private initialSpinSpeed = 50; // Start fast (50ms between updates)
-    private finalSpinSpeed = 400; // End slow (400ms between updates)
+    // Animation timing
+    private spinIntervals: ReturnType<typeof setInterval>[] = [];
+    private readonly ITEMS_PER_LANE = 8;
+    private readonly SPIN_DURATION_BASE = 2000; // Base duration per lane
+    private readonly LANE_STOP_DELAY = 600; // Delay between each lane stopping
+    private readonly INITIAL_SPEED = 60; // ms between updates
+    private readonly FINAL_SPEED = 300; // ms at the end
+
+    constructor(private sanitizer: DomSanitizer) {}
 
     ngOnInit() {
         this.loadCharacterUpgrades();
-        this.startRoulette();
+        this.initializeSlotMachine();
+        this.startAllLanes();
     }
 
     ngOnDestroy() {
-        this.stopSpinAnimation();
+        this.stopAllAnimations();
     }
 
     /**
@@ -72,55 +87,120 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Start the roulette animation
+     * Initialize 3 slot lanes with random items
      */
-    private startRoulette(): void {
-        this.isSpinning = true;
-        this.showResult = false;
+    private initializeSlotMachine(): void {
+        this.lanes = [];
 
-        // Pre-select the winner based on probability
-        const winnerRarity = this.rollRarity();
-        const availableOfRarity = this.characterUpgrades.filter(u => u.rarity === winnerRarity);
+        for (let i = 0; i < 3; i++) {
+            // Roll rarity for this lane's winner
+            const winnerRarity = this.rollRarity();
+            const availableOfRarity = this.characterUpgrades.filter(u => u.rarity === winnerRarity);
 
-        if (availableOfRarity.length === 0) {
-            // Fallback to any upgrade if no upgrades of that rarity exist
-            this.selectedUpgrade = this.toRouletteUpgrade(
-                this.characterUpgrades[Math.floor(Math.random() * this.characterUpgrades.length)]
-            );
-        } else {
-            this.selectedUpgrade = this.toRouletteUpgrade(
-                availableOfRarity[Math.floor(Math.random() * availableOfRarity.length)]
-            );
+            let winner: AbilityOption;
+            if (availableOfRarity.length > 0) {
+                winner = availableOfRarity[Math.floor(Math.random() * availableOfRarity.length)];
+            } else {
+                winner = this.characterUpgrades[Math.floor(Math.random() * this.characterUpgrades.length)];
+            }
+
+            const winnerUpgrade = this.toRouletteUpgrade(winner);
+
+            // Create items array with random upgrades + winner at a specific position
+            const items: RouletteUpgrade[] = [];
+            const winnerPosition = this.ITEMS_PER_LANE - 2; // Winner near the end
+
+            for (let j = 0; j < this.ITEMS_PER_LANE; j++) {
+                if (j === winnerPosition) {
+                    items.push(winnerUpgrade);
+                } else {
+                    const randomAbility = this.characterUpgrades[Math.floor(Math.random() * this.characterUpgrades.length)];
+                    items.push(this.toRouletteUpgrade(randomAbility));
+                }
+            }
+
+            this.lanes.push({
+                items,
+                currentIndex: 0,
+                isSpinning: true,
+                winner: winnerUpgrade,
+                offset: 0
+            });
         }
+    }
 
-        // Create spinning array with mixed upgrades for visual effect
-        this.spinningUpgrades = this.createSpinSequence();
+    /**
+     * Start all lanes spinning with staggered stop times
+     */
+    private startAllLanes(): void {
+        this.lanes.forEach((lane, index) => {
+            const stopDelay = this.SPIN_DURATION_BASE + (index * this.LANE_STOP_DELAY);
+            this.startLaneSpin(lane, index, stopDelay);
+        });
+    }
 
-        // Start spinning animation
+    /**
+     * Start spinning a single lane
+     */
+    private startLaneSpin(lane: SlotLane, laneIndex: number, totalDuration: number): void {
         const startTime = Date.now();
-        let currentSpeed = this.initialSpinSpeed;
+        let currentSpeed = this.INITIAL_SPEED;
 
         const spinTick = () => {
             const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / this.spinDuration, 1);
+            const progress = Math.min(elapsed / totalDuration, 1);
 
-            // Gradually slow down (ease-out)
-            currentSpeed = this.initialSpinSpeed + (this.finalSpinSpeed - this.initialSpinSpeed) * Math.pow(progress, 2);
+            // Ease-out: slow down as we approach the end
+            currentSpeed = this.INITIAL_SPEED + (this.FINAL_SPEED - this.INITIAL_SPEED) * Math.pow(progress, 2);
 
             // Advance to next item
-            this.currentSpinIndex = (this.currentSpinIndex + 1) % this.spinningUpgrades.length;
+            lane.currentIndex = (lane.currentIndex + 1) % lane.items.length;
+            lane.offset = 0;
 
             if (progress >= 1) {
-                // Spinning complete - show the winner
-                this.stopSpinAnimation();
-                this.revealWinner();
+                // Stop at winner position
+                const winnerIndex = lane.items.findIndex(item => item === lane.winner);
+                lane.currentIndex = winnerIndex;
+                lane.isSpinning = false;
+                this.checkAllLanesStopped();
             } else {
                 // Schedule next tick
-                this.spinInterval = setTimeout(spinTick, currentSpeed);
+                const interval = setTimeout(spinTick, currentSpeed);
+                this.spinIntervals.push(interval);
             }
         };
 
-        this.spinInterval = setTimeout(spinTick, currentSpeed);
+        const interval = setTimeout(spinTick, currentSpeed);
+        this.spinIntervals.push(interval);
+    }
+
+    /**
+     * Check if all lanes have stopped
+     */
+    private checkAllLanesStopped(): void {
+        if (this.lanes.every(lane => !lane.isSpinning)) {
+            this.allLanesStopped = true;
+
+            // Select the final winner (random from the 3 winners)
+            setTimeout(() => {
+                this.selectFinalWinner();
+            }, 800);
+        }
+    }
+
+    /**
+     * Select final winner from the 3 lane winners
+     */
+    private selectFinalWinner(): void {
+        const winners = this.lanes.map(lane => lane.winner).filter(w => w !== null) as RouletteUpgrade[];
+        const randomIndex = Math.floor(Math.random() * winners.length);
+        this.finalSelection = winners[randomIndex];
+        this.showFinalResult = true;
+
+        // Auto-apply after showing result
+        setTimeout(() => {
+            this.applyUpgrade();
+        }, 2000);
     }
 
     /**
@@ -139,41 +219,13 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Create a sequence of upgrades for the spin animation
-     * Includes the winner near the end for dramatic effect
-     */
-    private createSpinSequence(): RouletteUpgrade[] {
-        const sequence: RouletteUpgrade[] = [];
-        const allUpgrades = this.characterUpgrades.map(u => this.toRouletteUpgrade(u));
-
-        // Add 15-20 random items before the winner
-        const preWinnerCount = 15 + Math.floor(Math.random() * 6);
-        for (let i = 0; i < preWinnerCount; i++) {
-            const randomUpgrade = allUpgrades[Math.floor(Math.random() * allUpgrades.length)];
-            sequence.push(randomUpgrade);
-        }
-
-        // Add the winner
-        if (this.selectedUpgrade) {
-            sequence.push(this.selectedUpgrade);
-        }
-
-        // Add a few more items after for smooth animation
-        for (let i = 0; i < 3; i++) {
-            const randomUpgrade = allUpgrades[Math.floor(Math.random() * allUpgrades.length)];
-            sequence.push(randomUpgrade);
-        }
-
-        return sequence;
-    }
-
-    /**
-     * Convert AbilityOption to RouletteUpgrade with display class
+     * Convert AbilityOption to RouletteUpgrade with display class and icon
      */
     private toRouletteUpgrade(ability: AbilityOption): RouletteUpgrade {
         return {
             ...ability,
-            displayClass: this.getRarityClass(ability.rarity)
+            displayClass: this.getRarityClass(ability.rarity),
+            icon: getSkillIcon(ability.id, this.characterId)
         };
     }
 
@@ -183,53 +235,35 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     private getRarityClass(rarity: string): string {
         switch (rarity) {
             case 'basica':
-                return 'common';
+                return 'basic';
             case 'epica':
-                return 'rare';
+                return 'epic';
             case 'legendaria':
                 return 'legendary';
             default:
-                return 'common';
+                return 'basic';
         }
     }
 
     /**
-     * Stop the spin animation
+     * Stop all animations
      */
-    private stopSpinAnimation(): void {
-        if (this.spinInterval) {
-            clearTimeout(this.spinInterval);
-            this.spinInterval = null;
+    private stopAllAnimations(): void {
+        this.spinIntervals.forEach(interval => clearTimeout(interval));
+        this.spinIntervals = [];
+    }
+
+    /**
+     * Apply the selected upgrade
+     */
+    applyUpgrade(): void {
+        if (this.finalSelection) {
+            this.upgradeSelected.emit(this.finalSelection);
         }
     }
 
     /**
-     * Reveal the winner with fanfare
-     */
-    private revealWinner(): void {
-        this.isSpinning = false;
-        this.showResult = true;
-    }
-
-    /**
-     * Get current spinning upgrade for display
-     */
-    get currentSpinUpgrade(): RouletteUpgrade | null {
-        if (this.spinningUpgrades.length === 0) return null;
-        return this.spinningUpgrades[this.currentSpinIndex];
-    }
-
-    /**
-     * Accept the selected upgrade
-     */
-    acceptUpgrade(): void {
-        if (this.selectedUpgrade) {
-            this.upgradeSelected.emit(this.selectedUpgrade);
-        }
-    }
-
-    /**
-     * Get display rarity text (translated)
+     * Get display rarity text
      */
     getRarityText(rarity: string): string {
         switch (rarity) {
@@ -245,17 +279,40 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Get icon for ability (default icons based on character)
+     * Get current item for a lane (visible in the slot)
      */
-    getAbilityIcon(ability: AbilityOption): string {
-        // You can customize icons per ability ID here
-        switch (ability.rarity) {
-            case 'legendaria':
-                return '⭐';
-            case 'epica':
-                return '💎';
-            default:
-                return '🔹';
+    getLaneCurrentItem(lane: SlotLane): RouletteUpgrade {
+        return lane.items[lane.currentIndex];
+    }
+
+    /**
+     * Get items around current for smooth scroll effect
+     */
+    getLaneVisibleItems(lane: SlotLane): RouletteUpgrade[] {
+        const items: RouletteUpgrade[] = [];
+        const total = lane.items.length;
+
+        // Show 3 items: previous, current, next
+        for (let i = -1; i <= 1; i++) {
+            const index = (lane.currentIndex + i + total) % total;
+            items.push(lane.items[index]);
         }
+
+        return items;
+    }
+
+    /**
+     * Sanitize SVG for rendering
+     */
+    getSafeSvg(icon: SkillIcon): SafeHtml {
+        const svgString = `<svg viewBox="${icon.viewBox}" xmlns="http://www.w3.org/2000/svg">${icon.svg}</svg>`;
+        return this.sanitizer.bypassSecurityTrustHtml(svgString);
+    }
+
+    /**
+     * Check if this lane's winner is the final selection
+     */
+    isWinnerLane(lane: SlotLane): boolean {
+        return this.finalSelection !== null && lane.winner === this.finalSelection;
     }
 }

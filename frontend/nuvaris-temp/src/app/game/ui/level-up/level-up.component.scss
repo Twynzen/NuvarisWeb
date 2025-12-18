@@ -1,140 +1,417 @@
+// ==================== QDT STYLE: WHITE/GRAY MINIMALIST ====================
+
+// Color palette
+$qdt-bg: #0a0a0a;
+$qdt-bg-light: #111111;
+$qdt-overlay: rgba(10, 10, 10, 0.96);
+
+$qdt-white: #ffffff;
+$qdt-gray-100: #f5f5f5;
+$qdt-gray-200: #e0e0e0;
+$qdt-gray-300: #cccccc;
+$qdt-gray-400: #999999;
+$qdt-gray-500: #666666;
+$qdt-gray-600: #444444;
+$qdt-gray-700: #333333;
+$qdt-gray-800: #222222;
+
+// Rarity accents (subtle)
+$rarity-basic: $qdt-gray-400;
+$rarity-epic: $qdt-gray-200;
+$rarity-legendary: $qdt-white;
+
+// ==================== MAIN OVERLAY ====================
+
 .level-up-overlay {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(10, 10, 26, 0.95);
+    background: $qdt-overlay;
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 2000;
     font-family: 'Courier New', Courier, monospace;
+
+    &.show-result {
+        .container {
+            animation: containerPulse 0.5s ease-out;
+        }
+    }
 }
 
 .container {
     text-align: center;
     width: 100%;
+    max-width: 900px;
+    padding: 20px;
 }
+
+// ==================== TITLE ====================
 
 .title {
-    color: #00f5ff;
-    font-size: 3em;
-    margin-bottom: 30px;
-    text-shadow: 0 0 20px #00f5ff;
-    animation: pulse 2s infinite;
+    color: $qdt-white;
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    letter-spacing: 8px;
+    font-weight: 300;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
 }
 
-// ==================== ROULETTE CONTAINER ====================
+.subtitle {
+    color: $qdt-gray-400;
+    font-size: 1em;
+    margin-bottom: 40px;
+    letter-spacing: 4px;
+    animation: blink 1s infinite;
+}
 
-.roulette-container {
+// ==================== SLOT MACHINE ====================
+
+.slot-machine {
+    position: relative;
+    padding: 20px 0;
+}
+
+.lane-container {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    justify-content: center;
     gap: 20px;
 }
 
-.spin-indicator {
-    color: #00f5ff;
-    font-size: 1.2em;
-    animation: blink 0.5s infinite;
-    letter-spacing: 3px;
-}
-
-// ==================== ROULETTE CARD ====================
-
-.roulette-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 3px solid #fff;
-    border-radius: 15px;
-    padding: 40px;
-    width: 320px;
+.slot-lane {
     position: relative;
+    width: 220px;
+    background: $qdt-gray-800;
+    border: 1px solid $qdt-gray-600;
+    border-radius: 8px;
     overflow: hidden;
-    transition: all 0.1s;
+    transition: all 0.3s ease;
 
     &.spinning {
-        animation: cardFlash 0.1s infinite;
-    }
+        .slot-viewport {
+            animation: slotPulse 0.1s infinite;
+        }
 
-    &.winner {
-        animation: winnerReveal 0.5s ease-out;
-    }
-
-    .icon {
-        font-size: 4em;
-        margin-bottom: 20px;
-
-        &.winner-icon {
-            animation: iconPulse 1s infinite;
+        .slot-item {
+            animation: itemFlash 0.08s infinite;
         }
     }
 
-    .name {
-        font-size: 1.8em;
-        margin-bottom: 15px;
-        color: #fff;
+    &.stopped {
+        border-color: $qdt-gray-300;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+
+        .slot-item {
+            animation: itemReveal 0.3s ease-out;
+        }
+    }
+}
+
+// ==================== SLOT VIEWPORT ====================
+
+.slot-viewport {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(180deg,
+        rgba(0, 0, 0, 0.5) 0%,
+        transparent 30%,
+        transparent 70%,
+        rgba(0, 0, 0, 0.5) 100%
+    );
+}
+
+.slot-reel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+// ==================== SLOT ITEM ====================
+
+.slot-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    width: 100%;
+    text-align: center;
+
+    .item-icon {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 12px;
+        color: $qdt-gray-400;
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
     }
 
-    .description {
-        color: #ccc;
+    .item-name {
         font-size: 1em;
-        line-height: 1.5;
-        margin-bottom: 20px;
+        color: $qdt-gray-200;
+        margin-bottom: 6px;
+        font-weight: 500;
+        letter-spacing: 1px;
     }
 
-    .rarity-badge {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        font-size: 0.8em;
-        padding: 5px 10px;
-        border-radius: 5px;
-        background: rgba(0, 0, 0, 0.6);
+    .item-rarity {
+        font-size: 0.7em;
+        color: $qdt-gray-500;
         letter-spacing: 2px;
+        padding: 2px 8px;
+        border: 1px solid $qdt-gray-600;
+        border-radius: 2px;
     }
 
-    // Rarity Styles
-    &.common {
-        border-color: #00f5ff;
-        box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
-
-        .name {
-            color: #00f5ff;
+    // Rarity styles
+    &.basic {
+        .item-icon {
+            color: $rarity-basic;
         }
-
-        .rarity-badge {
-            background: rgba(0, 245, 255, 0.3);
+        .item-rarity {
+            border-color: $rarity-basic;
+            color: $rarity-basic;
         }
     }
 
-    &.rare {
-        border-color: #ff00ff;
-        box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
-
-        .name {
-            color: #ff00ff;
+    &.epic {
+        .item-icon {
+            color: $rarity-epic;
         }
-
-        .rarity-badge {
-            background: rgba(255, 0, 255, 0.3);
+        .item-name {
+            color: $qdt-white;
+        }
+        .item-rarity {
+            border-color: $rarity-epic;
+            color: $rarity-epic;
+            background: rgba(255, 255, 255, 0.05);
         }
     }
 
     &.legendary {
-        border-color: #ffd700;
-        box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+        .item-icon {
+            color: $rarity-legendary;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+        }
+        .item-name {
+            color: $qdt-white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        .item-rarity {
+            border-color: $rarity-legendary;
+            color: $rarity-legendary;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+    }
+}
 
-        .name {
-            color: #ffd700;
+// ==================== LANE INDICATORS ====================
+
+.lane-indicator {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 24px;
+    height: 24px;
+    background: $qdt-gray-700;
+    border: 1px solid $qdt-gray-500;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    color: $qdt-gray-400;
+}
+
+.stopped-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: $qdt-white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: badgePop 0.3s ease-out;
+
+    .checkmark {
+        color: $qdt-bg;
+        font-size: 14px;
+        font-weight: bold;
+    }
+}
+
+// ==================== SELECTION POINTER ====================
+
+.selection-pointer {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+
+    .pointer-arrow {
+        width: 0;
+        height: 0;
+        border-left: 12px solid transparent;
+        border-right: 12px solid transparent;
+        border-bottom: 16px solid $qdt-white;
+        animation: pointerPulse 1s infinite;
+    }
+}
+
+// ==================== FINAL RESULT ====================
+
+.final-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    animation: resultFadeIn 0.5s ease-out;
+}
+
+.result-banner {
+    font-size: 1.8em;
+    letter-spacing: 6px;
+    font-weight: 300;
+    padding: 12px 32px;
+    border: 1px solid $qdt-gray-500;
+    color: $qdt-white;
+
+    &.basic {
+        border-color: $rarity-basic;
+        color: $rarity-basic;
+    }
+
+    &.epic {
+        border-color: $rarity-epic;
+        color: $rarity-epic;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    &.legendary {
+        border-color: $rarity-legendary;
+        color: $rarity-legendary;
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+        animation: legendaryPulse 1.5s infinite;
+    }
+}
+
+// ==================== WINNER CARD ====================
+
+.winner-card {
+    position: relative;
+    background: $qdt-white;
+    color: $qdt-bg;
+    padding: 40px 50px;
+    border-radius: 8px;
+    min-width: 320px;
+    overflow: hidden;
+
+    .winner-glow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .winner-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        color: $qdt-gray-700;
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    .winner-name {
+        font-size: 1.6em;
+        margin-bottom: 12px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        color: $qdt-bg;
+    }
+
+    .winner-description {
+        font-size: 1em;
+        color: $qdt-gray-600;
+        margin-bottom: 16px;
+        line-height: 1.5;
+    }
+
+    .winner-rarity {
+        font-size: 0.8em;
+        letter-spacing: 3px;
+        padding: 6px 16px;
+        border: 1px solid $qdt-gray-300;
+        color: $qdt-gray-500;
+        display: inline-block;
+    }
+
+    // Rarity card styles
+    &.basic {
+        background: $qdt-gray-100;
+
+        .winner-icon {
+            color: $qdt-gray-500;
         }
 
-        .rarity-badge {
-            background: rgba(255, 215, 0, 0.3);
-            color: #ffd700;
+        .winner-rarity {
+            border-color: $qdt-gray-400;
+            color: $qdt-gray-500;
+        }
+    }
+
+    &.epic {
+        background: $qdt-white;
+        box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
+
+        .winner-icon {
+            color: $qdt-gray-800;
         }
 
-        // Special legendary glow effect
+        .winner-rarity {
+            border-color: $qdt-gray-700;
+            color: $qdt-gray-700;
+            background: rgba(0, 0, 0, 0.05);
+        }
+    }
+
+    &.legendary {
+        background: $qdt-white;
+        box-shadow: 0 0 60px rgba(255, 255, 255, 0.4);
+
+        .winner-icon {
+            color: $qdt-bg;
+            filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.3));
+        }
+
+        .winner-name {
+            text-shadow: none;
+        }
+
+        .winner-rarity {
+            border-color: $qdt-bg;
+            color: $qdt-white;
+            background: $qdt-bg;
+        }
+
         &::before {
             content: '';
             position: absolute;
@@ -145,121 +422,110 @@
             background: linear-gradient(
                 45deg,
                 transparent 40%,
-                rgba(255, 215, 0, 0.1) 50%,
+                rgba(255, 255, 255, 0.8) 50%,
                 transparent 60%
             );
-            animation: legendaryShine 2s infinite;
+            animation: legendaryShine 3s infinite;
         }
     }
 }
 
-// ==================== RESULT CONTAINER ====================
+// ==================== AUTO APPLY INDICATOR ====================
 
-.result-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-}
-
-.result-banner {
-    font-size: 2em;
-    padding: 10px 30px;
-    border-radius: 5px;
-    letter-spacing: 3px;
-    animation: bannerPulse 1s infinite;
-
-    &.common {
-        color: #00f5ff;
-        text-shadow: 0 0 20px #00f5ff;
-    }
-
-    &.rare {
-        color: #ff00ff;
-        text-shadow: 0 0 20px #ff00ff;
-    }
-
-    &.legendary {
-        color: #ffd700;
-        text-shadow: 0 0 30px #ffd700;
-    }
-}
-
-// ==================== ACCEPT BUTTON ====================
-
-.accept-btn {
-    padding: 15px 50px;
-    font-size: 1.3em;
-    font-family: 'Courier New', Courier, monospace;
-    cursor: pointer;
-    border-radius: 10px;
-    letter-spacing: 2px;
-    transition: all 0.3s;
+.auto-apply-indicator {
     margin-top: 20px;
 
-    &.common {
-        background: transparent;
-        border: 2px solid #00f5ff;
-        color: #00f5ff;
+    .loading-dots {
+        color: $qdt-gray-400;
+        font-size: 0.9em;
+        letter-spacing: 4px;
 
-        &:hover {
-            background: rgba(0, 245, 255, 0.2);
-            box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
-            transform: scale(1.05);
-        }
-    }
-
-    &.rare {
-        background: transparent;
-        border: 2px solid #ff00ff;
-        color: #ff00ff;
-
-        &:hover {
-            background: rgba(255, 0, 255, 0.2);
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
-            transform: scale(1.05);
-        }
-    }
-
-    &.legendary {
-        background: transparent;
-        border: 2px solid #ffd700;
-        color: #ffd700;
-
-        &:hover {
-            background: rgba(255, 215, 0, 0.2);
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
-            transform: scale(1.1);
+        &::after {
+            content: '';
+            animation: dots 1.5s infinite;
         }
     }
 }
 
 // ==================== ANIMATIONS ====================
 
-@keyframes pulse {
-    0% {
-        text-shadow: 0 0 20px #00f5ff;
-    }
-    50% {
-        text-shadow: 0 0 40px #00f5ff, 0 0 10px #fff;
-    }
-    100% {
-        text-shadow: 0 0 20px #00f5ff;
-    }
-}
-
 @keyframes blink {
     0%, 100% {
         opacity: 1;
     }
     50% {
-        opacity: 0.5;
+        opacity: 0.4;
     }
 }
 
-@keyframes cardFlash {
+@keyframes slotPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.9;
+    }
+}
+
+@keyframes itemFlash {
     0% {
+        transform: translateY(-10px);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(10px);
+        opacity: 1;
+    }
+}
+
+@keyframes itemReveal {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    100% {
         transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes badgePop {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes pointerPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    50% {
+        opacity: 0.6;
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes resultFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes containerPulse {
+    0% {
+        transform: scale(0.98);
     }
     50% {
         transform: scale(1.02);
@@ -269,35 +535,12 @@
     }
 }
 
-@keyframes winnerReveal {
-    0% {
-        transform: scale(0.8);
-        opacity: 0;
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes iconPulse {
+@keyframes legendaryPulse {
     0%, 100% {
-        transform: scale(1);
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
     }
     50% {
-        transform: scale(1.2);
-    }
-}
-
-@keyframes bannerPulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.8;
+        text-shadow: 0 0 50px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.5);
     }
 }
 
@@ -307,5 +550,48 @@
     }
     100% {
         transform: translateX(100%) rotate(45deg);
+    }
+}
+
+@keyframes dots {
+    0% {
+        content: '';
+    }
+    25% {
+        content: '.';
+    }
+    50% {
+        content: '..';
+    }
+    75% {
+        content: '...';
+    }
+}
+
+// ==================== RESPONSIVE ====================
+
+@media (max-width: 768px) {
+    .lane-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .slot-lane {
+        width: 280px;
+    }
+
+    .slot-viewport {
+        height: 160px;
+    }
+
+    .title {
+        font-size: 1.8em;
+        letter-spacing: 4px;
+    }
+
+    .winner-card {
+        padding: 30px 40px;
+        min-width: 280px;
     }
 }
