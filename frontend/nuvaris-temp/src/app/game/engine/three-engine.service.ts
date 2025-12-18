@@ -20,6 +20,7 @@ import { BSPToRoomConverter, UnifiedMapData } from '../world/bsp-to-room.convert
 import { PlayerFogSystem } from '../world/player-fog.system';
 import { AudioService } from '../services/audio.service';
 import { CharacterCursor } from '../ui/character-cursor';
+import { GameState, createInitialGameState } from '../models/game-state.interface';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -113,20 +114,8 @@ export class ThreeEngineService implements OnDestroy {
     private baseCameraY = 25;
     private baseCameraZ = 20;
 
-    // Game State
-    public gameState = {
-        health: 100,
-        maxHealth: 100,
-        xp: 0,
-        xpToLevel: 100,
-        level: 1,
-        wave: 1,
-        score: 0,
-        isLevelingUp: false,
-        isPaused: false,
-        isGameOver: false,
-        debugMode: false
-    };
+    // Game State (typed interface - eliminates 'as any' casts)
+    public gameState: GameState = createInitialGameState();
 
     // Input
     private keys: { [key: string]: boolean } = {};
@@ -648,9 +637,9 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     public toggleGodMode(): boolean {
-        (this.gameState as any).godMode = !(this.gameState as any).godMode;
-        console.log(`[DEV] God Mode: ${(this.gameState as any).godMode}`);
-        return (this.gameState as any).godMode;
+        this.gameState.godMode = !this.gameState.godMode;
+        console.log(`[DEV] God Mode: ${this.gameState.godMode}`);
+        return this.gameState.godMode;
     }
 
     public setPlayerHealth(amount: number) {
@@ -662,23 +651,23 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     public toggleAutoShoot(enabled: boolean) {
-        (this.gameState as any).autoShootEnabled = enabled;
+        this.gameState.autoShootEnabled = enabled;
         console.log(`[DEV] Auto-shoot: ${enabled}`);
     }
 
     public setDamageMultiplier(multiplier: number) {
-        (this.gameState as any).damageMultiplier = multiplier;
+        this.gameState.damageMultiplier = multiplier;
         console.log(`[DEV] Damage Multiplier: ${multiplier}x`);
     }
 
     public toggleInvisibility(): boolean {
-        (this.gameState as any).invisible = !(this.gameState as any).invisible;
+        this.gameState.invisible = !this.gameState.invisible;
 
         // Note: Invisibility makes player invisible to ENEMIES (they won't detect/attack)
         // No visual change to player sprite - purely functional for AI
 
-        console.log(`[DEV] Invisibility: ${(this.gameState as any).invisible}`);
-        return (this.gameState as any).invisible;
+        console.log(`[DEV] Invisibility: ${this.gameState.invisible}`);
+        return this.gameState.invisible;
     }
 
     public killAllEnemies(): number {
@@ -1546,7 +1535,7 @@ export class ThreeEngineService implements OnDestroy {
     // Auto-attack at nearest enemy (different behavior per character)
     private autoShoot() {
         // Check if auto-shoot is disabled via Dev Mode
-        if ((this.gameState as any).autoShootEnabled === false) return;
+        if (!this.gameState.autoShootEnabled) return;
 
         const currentTime = this.clock.getElapsedTime();
 
@@ -2266,7 +2255,7 @@ export class ThreeEngineService implements OnDestroy {
             }
 
             // Update enemies (with wall collision AND attack behavior)
-            const isPlayerInvisible = (this.gameState as any).invisible || false;
+            const isPlayerInvisible = this.gameState.invisible;
             this.enemies.forEach(enemy => enemy.update(delta, this.player, 98, currentTime, isPlayerInvisible, this.enemies));
 
             // Check door collision for enemies - push them away from closed doors
@@ -2351,8 +2340,8 @@ export class ThreeEngineService implements OnDestroy {
                     if (proj.mesh.position.distanceTo(enemy.mesh.position) < 1.5) {
                         // Apply damage multiplier if set
                         let damage = proj.damage;
-                        if ((this.gameState as any).damageMultiplier) {
-                            damage *= (this.gameState as any).damageMultiplier;
+                        if (this.gameState.damageMultiplier !== 1) {
+                            damage *= this.gameState.damageMultiplier;
                         }
 
                         // CALL ABILITY HOOK: onProjectileHit (for Chain Lightning, Mind Control, etc.)
@@ -2514,9 +2503,9 @@ export class ThreeEngineService implements OnDestroy {
     // Check collision between player and enemies (ONLY when enemy attacks)
     private checkEnemyAttackCollision(currentTime: number) {
         // God Mode Check
-        if ((this.gameState as any).godMode) return;
+        if (this.gameState.godMode) return;
         // Invisibility Check - enemies shouldn't attack if invisible (simplified logic for now)
-        if ((this.gameState as any).invisible) return;
+        if (this.gameState.invisible) return;
 
         // Calculate collision threshold: sum of both radii
         const collisionDistance = PlayerThree.COLLISION_RADIUS + EnemyThree.COLLISION_RADIUS;
@@ -2754,19 +2743,7 @@ export class ThreeEngineService implements OnDestroy {
         }
 
         // Reset game state
-        this.gameState = {
-            health: 100,
-            maxHealth: 100,
-            xp: 0,
-            xpToLevel: 100,
-            level: 1,
-            wave: 1,
-            score: 0,
-            isLevelingUp: false,
-            isPaused: false,
-            isGameOver: false,
-            debugMode: false
-        };
+        this.gameState = createInitialGameState();
 
         // Reset timers and states
         this.lastSpawnTime = 0;
@@ -2810,19 +2787,7 @@ export class ThreeEngineService implements OnDestroy {
         }
 
         // Reset game state to initial values
-        this.gameState = {
-            health: 100,
-            maxHealth: 100,
-            xp: 0,
-            xpToLevel: 100,
-            level: 1,
-            wave: 1,
-            score: 0,
-            isLevelingUp: false,
-            isPaused: false,
-            isGameOver: false,
-            debugMode: false
-        };
+        this.gameState = createInitialGameState();
 
         // Reset camera position
         this.camera.position.set(0, 25, 20);
