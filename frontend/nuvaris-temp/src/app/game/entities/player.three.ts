@@ -70,6 +70,40 @@ export class PlayerThree {
     // Debug mode - set to true to see flip/animation logs
     private DEBUG_FLIP = false;
 
+    // ========== PROYECTO-A CHARGE ATTACK SYSTEM ==========
+    private proyectoACharging = false;
+    private proyectoAChargeDirection: 'down' | 'left' | 'right' = 'down';
+    private proyectoAChargeLevel = 0;
+    private proyectoAChargeStartTime = 0;
+    private proyectoAInHoldLoop = false;
+
+    // Frame ranges per direction (0-indexed)
+    // Based on visual analysis of attack animations
+    private readonly PROYECTO_A_FRAMES = {
+        down: {
+            chargeEnd: 7,      // Frames 0-7: wind-up (brazos subiendo)
+            holdStart: 8,      // Frames 8-11: hold loop (brazos arriba)
+            holdEnd: 11,
+            releaseStart: 12,  // Frames 12-29: release (golpe + recovery)
+            impactFrame: 14    // Frame where damage applies
+        },
+        left: {
+            chargeEnd: 2,      // Frames 0-2: wind-up
+            holdStart: 3,      // Frames 3-5: hold loop
+            holdEnd: 5,
+            releaseStart: 6,   // Frames 6-29: release
+            impactFrame: 8     // Frame where damage applies
+        },
+        right: {
+            chargeEnd: 2,      // Frames 0-2: wind-up
+            holdStart: 3,      // Frames 3-5: hold loop
+            holdEnd: 5,
+            releaseStart: 6,   // Frames 6-29: release
+            impactFrame: 8     // Frame where damage applies
+        }
+    };
+    private readonly PROYECTO_A_CHARGE_TIME = 0.3; // Seconds to reach 100% charge
+
     // Map bounds for wall collision
     private mapBounds = 98;
 
@@ -196,6 +230,8 @@ export class PlayerThree {
             this.loadLarsAnimations();
         } else if (this.characterId === 'proyecto-y') {
             this.loadProyectoYAnimations();
+        } else if (this.characterId === 'proyecto-a') {
+            this.loadArcadioAnimations();
         } else {
             // Other characters use shoot animations (30 frames)
             this.loadShootAnimations(folder, prefix);
@@ -478,6 +514,86 @@ export class PlayerThree {
     }
 
     /**
+     * Load Arcadio (Proyecto-A) specific animations:
+     * - 4 diagonal movement animations (30 frames each)
+     * - 3 attack animations (30 frames each, 120° coverage each)
+     * - Berserk idle animation
+     */
+    private loadArcadioAnimations(): void {
+        const folder = 'proyecto-a';
+        const prefix = 'proyecto-a-';
+
+        // === DIAGONAL MOVEMENT (30 frames each) ===
+        this.animator.loadAnimation({
+            name: 'run-up-left',
+            texturePath: `assets/${folder}/up-left`,
+            prefix: `${prefix}walk-up-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-up-right',
+            texturePath: `assets/${folder}/up-right`,
+            prefix: `${prefix}walk-up-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-down-left',
+            texturePath: `assets/${folder}/down-left`,
+            prefix: `${prefix}walk-down-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'run-down-right',
+            texturePath: `assets/${folder}/down-right`,
+            prefix: `${prefix}walk-down-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        // === ATTACK ANIMATIONS (3 directions, 120° each = 360° coverage) ===
+        // Each attack has 3 phases: wind-up (1-10), impact (11-20), recover (21-30)
+        const attackDirections = ['down', 'left', 'right'];
+        for (const dir of attackDirections) {
+            this.animator.loadAnimation({
+                name: `attack-${dir}`,
+                texturePath: `assets/${folder}/attack/${dir}`,
+                prefix: `${prefix}attack-${dir}-`,
+                suffix: '.png',
+                frameCount: 30,
+                frameRate: 30,
+                loop: false
+            });
+        }
+
+        // === BERSERK IDLE (rage mode) ===
+        this.animator.loadAnimation({
+            name: 'berserk-idle',
+            texturePath: `assets/${folder}/berserk/idle`,
+            prefix: `${prefix}berserk-idle-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 30,
+            loop: true
+        });
+
+        console.log('[PROYECTO-A] Loaded 8-directional movement + 3-directional attack (120° each) + berserk');
+    }
+
+    /**
      * Load shoot animations for non-Lars characters
      */
     private loadShootAnimations(folder: string, prefix: string) {
@@ -607,7 +723,7 @@ export class PlayerThree {
         }
 
         // Animation State Machine
-        // Priority: Attack > Charging > Melee/Shooting > Movement > Idle
+        // Priority: Attack > Charging > ProyectoA Charging > Melee/Shooting > Movement > Idle
         let animationPlayed = '';
 
         if (this.isAttacking) {
@@ -624,6 +740,9 @@ export class PlayerThree {
             }
 
             animationPlayed = 'charging';
+        } else if (this.proyectoACharging) {
+            // Proyecto-A charge animation is handled in startProyectoACharge() - don't override
+            animationPlayed = 'proyecto-a-charging';
         } else if (this.isMeleeAttacking) {
             // Melee animation is handled in meleeAttack() - don't override it
             animationPlayed = 'melee';
@@ -631,8 +750,8 @@ export class PlayerThree {
             // Shooting animation is handled in shoot()
             animationPlayed = 'shooting';
         } else if (this.isMoving) {
-            // Movement animations - Lars and Proyecto-Y use 8-directional
-            if (this.characterId === 'lars' || this.characterId === 'proyecto-y') {
+            // Movement animations - Lars, Proyecto-Y, and Arcadio use 8-directional
+            if (this.characterId === 'lars' || this.characterId === 'proyecto-y' || this.characterId === 'proyecto-a') {
                 animationPlayed = this.play8DirectionalMovement(moveX, moveZ);
             } else {
                 animationPlayed = this.playCardinalMovementAnimation(moveX, moveZ);
@@ -1393,6 +1512,336 @@ export class PlayerThree {
         return result;
     }
 
+
+    // ========== ARCADIO ATTACK SYSTEM (3 directions, 120° each) ==========
+
+    /**
+     * Get attack direction for Arcadio based on angle to target
+     * Divides 360° into 3 zones of 120° each: down, left, right
+     */
+    public getArcadioAttackDirection(targetPosition: THREE.Vector3): 'down' | 'left' | 'right' {
+        const direction = new THREE.Vector3()
+            .subVectors(targetPosition, this.mesh.position);
+
+        // Calculate angle using atan2 (returns -PI to PI)
+        // In game: +X = right, +Z = down (toward camera)
+        // atan2(x, z): 0° = toward camera, 90° = right, 180° = away from camera, 270° = left
+        const angleRad = Math.atan2(direction.x, direction.z);
+        let angleDeg = angleRad * (180 / Math.PI);
+
+        // Normalize to 0-360
+        if (angleDeg < 0) angleDeg += 360;
+
+        // Zone mapping (120° each) - based on isometric view:
+        // DOWN:  300°-360° and 0°-60° (toward camera, bottom of screen)
+        // RIGHT: 60°-180° (upper-right of screen)
+        // LEFT:  180°-300° (upper-left of screen)
+        if (angleDeg >= 300 || angleDeg < 60) {
+            return 'down';  // Toward camera (bottom of screen)
+        } else if (angleDeg >= 60 && angleDeg < 180) {
+            return 'right'; // Upper-right
+        } else {
+            return 'left';  // Upper-left (180°-300°)
+        }
+    }
+
+    /**
+     * Play Arcadio attack animation with 3-zone damage timing
+     * @param targetPosition Position to attack towards
+     * @param onZoneDamage Callback for each damage zone (called 3 times)
+     */
+    public playArcadioAttack(
+        targetPosition: THREE.Vector3,
+        onZoneDamage?: (zone: 'start' | 'center' | 'end', multiplier: number, direction: 'down' | 'left' | 'right') => void
+    ): Promise<void> {
+        return new Promise((resolve) => {
+            if (this.characterId !== 'proyecto-a') {
+                resolve();
+                return;
+            }
+
+            // Check cooldown
+            const now = Date.now();
+            if (now - this.lastMeleeAttackTime < this.meleeAttackCooldown * 1000) {
+                resolve();
+                return;
+            }
+
+            if (this.isMeleeAttacking) {
+                resolve();
+                return;
+            }
+
+            this.isMeleeAttacking = true;
+            this.lastMeleeAttackTime = now;
+
+            // Get 3-directional attack direction
+            const direction = this.getArcadioAttackDirection(targetPosition);
+
+            // Update facing based on direction
+            if (direction === 'right') {
+                this.facingRight = true;
+            } else if (direction === 'left') {
+                this.facingRight = false;
+            }
+
+            // Play attack animation
+            const attackAnim = `attack-${direction}`;
+            this.animator.play(attackAnim, false, 30);
+
+            console.log(`[ARCADIO] Attack direction: ${direction}`);
+
+            // === DAMAGE TIMING (3 zones within the attack) ===
+            // Wind-up: frames 1-10 @ 30fps (333ms)
+            // Impact: frames 11-20 (damage at 12, 15, 18)
+            // Recover: frames 21-30
+
+            // Zone 1 (start of arc) - Frame 12 (~400ms)
+            setTimeout(() => {
+                if (onZoneDamage) {
+                    onZoneDamage('start', 0.7, direction); // 70% damage
+                }
+            }, 400);
+
+            // Zone 2 (center of arc) - Frame 15 (~500ms) - MAXIMUM DAMAGE
+            setTimeout(() => {
+                if (onZoneDamage) {
+                    onZoneDamage('center', 1.0, direction); // 100% damage
+                }
+            }, 500);
+
+            // Zone 3 (end of arc) - Frame 18 (~600ms)
+            setTimeout(() => {
+                if (onZoneDamage) {
+                    onZoneDamage('end', 0.7, direction); // 70% damage
+                }
+            }, 600);
+
+            // Reset attack state after full animation (~1 second)
+            setTimeout(() => {
+                this.isMeleeAttacking = false;
+                resolve();
+            }, 1000);
+        });
+    }
+
+    // ========== PROYECTO-A CHARGE ATTACK METHODS ==========
+
+    /**
+     * Start charging attack for Proyecto-A (called on mouse down)
+     * Plays wind-up animation and transitions to hold loop at 100%
+     */
+    public startProyectoACharge(targetPosition: THREE.Vector3): boolean {
+        if (this.characterId !== 'proyecto-a') return false;
+        if (this.proyectoACharging || this.isMeleeAttacking || this.isDead) return false;
+
+        this.proyectoACharging = true;
+        this.proyectoAChargeStartTime = Date.now();
+        this.proyectoAChargeLevel = 0;
+        this.proyectoAInHoldLoop = false;
+
+        // Determine initial direction based on cursor
+        this.proyectoAChargeDirection = this.getArcadioAttackDirection(targetPosition);
+
+        // Update facing
+        if (this.proyectoAChargeDirection === 'right') {
+            this.facingRight = true;
+        } else if (this.proyectoAChargeDirection === 'left') {
+            this.facingRight = false;
+        }
+
+        // Start playing the attack animation (wind-up phase)
+        const attackAnim = `attack-${this.proyectoAChargeDirection}`;
+        const frames = this.PROYECTO_A_FRAMES[this.proyectoAChargeDirection];
+
+        // Calculate FPS to make wind-up match charge time
+        // chargeEnd+1 frames in PROYECTO_A_CHARGE_TIME seconds
+        const windupFrames = frames.chargeEnd + 1;
+        const windupFps = windupFrames / this.PROYECTO_A_CHARGE_TIME;
+
+        this.animator.play(attackAnim, false, windupFps);
+
+        console.log(`[PROYECTO-A] Charge started - direction: ${this.proyectoAChargeDirection}`);
+        return true;
+    }
+
+    /**
+     * Update Proyecto-A charge (called every frame while charging)
+     * Handles direction changes and transitions to hold loop
+     */
+    public updateProyectoACharge(delta: number, targetPosition: THREE.Vector3): void {
+        if (!this.proyectoACharging || this.characterId !== 'proyecto-a') return;
+
+        // Calculate charge level
+        const elapsed = (Date.now() - this.proyectoAChargeStartTime) / 1000;
+        this.proyectoAChargeLevel = Math.min(elapsed / this.PROYECTO_A_CHARGE_TIME, 1.0);
+
+        // Check if direction changed
+        const newDirection = this.getArcadioAttackDirection(targetPosition);
+
+        if (newDirection !== this.proyectoAChargeDirection && !this.proyectoAInHoldLoop) {
+            // Direction changed during wind-up, restart with new direction
+            this.proyectoAChargeDirection = newDirection;
+
+            // Update facing
+            if (newDirection === 'right') {
+                this.facingRight = true;
+            } else if (newDirection === 'left') {
+                this.facingRight = false;
+            }
+
+            // Restart animation with new direction
+            const attackAnim = `attack-${newDirection}`;
+            const frames = this.PROYECTO_A_FRAMES[newDirection];
+            const windupFrames = frames.chargeEnd + 1;
+            const windupFps = windupFrames / this.PROYECTO_A_CHARGE_TIME;
+
+            // Maintain charge progress
+            const currentFrame = Math.floor(this.proyectoAChargeLevel * frames.chargeEnd);
+            this.animator.play(attackAnim, false, windupFps);
+        }
+
+        // Transition to hold loop when charge reaches 100%
+        if (this.proyectoAChargeLevel >= 1.0 && !this.proyectoAInHoldLoop) {
+            this.proyectoAInHoldLoop = true;
+
+            const frames = this.PROYECTO_A_FRAMES[this.proyectoAChargeDirection];
+            const attackAnim = `attack-${this.proyectoAChargeDirection}`;
+
+            // Start oscillating hold loop
+            this.animator.playSubsetLoop(
+                attackAnim,
+                frames.holdStart,
+                frames.holdEnd,
+                12 // Slow oscillation for "power ready" effect
+            );
+
+            console.log(`[PROYECTO-A] Charge 100% - hold loop (frames ${frames.holdStart}-${frames.holdEnd})`);
+        }
+
+        // While in hold loop, allow direction changes
+        if (this.proyectoAInHoldLoop && newDirection !== this.proyectoAChargeDirection) {
+            this.proyectoAChargeDirection = newDirection;
+
+            // Update facing
+            if (newDirection === 'right') {
+                this.facingRight = true;
+            } else if (newDirection === 'left') {
+                this.facingRight = false;
+            }
+
+            // Switch to new direction's hold loop
+            const frames = this.PROYECTO_A_FRAMES[newDirection];
+            const attackAnim = `attack-${newDirection}`;
+
+            this.animator.playSubsetLoop(
+                attackAnim,
+                frames.holdStart,
+                frames.holdEnd,
+                12
+            );
+
+            console.log(`[PROYECTO-A] Hold direction changed to: ${newDirection}`);
+        }
+    }
+
+    /**
+     * Release Proyecto-A charge (called on mouse up)
+     * Plays the release animation (impact + recovery) and triggers damage
+     * @returns Object with direction and impact timing for engine to process
+     */
+    public releaseProyectoACharge(targetPosition: THREE.Vector3): {
+        direction: 'down' | 'left' | 'right';
+        impactDelay: number;
+        chargeLevel: number;
+    } | null {
+        if (!this.proyectoACharging || this.characterId !== 'proyecto-a') return null;
+
+        const finalChargeLevel = this.proyectoAChargeLevel;
+
+        // Use the current charge direction (where the character is already facing)
+        // NOT a new calculation - this ensures attack goes where player is visually aiming
+        const direction = this.proyectoAChargeDirection;
+        const frames = this.PROYECTO_A_FRAMES[direction];
+
+        // Stop charging state
+        this.proyectoACharging = false;
+        this.proyectoAChargeLevel = 0;
+        this.proyectoAInHoldLoop = false;
+        this.animator.stopSubsetLoop();
+
+        // Facing is already set from the charge update - no need to change
+
+        // Set attacking state
+        this.isMeleeAttacking = true;
+
+        // Play release animation (from releaseStart to end)
+        const attackAnim = `attack-${direction}`;
+
+        // Calculate timing: frames from releaseStart to impactFrame
+        const framesUntilImpact = frames.impactFrame - frames.holdEnd;
+        const totalReleaseFrames = 30 - frames.releaseStart;
+
+        // Play at 30fps for impactful feel
+        const releaseFps = 30;
+        const impactDelay = (framesUntilImpact / releaseFps) * 1000; // ms until impact
+
+        // Play from release start frame
+        this.animator.playSubsetLoop(attackAnim, frames.releaseStart, 29, releaseFps);
+
+        // Stop the "loop" after one play (it's not really looping, just playing once)
+        const totalDuration = (totalReleaseFrames / releaseFps) * 1000;
+        setTimeout(() => {
+            this.animator.stopSubsetLoop();
+            this.isMeleeAttacking = false;
+        }, totalDuration);
+
+        console.log(`[PROYECTO-A] Released! Direction: ${direction}, Charge: ${(finalChargeLevel * 100).toFixed(0)}%, Impact in ${impactDelay.toFixed(0)}ms`);
+
+        return {
+            direction,
+            impactDelay,
+            chargeLevel: finalChargeLevel
+        };
+    }
+
+    /**
+     * Cancel Proyecto-A charge without attacking
+     */
+    public cancelProyectoACharge(): void {
+        if (!this.proyectoACharging) return;
+
+        this.proyectoACharging = false;
+        this.proyectoAChargeLevel = 0;
+        this.proyectoAInHoldLoop = false;
+        this.animator.stopSubsetLoop();
+
+        // Return to idle
+        this.animator.play('idle', true, 30);
+
+        console.log('[PROYECTO-A] Charge cancelled');
+    }
+
+    /**
+     * Check if Proyecto-A is currently charging
+     */
+    public isProyectoACharging(): boolean {
+        return this.proyectoACharging;
+    }
+
+    /**
+     * Get Proyecto-A charge level (0-1)
+     */
+    public getProyectoAChargeLevel(): number {
+        return this.proyectoAChargeLevel;
+    }
+
+    /**
+     * Check if Proyecto-A charge is at 100% (in hold loop)
+     */
+    public isProyectoAFullyCharged(): boolean {
+        return this.proyectoAInHoldLoop;
+    }
 
     /**
      * Check if this character uses melee attacks

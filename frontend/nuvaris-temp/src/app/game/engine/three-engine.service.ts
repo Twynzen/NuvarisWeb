@@ -209,16 +209,21 @@ export class ThreeEngineService implements OnDestroy {
     // ========== MOUSE/TOUCH HANDLERS FOR LARS CHARGE ==========
 
     private handleMouseDown(e: MouseEvent): void {
-        // Only left click, and only for Lars and Proyecto-Y (charge attack characters)
+        // Only left click, and only for charge attack characters (Lars, Proyecto-Y, Proyecto-A)
         if (e.button !== 0) return;
-        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y' && this.currentCharacterId !== 'proyecto-a')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         this.isMouseDown = true;
         this.mousePosition = { x: e.clientX, y: e.clientY };
 
-        // Start charging
-        if (this.player.startCharge()) {
+        // Start charging based on character
+        if (this.currentCharacterId === 'proyecto-a') {
+            const worldPos = this.screenToWorld(e.clientX, e.clientY);
+            if (this.player.startProyectoACharge(worldPos)) {
+                // Proyecto-A doesn't use the same visual effects as Lars
+            }
+        } else if (this.player.startCharge()) {
             this.createChargeVisualEffects();
         }
     }
@@ -229,13 +234,22 @@ export class ThreeEngineService implements OnDestroy {
 
         this.isMouseDown = false;
 
-        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y' && this.currentCharacterId !== 'proyecto-a')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         // Get world position from mouse
         const worldPos = this.screenToWorld(e.clientX, e.clientY);
 
-        // Release charge and get result
+        // Handle Proyecto-A release separately
+        if (this.currentCharacterId === 'proyecto-a') {
+            const result = this.player.releaseProyectoACharge(worldPos);
+            if (result) {
+                this.executeProyectoAChargeAttack(result.direction, result.impactDelay, result.chargeLevel);
+            }
+            return;
+        }
+
+        // Release charge and get result (Lars, Proyecto-Y)
         const result = this.player.releaseCharge(worldPos);
 
         if (result) {
@@ -254,15 +268,21 @@ export class ThreeEngineService implements OnDestroy {
     private handleMouseMove(e: MouseEvent): void {
         this.mousePosition = { x: e.clientX, y: e.clientY };
 
-        // Update charge indicator direction if charging
-        if (this.isMouseDown && this.player?.isChargingAttack()) {
-            this.updateChargeIndicatorDirection();
+        // Update charge direction based on character
+        if (this.isMouseDown && this.player) {
+            if (this.currentCharacterId === 'proyecto-a' && this.player.isProyectoACharging()) {
+                // Update Proyecto-A charge direction
+                const worldPos = this.screenToWorld(e.clientX, e.clientY);
+                this.player.updateProyectoACharge(0, worldPos);
+            } else if (this.player.isChargingAttack()) {
+                this.updateChargeIndicatorDirection();
+            }
         }
     }
 
     private handleTouchStart(e: TouchEvent): void {
         if (e.touches.length === 0) return;
-        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y' && this.currentCharacterId !== 'proyecto-a')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         // Use first touch
@@ -270,7 +290,11 @@ export class ThreeEngineService implements OnDestroy {
         this.isMouseDown = true;
         this.mousePosition = { x: touch.clientX, y: touch.clientY };
 
-        if (this.player.startCharge()) {
+        // Start charging based on character
+        if (this.currentCharacterId === 'proyecto-a') {
+            const worldPos = this.screenToWorld(touch.clientX, touch.clientY);
+            this.player.startProyectoACharge(worldPos);
+        } else if (this.player.startCharge()) {
             this.createChargeVisualEffects();
         }
     }
@@ -280,11 +304,20 @@ export class ThreeEngineService implements OnDestroy {
 
         this.isMouseDown = false;
 
-        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y' && this.currentCharacterId !== 'proyecto-a')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         // Use last known mouse position
         const worldPos = this.screenToWorld(this.mousePosition.x, this.mousePosition.y);
+
+        // Handle Proyecto-A release separately
+        if (this.currentCharacterId === 'proyecto-a') {
+            const result = this.player.releaseProyectoACharge(worldPos);
+            if (result) {
+                this.executeProyectoAChargeAttack(result.direction, result.impactDelay, result.chargeLevel);
+            }
+            return;
+        }
 
         const result = this.player.releaseCharge(worldPos);
 
@@ -305,8 +338,15 @@ export class ThreeEngineService implements OnDestroy {
         const touch = e.touches[0];
         this.mousePosition = { x: touch.clientX, y: touch.clientY };
 
-        if (this.isMouseDown && this.player?.isChargingAttack()) {
-            this.updateChargeIndicatorDirection();
+        // Update charge direction based on character
+        if (this.isMouseDown && this.player) {
+            if (this.currentCharacterId === 'proyecto-a' && this.player.isProyectoACharging()) {
+                // Update Proyecto-A charge direction
+                const worldPos = this.screenToWorld(touch.clientX, touch.clientY);
+                this.player.updateProyectoACharge(0, worldPos);
+            } else if (this.player.isChargingAttack()) {
+                this.updateChargeIndicatorDirection();
+            }
         }
     }
 
@@ -1587,6 +1627,95 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     /**
+     * Execute Proyecto-A charge attack (melee area damage with Three.js effects)
+     * Called when player releases the charge
+     */
+    private executeProyectoAChargeAttack(
+        direction: 'down' | 'left' | 'right',
+        impactDelay: number,
+        chargeLevel: number
+    ): void {
+        if (!this.player || !this.characterAbility) return;
+
+        const proyectoAAbility = this.characterAbility as ProyectoAAbilityThree;
+        const arcadioRange = 8; // Melee range
+        const baseDamage = proyectoAAbility?.damage || 40;
+
+        // Calculate damage based on charge level (50% at 0 charge, 100% at full charge)
+        const damageMultiplier = 0.5 + (chargeLevel * 0.5);
+        const damage = baseDamage * damageMultiplier;
+
+        // Calculate attack angle based on direction
+        const attackAngle = this.getArcadioAttackAngle(direction);
+
+        // Schedule damage and effects at impact frame
+        setTimeout(() => {
+            // Create visual effects (spikes, cracks, screen shake)
+            if (proyectoAAbility?.createMeleeImpactEffect) {
+                // Vector from atan2(x, z) convention: X = sin(angle), Z = cos(angle)
+                const attackDir = new THREE.Vector3(
+                    Math.sin(attackAngle),
+                    0,
+                    Math.cos(attackAngle)
+                );
+                proyectoAAbility.createMeleeImpactEffect(
+                    this.player.mesh.position,
+                    attackDir,
+                    this.scene,
+                    arcadioRange,
+                    this.camera
+                );
+            }
+
+            // Apply damage in 120° arc (the direction covers 120° of the circle)
+            const arcSpread = Math.PI * (120 / 180); // 120 degrees in radians
+            let enemiesHit = 0;
+
+            for (const enemy of this.enemies) {
+                if (enemy.isDead || enemy.isMindControlled) continue;
+
+                const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
+                if (dist > arcadioRange) continue;
+
+                // Check if enemy is within the 120° arc
+                // Use atan2(x, z) convention to match attackAngle
+                const toEnemy = new THREE.Vector3()
+                    .subVectors(enemy.mesh.position, this.player.mesh.position);
+                const enemyAngle = Math.atan2(toEnemy.x, toEnemy.z);
+                let angleDiff = enemyAngle - attackAngle;
+
+                // Normalize angle
+                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+
+                if (Math.abs(angleDiff) <= arcSpread / 2) {
+                    const reward = enemy.takeDamage(damage, this.scene);
+                    if (reward) {
+                        this.addXp(reward.xp);
+                        this.gameState.score += reward.score;
+                    }
+
+                    // Knockback
+                    enemy.applyKnockback(this.player.mesh.position, 5);
+                    enemiesHit++;
+
+                    // Lifesteal
+                    if (proyectoAAbility?.applyLifesteal) {
+                        proyectoAAbility.applyLifesteal(damage, 1);
+                    }
+                }
+            }
+
+            if (enemiesHit > 0) {
+                console.log(`[PROYECTO-A] Charge attack hit ${enemiesHit} enemies for ${damage.toFixed(0)} damage (${(chargeLevel * 100).toFixed(0)}% charge)`);
+            }
+        }, impactDelay);
+
+        // Play sound
+        this.audioService.playShoot(this.currentCharacterId);
+    }
+
+    /**
      * Find enemy near a world position
      */
     private findEnemyNearPosition(position: THREE.Vector3, maxDistance: number): EnemyThree | null {
@@ -1632,15 +1761,15 @@ export class ThreeEngineService implements OnDestroy {
         // Check if auto-shoot is disabled via Dev Mode
         if (!this.gameState.autoShootEnabled) return;
 
-        // Lars and Proyecto-Y use manual charge system, not auto-shoot
-        if (this.currentCharacterId === 'lars' || this.currentCharacterId === 'proyecto-y') return;
+        // Lars, Proyecto-Y, and Proyecto-A use manual charge system, not auto-shoot
+        if (this.currentCharacterId === 'lars' || this.currentCharacterId === 'proyecto-y' || this.currentCharacterId === 'proyecto-a') return;
 
         const currentTime = this.clock.getElapsedTime();
 
         // Check cooldown
         if (currentTime - this.lastShootTime < this.autoShootInterval) return;
 
-        // ========== ARCADIO: ATAQUE DE ZONA (sin proyectil) ==========
+        // ========== ARCADIO: ATAQUE EN 3 ZONAS (120° cada una, daño progresivo) ==========
         if (this.player.usesCurvedProjectile()) {
             // Arcadio solo ataca enemigos CERCANOS (rango 8 unidades)
             const arcadioRange = 8;
@@ -1648,30 +1777,39 @@ export class ThreeEngineService implements OnDestroy {
 
             if (!nearestEnemy) return; // No hay enemigo cerca, NO atacar
 
-            // Ataque de zona instantaneo - SIN proyectil
             this.lastShootTime = currentTime;
 
-            const attackDir = new THREE.Vector3()
-                .subVectors(nearestEnemy.mesh.position, this.player.mesh.position)
-                .normalize();
-
-            // Crear efecto de impacto melee (picos 3D + screen shake)
-            if (this.characterAbility) {
+            // Play Arcadio attack animation with 3-zone damage callback
+            this.player.playArcadioAttack(nearestEnemy.mesh.position, (zone, multiplier, attackDirection) => {
+                // Callback called 3 times: at frames 12, 15, 18
                 const arcadioAbility = this.characterAbility as any;
-                if (arcadioAbility.createMeleeImpactEffect) {
+                const baseDamage = arcadioAbility?.damage || 40;
+                const damage = baseDamage * multiplier;
+
+                // Calculate attack direction vector based on the 3-direction system
+                const attackAngle = this.getArcadioAttackAngle(attackDirection);
+                const zoneAngle = this.getZoneAngle(attackAngle, zone);
+
+                // Only show visual effects on CENTER zone (100% damage)
+                if (zone === 'center' && arcadioAbility?.createMeleeImpactEffect) {
+                    // Vector from atan2(x, z) convention: X = sin(angle), Z = cos(angle)
+                    const attackDir = new THREE.Vector3(
+                        Math.sin(attackAngle),
+                        0,
+                        Math.cos(attackAngle)
+                    );
                     arcadioAbility.createMeleeImpactEffect(
                         this.player.mesh.position,
                         attackDir,
                         this.scene,
                         arcadioRange,
-                        this.camera // Pasar camara para screen shake
+                        this.camera
                     );
                 }
 
-                // Aplicar daño de zona a todos los enemigos en el abanico
-                const angleSpread = Math.PI * 0.8; // 144 grados (mismo que picos)
-                const baseAngle = Math.atan2(attackDir.z, attackDir.x);
-                const damage = arcadioAbility.damage || 40;
+                // Apply damage to enemies in this 40° zone
+                const zoneSpread = Math.PI * (40 / 180); // 40 degrees in radians
+                let enemiesHit = 0;
 
                 for (const enemy of this.enemies) {
                     if (enemy.isDead || enemy.isMindControlled) continue;
@@ -1679,39 +1817,44 @@ export class ThreeEngineService implements OnDestroy {
                     const dist = enemy.mesh.position.distanceTo(this.player.mesh.position);
                     if (dist > arcadioRange) continue;
 
-                    // Verificar si está dentro del abanico
+                    // Check if enemy is within this zone
+                    // Use atan2(x, z) convention to match attackAngle
                     const toEnemy = new THREE.Vector3()
                         .subVectors(enemy.mesh.position, this.player.mesh.position);
-                    const enemyAngle = Math.atan2(toEnemy.z, toEnemy.x);
-                    let angleDiff = enemyAngle - baseAngle;
+                    const enemyAngle = Math.atan2(toEnemy.x, toEnemy.z);
+                    let angleDiff = enemyAngle - zoneAngle;
 
-                    // Normalizar angulo
+                    // Normalize angle
                     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-                    if (Math.abs(angleDiff) <= angleSpread / 2) {
+                    if (Math.abs(angleDiff) <= zoneSpread / 2) {
                         const reward = enemy.takeDamage(damage, this.scene);
                         if (reward) {
                             this.addXp(reward.xp);
                             this.gameState.score += reward.score;
-                            // Enemy will be cleaned up in the main update loop
                         }
 
-                        // Aplicar knockback
-                        enemy.applyKnockback(this.player.mesh.position, 5);
+                        // Knockback only on center hit
+                        if (zone === 'center') {
+                            enemy.applyKnockback(this.player.mesh.position, 5);
+                        }
 
-                        // Lifesteal de Arcadio
-                        if (arcadioAbility.applyLifesteal) {
+                        enemiesHit++;
+
+                        // Lifesteal
+                        if (arcadioAbility?.applyLifesteal) {
                             arcadioAbility.applyLifesteal(damage, 1);
                         }
                     }
                 }
-            }
 
-            // Arcadio mira hacia el enemigo (sin animacion larga)
-            this.player.faceTarget(nearestEnemy.mesh.position);
+                if (enemiesHit > 0) {
+                    console.log(`[ARCADIO] Zone ${zone}: ${enemiesHit} enemies hit for ${damage.toFixed(0)} damage`);
+                }
+            });
 
-            // Play shoot sound
+            // Play attack sound
             this.audioService.playShoot(this.currentCharacterId);
             return;
         }
@@ -1733,6 +1876,45 @@ export class ThreeEngineService implements OnDestroy {
             this.lastShootTime = currentTime;
             // Play shoot sound
             this.audioService.playShoot(this.currentCharacterId);
+        }
+    }
+
+    // ========== ARCADIO ATTACK HELPERS ==========
+
+    /**
+     * Get the base angle for Arcadio's 3-direction attack system
+     * @param direction 'down' | 'left' | 'right'
+     * @returns Angle in radians
+     */
+    private getArcadioAttackAngle(direction: 'down' | 'left' | 'right'): number {
+        // Using atan2(x, z) convention where:
+        // 0° = toward camera (+Z), 90° = right (+X), 180° = away from camera (-Z), 270° = left (-X)
+        // Each zone is 120° centered at:
+        // DOWN: 0° (toward camera)
+        // RIGHT: 120° (upper-right diagonal)
+        // LEFT: 240° (upper-left diagonal)
+        switch (direction) {
+            case 'down': return 0;                          // 0° - toward camera (+Z)
+            case 'right': return Math.PI * 2 / 3;           // 120° - upper-right diagonal
+            case 'left': return Math.PI * 4 / 3;            // 240° - upper-left diagonal
+            default: return 0;
+        }
+    }
+
+    /**
+     * Get the angle for a specific damage zone within an attack
+     * Each attack (120°) is divided into 3 zones of 40° each
+     * @param baseAngle Base angle of the attack direction
+     * @param zone 'start' | 'center' | 'end'
+     * @returns Angle in radians for this zone
+     */
+    private getZoneAngle(baseAngle: number, zone: 'start' | 'center' | 'end'): number {
+        const zoneOffset = Math.PI * (40 / 180); // 40 degrees in radians
+        switch (zone) {
+            case 'start': return baseAngle - zoneOffset;  // Left side of arc
+            case 'center': return baseAngle;               // Center of arc
+            case 'end': return baseAngle + zoneOffset;     // Right side of arc
+            default: return baseAngle;
         }
     }
 
@@ -2245,6 +2427,13 @@ export class ThreeEngineService implements OnDestroy {
 
         if (this.player) {
             this.player.update(delta, this.keys);
+
+            // ========== PROYECTO-A CHARGE UPDATE (every frame) ==========
+            // Update charge state even when mouse isn't moving
+            if (this.currentCharacterId === 'proyecto-a' && this.player.isProyectoACharging()) {
+                const worldPos = this.screenToWorld(this.mousePosition.x, this.mousePosition.y);
+                this.player.updateProyectoACharge(delta, worldPos);
+            }
 
             // ========== WALK SOUND DETECTION ==========
             // Check if player is moving (WASD keys)
