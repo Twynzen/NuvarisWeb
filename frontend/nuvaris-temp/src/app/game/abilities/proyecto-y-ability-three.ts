@@ -8,8 +8,10 @@ import { ProyectoYSkills } from './skills/proyecto-y.skills';
 /**
  * Yurany Ability - Three.js implementation
  * Passive: Chain Lightning
- * - Projectiles chain to nearby enemies after hitting
- * - Each chain does reduced damage
+ * - CHARGE ATTACK: Hold to charge, release to chain attack multiple enemies
+ * - Full charge (100%): 50 → 40 → 30 → 20 → 10... (decrements of 10)
+ * - Partial charge: damage ÷ 2 per chain (40 → 20 → 10 → 5...)
+ * - More charge = more enemies chained (up to 6)
  * - Can stun enemies (upgrade)
  * - Passive dodge chance (20% base)
  * - NEW: Critical hit chance
@@ -17,15 +19,27 @@ import { ProyectoYSkills } from './skills/proyecto-y.skills';
  */
 export class ProyectoYAbilityThree implements CharacterAbilityThree {
     name = 'Chain Lightning';
-    description = 'Attacks chain to nearby enemies.';
+    description = 'Hold attack to charge, chain damage through multiple enemies.';
 
     private scene!: THREE.Scene;
     private player!: PlayerThree;
 
     // Chain properties (in Three.js units)
     public chainRange = 12; // Units to find next chain target
-    public chainDamagePercent = 0.5; // 50% damage transmitted
-    public maxBounces = 1; // How many times damage can chain
+    public chainDamagePercent = 0.5; // 50% damage transmitted (for passive chain only)
+    public maxBounces = 1; // How many times passive damage can chain
+
+    // ========== CHARGE ATTACK SYSTEM ==========
+    // Damage based on charge level
+    public readonly MAX_CHAIN_DAMAGE = 50; // Full charge damage
+    public readonly MIN_CHAIN_DAMAGE = 15; // Quick tap damage
+    // Full charge: decrement by 10 each chain (50→40→30→20→10)
+    // Partial charge: divide by 2 each chain (40→20→10→5)
+
+    // Max enemies chained based on charge level
+    public readonly MAX_CHAIN_ENEMIES_FULL = 6;
+    public readonly MAX_CHAIN_ENEMIES_MID = 4;
+    public readonly MAX_CHAIN_ENEMIES_MIN = 2;
 
     // Chain tracking per projectile (prevent infinite loops)
     private projectileChains: Map<ProjectileThree, Set<EnemyThree>> = new Map();
@@ -177,6 +191,241 @@ export class ProyectoYAbilityThree implements CharacterAbilityThree {
 
     getUpgrades(): any[] {
         return ProyectoYSkills;
+    }
+
+    // ========== CHARGE CHAIN ATTACK ==========
+
+    /**
+     * Execute chain attack based on charge level
+     * Called when player releases charge attack
+     *
+     * @param chargeLevel 0-1 representing charge progress
+     * @param targetPosition Where the attack is aimed
+     * @param allEnemies All enemies in the game
+     * @param scene THREE.Scene for visual effects
+     * @param playerPos Player position for finding nearest enemy
+     * @returns Array of { enemy, damage, orb } for each enemy hit
+     */
+    public executeChargeChainAttack(
+        chargeLevel: number,
+        targetPosition: THREE.Vector3,
+        allEnemies: EnemyThree[],
+        scene: THREE.Scene,
+        playerPos: THREE.Vector3
+    ): { enemy: EnemyThree; damage: number; orb: any }[] {
+        const results: { enemy: EnemyThree; damage: number; orb: any }[] = [];
+
+        // Calculate base damage based on charge level
+        const baseDamage = this.calculateChargeDamage(chargeLevel);
+
+        // Calculate max enemies to chain based on charge level
+        const maxChainEnemies = this.calculateMaxChainEnemies(chargeLevel);
+
+        // Is this a full charge? (100%)
+        const isFullCharge = chargeLevel >= 1.0;
+
+        console.log(`[PROJECT Y] Chain Attack! Charge: ${Math.floor(chargeLevel * 100)}%, Base Damage: ${baseDamage}, Max Chains: ${maxChainEnemies}`);
+
+        // Find first enemy (nearest to target position or player)
+        let currentEnemy = this.findNearestEnemyToPosition(targetPosition, allEnemies, 10);
+        if (!currentEnemy) {
+            currentEnemy = this.findNearestEnemyToPosition(playerPos, allEnemies, 20);
+        }
+
+        if (!currentEnemy) {
+            console.log('[PROJECT Y] No valid target for chain attack');
+            return results;
+        }
+
+        // Track chained enemies to prevent hitting same enemy twice
+        const chainedEnemies = new Set<EnemyThree>();
+        let currentDamage = baseDamage;
+        let chainIndex = 0;
+
+        // Chain through enemies
+        while (currentEnemy && chainIndex < maxChainEnemies && currentDamage >= 1) {
+            chainedEnemies.add(currentEnemy);
+
+            // Apply damage (integer only)
+            const damageToApply = Math.floor(currentDamage);
+            const orb = currentEnemy.takeDamage(damageToApply, scene);
+
+            results.push({
+                enemy: currentEnemy,
+                damage: damageToApply,
+                orb: orb
+            });
+
+            // Create visual effect from previous enemy (or player) to current
+            if (chainIndex === 0) {
+                // First chain: from player to first enemy
+                this.createChainEffect(playerPos, currentEnemy.mesh.position, scene, true);
+            }
+
+            // Apply stun if unlocked
+            if (this.stunChance > 0 && Math.random() < this.stunChance) {
+                currentEnemy.applyStun(this.stunDuration);
+            }
+
+            console.log(`[PROJECT Y] Chain ${chainIndex + 1}: ${damageToApply} damage to enemy`);
+
+            // Find next enemy in chain
+            const previousEnemy = currentEnemy;
+            currentEnemy = this.findNextChainTarget(currentEnemy, allEnemies, chainedEnemies);
+
+            if (currentEnemy) {
+                // Create chain effect to next enemy
+                this.createChainEffect(previousEnemy.mesh.position, currentEnemy.mesh.position, scene, false);
+            }
+
+            // Calculate next damage based on charge type
+            if (isFullCharge) {
+                // Full charge: decrement by 10 (50→40→30→20→10)
+                currentDamage = currentDamage - 10;
+            } else {
+                // Partial charge: divide by 2 (40→20→10→5...)
+                currentDamage = Math.floor(currentDamage / 2);
+            }
+
+            chainIndex++;
+        }
+
+        // Play chain lightning sound
+        if (this.onChainLightningCallback && results.length > 0) {
+            this.onChainLightningCallback();
+        }
+
+        return results;
+    }
+
+    /**
+     * Calculate base damage based on charge level
+     * Quick tap: 15, Full charge: 50
+     */
+    private calculateChargeDamage(chargeLevel: number): number {
+        // Linear interpolation between MIN and MAX damage
+        const damage = this.MIN_CHAIN_DAMAGE +
+            (this.MAX_CHAIN_DAMAGE - this.MIN_CHAIN_DAMAGE) * chargeLevel;
+        return Math.floor(damage);
+    }
+
+    /**
+     * Calculate max enemies that can be chained based on charge level
+     */
+    private calculateMaxChainEnemies(chargeLevel: number): number {
+        if (chargeLevel >= 1.0) {
+            return this.MAX_CHAIN_ENEMIES_FULL; // 6 enemies
+        } else if (chargeLevel >= 0.5) {
+            return this.MAX_CHAIN_ENEMIES_MID; // 4 enemies
+        } else {
+            return this.MAX_CHAIN_ENEMIES_MIN; // 2 enemies
+        }
+    }
+
+    /**
+     * Find nearest enemy to a position
+     */
+    private findNearestEnemyToPosition(
+        position: THREE.Vector3,
+        allEnemies: EnemyThree[],
+        maxDistance: number
+    ): EnemyThree | null {
+        let nearest: EnemyThree | null = null;
+        let minDist = maxDistance;
+
+        for (const enemy of allEnemies) {
+            if (enemy.isDead || enemy.isMindControlled) continue;
+
+            const dist = position.distanceTo(enemy.mesh.position);
+            if (dist < minDist) {
+                minDist = dist;
+                nearest = enemy;
+            }
+        }
+
+        return nearest;
+    }
+
+    /**
+     * Find next enemy in the chain (nearest to current that hasn't been hit)
+     */
+    private findNextChainTarget(
+        fromEnemy: EnemyThree,
+        allEnemies: EnemyThree[],
+        alreadyChained: Set<EnemyThree>
+    ): EnemyThree | null {
+        let closest: EnemyThree | null = null;
+        let minDistance = this.chainRange;
+
+        for (const enemy of allEnemies) {
+            if (enemy === fromEnemy || enemy.isDead ||
+                alreadyChained.has(enemy) || enemy.isMindControlled) {
+                continue;
+            }
+
+            const distance = fromEnemy.mesh.position.distanceTo(enemy.mesh.position);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closest = enemy;
+            }
+        }
+
+        return closest;
+    }
+
+    /**
+     * Create chain lightning effect between two points
+     */
+    private createChainEffect(
+        from: THREE.Vector3,
+        to: THREE.Vector3,
+        scene: THREE.Scene,
+        isFirst: boolean
+    ): void {
+        // Create jagged lightning line
+        const points: THREE.Vector3[] = [];
+        const segments = isFirst ? 8 : 5;
+
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const point = new THREE.Vector3().lerpVectors(from, to, t);
+
+            // Add randomness to middle points
+            if (i > 0 && i < segments) {
+                point.x += (Math.random() - 0.5) * 1.2;
+                point.y += 0.5 + Math.random() * 0.8;
+                point.z += (Math.random() - 0.5) * 1.2;
+            } else {
+                point.y += 1;
+            }
+
+            points.push(point);
+        }
+
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({
+            color: isFirst ? 0xffffff : 0x00ffff, // White for first, cyan for chains
+            linewidth: isFirst ? 3 : 2,
+            transparent: true,
+            opacity: 1
+        });
+
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+
+        // Fade out and remove
+        let opacity = 1;
+        const fadeInterval = setInterval(() => {
+            opacity -= 0.12;
+            material.opacity = Math.max(0, opacity);
+
+            if (opacity <= 0) {
+                scene.remove(line);
+                geometry.dispose();
+                material.dispose();
+                clearInterval(fadeInterval);
+            }
+        }, 25);
     }
 
     // ========== DASH ABILITY ==========
