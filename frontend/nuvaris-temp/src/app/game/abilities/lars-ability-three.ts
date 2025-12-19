@@ -293,11 +293,12 @@ export class LarsAbilityThree implements CharacterAbilityThree {
 
     // ========== VISUAL EFFECTS ==========
 
-    // ========== MENTAL ATTACK EFFECT (sin proyectil) ==========
+    // ========== COSMIC SPIRAL EFFECT (Espiral Cósmica Psíquica) ==========
     /**
-     * Crea efecto visual de ataque mental SIMPLIFICADO
-     * - Linea de "mirada" desde Lars al enemigo
-     * - Particulas de energia orbitando al enemigo (no barril)
+     * Crea efecto visual de ESPIRAL CÓSMICA
+     * - Partículas de polvo estelar en espiral helicoidal
+     * - Como cable de cobre enrollado / tornado cósmico
+     * - Anillos que giran en espiral hacia el enemigo
      */
     public createMentalAttackEffect(
         playerPos: THREE.Vector3,
@@ -306,102 +307,161 @@ export class LarsAbilityThree implements CharacterAbilityThree {
     ): void {
         const enemyPos = enemy.mesh.position.clone();
 
-        // 1. Linea de conexion mental (purpura, ondulante)
-        const points: THREE.Vector3[] = [];
-        const segments = 8;
+        // Calcular dirección y distancia
+        const direction = new THREE.Vector3().subVectors(enemyPos, playerPos);
+        const distance = direction.length();
+        direction.normalize();
 
-        for (let i = 0; i <= segments; i++) {
-            const t = i / segments;
-            const point = new THREE.Vector3().lerpVectors(playerPos, enemyPos, t);
-            point.y += 1.5; // A altura de ojos
+        // Altura base del efecto
+        const effectHeight = 1.2;
 
-            // Ondulacion sutil en puntos medios
-            if (i > 0 && i < segments) {
-                point.x += (Math.random() - 0.5) * 0.3;
-                point.z += (Math.random() - 0.5) * 0.3;
-            }
-            points.push(point);
-        }
-
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-        const lineMaterial = new THREE.LineBasicMaterial({
-            color: 0x9900ff, // Purpura mental
-            transparent: true,
-            opacity: 0.8
-        });
-
-        const mentalLine = new THREE.Line(lineGeometry, lineMaterial);
-        scene.add(mentalLine);
-
-        // 2. PARTICULAS DE ENERGIA orbitando al enemigo (mas organico)
+        // ====== 1. PARTÍCULAS DE POLVO CÓSMICO EN ESPIRAL ======
         const particles: THREE.Mesh[] = [];
         const particleMaterials: THREE.MeshBasicMaterial[] = [];
-        const particleCount = 6;
-        const orbitRadius = 1.0;
+        const particleCount = 24; // Más partículas para efecto de polvo
+        const spiralTurns = 3; // Vueltas de la espiral
+        const maxRadius = 0.8; // Radio máximo de la espiral
 
-        const particleGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+        const particleGeometry = new THREE.SphereGeometry(0.08, 6, 6); // Pequeñas
+
+        // Colores: púrpura y blanco
+        const cosmicColors = [0x9933ff, 0xffffff, 0xaa55ff, 0xeeeeff, 0x7722dd];
 
         for (let i = 0; i < particleCount; i++) {
+            const t = i / particleCount; // 0 a 1 a lo largo de la espiral
+            const angle = t * Math.PI * 2 * spiralTurns; // Ángulo en espiral
+            const radius = maxRadius * (0.3 + t * 0.7); // Radio crece hacia el enemigo
+
             const particleMaterial = new THREE.MeshBasicMaterial({
-                color: i % 2 === 0 ? 0x9900ff : 0xff00ff, // Alternar purpura/magenta
+                color: cosmicColors[i % cosmicColors.length],
                 transparent: true,
-                opacity: 0.9
+                opacity: 0.7 + Math.random() * 0.3
             });
 
             const particle = new THREE.Mesh(particleGeometry, particleMaterial);
 
-            // Posicion inicial distribuida en circulo
-            const startAngle = (i / particleCount) * Math.PI * 2;
-            const startHeight = 0.5 + (i % 3) * 0.7; // Alturas variadas
-
-            (particle as any).orbitAngle = startAngle;
-            (particle as any).orbitHeight = startHeight;
-            (particle as any).orbitSpeed = 0.15 + Math.random() * 0.1;
-
-            particle.position.set(
-                enemyPos.x + Math.cos(startAngle) * orbitRadius,
-                startHeight,
-                enemyPos.z + Math.sin(startAngle) * orbitRadius
-            );
+            // Guardar datos para animación
+            (particle as any).baseT = t;
+            (particle as any).spiralAngle = angle;
+            (particle as any).spiralRadius = radius;
+            (particle as any).randomOffset = Math.random() * 0.2; // Variación orgánica
 
             scene.add(particle);
             particles.push(particle);
             particleMaterials.push(particleMaterial);
         }
 
-        // Animacion (solo linea + esferas, sin glow)
-        let opacity = 1;
-        const fadeInterval = setInterval(() => {
-            opacity -= 0.05;
+        // ====== 2. ANILLOS ESPIRALES (como aros de tornado) ======
+        const spiralRings: THREE.Mesh[] = [];
+        const ringMaterials: THREE.MeshBasicMaterial[] = [];
+        const ringCount = 5;
 
-            // Seguir al enemigo
-            const currentEnemyPos = enemy.mesh.position;
+        for (let i = 0; i < ringCount; i++) {
+            const ringGeometry = new THREE.TorusGeometry(
+                0.3 + i * 0.1,  // Radio del torus (crece)
+                0.03,           // Grosor del tubo (delgado)
+                8,              // Segmentos radiales
+                24              // Segmentos tubulares
+            );
 
-            // Orbitar particulas alrededor del enemigo
-            for (const particle of particles) {
-                const angle = (particle as any).orbitAngle;
-                const height = (particle as any).orbitHeight;
-                const speed = (particle as any).orbitSpeed;
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: cosmicColors[i % cosmicColors.length],
+                transparent: true,
+                opacity: 0.5
+            });
 
-                (particle as any).orbitAngle += speed;
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
 
-                particle.position.x = currentEnemyPos.x + Math.cos(angle) * orbitRadius;
-                particle.position.z = currentEnemyPos.z + Math.sin(angle) * orbitRadius;
-                particle.position.y = currentEnemyPos.y + height;
+            // Guardar datos
+            (ring as any).baseT = (i + 1) / (ringCount + 1);
+            (ring as any).rotationSpeed = 0.15 + i * 0.05;
+            (ring as any).tiltAngle = Math.PI / 6 + (i * 0.1); // Inclinación variable
+
+            scene.add(ring);
+            spiralRings.push(ring);
+            ringMaterials.push(ringMaterial);
+        }
+
+        // ====== 3. ANIMACIÓN ======
+        let frame = 0;
+        const maxFrames = 30; // ~1 segundo
+
+        const animInterval = setInterval(() => {
+            frame++;
+            const progress = frame / maxFrames;
+            const time = frame * 0.1; // Para rotaciones continuas
+
+            // Animar partículas en espiral helicoidal
+            for (let i = 0; i < particles.length; i++) {
+                const particle = particles[i];
+                const mat = particleMaterials[i];
+
+                const baseT = (particle as any).baseT;
+                const spiralAngle = (particle as any).spiralAngle;
+                const spiralRadius = (particle as any).spiralRadius;
+                const randomOffset = (particle as any).randomOffset;
+
+                // Avanzar la partícula hacia el enemigo + rotación espiral
+                const currentT = Math.min(1, baseT + progress * 0.5);
+                const currentAngle = spiralAngle + time * 2; // Rotación continua
+
+                // Posición base interpolada entre player y enemy
+                const basePos = new THREE.Vector3().lerpVectors(playerPos, enemyPos, currentT);
+                basePos.y += effectHeight;
+
+                // Añadir offset espiral (perpendicular a la dirección)
+                const perpX = -direction.z; // Perpendicular en XZ
+                const perpZ = direction.x;
+
+                const offsetX = Math.cos(currentAngle) * spiralRadius * (1 - progress * 0.3);
+                const offsetZ = Math.sin(currentAngle) * spiralRadius * (1 - progress * 0.3);
+                const offsetY = Math.sin(currentAngle * 0.5) * 0.2 + randomOffset;
+
+                particle.position.set(
+                    basePos.x + perpX * offsetX + direction.x * offsetZ * 0.3,
+                    basePos.y + offsetY,
+                    basePos.z + perpZ * offsetX + direction.z * offsetZ * 0.3
+                );
+
+                // Escala pulsante
+                const pulse = 1 + Math.sin(time * 3 + i) * 0.3;
+                particle.scale.setScalar(pulse);
+
+                // Fade out gradual
+                mat.opacity = (0.7 + Math.random() * 0.3) * (1 - progress * 0.8);
             }
 
-            // Fade
-            lineMaterial.opacity = Math.max(0, opacity * 0.8);
-            for (const mat of particleMaterials) {
-                mat.opacity = Math.max(0, opacity * 0.9);
+            // Animar anillos espirales
+            for (let i = 0; i < spiralRings.length; i++) {
+                const ring = spiralRings[i];
+                const ringMat = ringMaterials[i];
+
+                const baseT = (ring as any).baseT;
+                const rotSpeed = (ring as any).rotationSpeed;
+                const tilt = (ring as any).tiltAngle;
+
+                // Avanzar hacia el enemigo
+                const currentT = Math.min(1, baseT + progress * 0.6);
+                const ringPos = new THREE.Vector3().lerpVectors(playerPos, enemyPos, currentT);
+                ringPos.y += effectHeight;
+
+                ring.position.copy(ringPos);
+
+                // Rotación en espiral (como tornado)
+                ring.rotation.x = tilt + time * rotSpeed;
+                ring.rotation.y = time * rotSpeed * 2;
+                ring.rotation.z = Math.sin(time + i) * 0.3;
+
+                // Escala que se contrae hacia el final
+                const ringScale = (1 - progress * 0.5) * (1 + Math.sin(time * 2) * 0.1);
+                ring.scale.setScalar(ringScale);
+
+                // Fade out
+                ringMat.opacity = 0.5 * (1 - progress);
             }
 
-            if (opacity <= 0) {
-                scene.remove(mentalLine);
-
-                lineGeometry.dispose();
-                lineMaterial.dispose();
-
+            // Cleanup al final
+            if (frame >= maxFrames) {
                 for (const particle of particles) {
                     scene.remove(particle);
                 }
@@ -410,9 +470,17 @@ export class LarsAbilityThree implements CharacterAbilityThree {
                 }
                 particleGeometry.dispose();
 
-                clearInterval(fadeInterval);
+                for (const ring of spiralRings) {
+                    scene.remove(ring);
+                    ring.geometry.dispose();
+                }
+                for (const mat of ringMaterials) {
+                    mat.dispose();
+                }
+
+                clearInterval(animInterval);
             }
-        }, 35); // ~28fps
+        }, 33); // ~30fps
     }
 
     private createExplosionEffect(position: THREE.Vector3, scene: THREE.Scene, color: number = 0x0066ff): void {
