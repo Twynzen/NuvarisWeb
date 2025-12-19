@@ -6,13 +6,15 @@
     <p class="subtitle" *ngIf="allLanesStopped && !showFinalResult">PROCESSING...</p>
 
     <!-- Slot Machine Container -->
-    <div class="slot-machine" *ngIf="!showFinalResult">
+    <div class="slot-machine" *ngIf="!showFinalResult" [class.revealing-winner]="showWinnerReveal">
       <!-- Lane indicators -->
       <div class="lane-container">
         <div class="slot-lane"
              *ngFor="let lane of lanes; let i = index"
              [class.spinning]="lane.isSpinning"
-             [class.stopped]="!lane.isSpinning">
+             [class.stopped]="!lane.isSpinning"
+             [class.is-winner]="showWinnerReveal && i === winnerLaneIndex"
+             [class.is-loser]="showWinnerReveal && i !== winnerLaneIndex">
 
           <!-- Slot viewport -->
           <div class="slot-viewport">
@@ -30,8 +32,13 @@
           <div class="lane-indicator">{{ i + 1 }}</div>
 
           <!-- Stopped indicator -->
-          <div class="stopped-badge" *ngIf="!lane.isSpinning">
+          <div class="stopped-badge" *ngIf="!lane.isSpinning && !showWinnerReveal">
             <span class="checkmark">&#10003;</span>
+          </div>
+
+          <!-- Winner label -->
+          <div class="winner-label" *ngIf="showWinnerReveal && i === winnerLaneIndex">
+            UPGRADE SELECTED
           </div>
         </div>
       </div>

@@ -38,6 +38,11 @@ export class LevelUpComponent implements OnInit, OnDestroy {
     finalSelection: RouletteUpgrade | null = null;
     showFinalResult = false;
     allLanesStopped = false;
+    showWinnerReveal = false;
+    winnerLaneIndex: number = -1;
+
+    // Keyboard handler reference
+    private keyboardHandler: ((e: KeyboardEvent) => void) | null = null;
 
     // Character upgrades pool
     private characterUpgrades: AbilityOption[] = [];
@@ -61,10 +66,59 @@ export class LevelUpComponent implements OnInit, OnDestroy {
         this.loadCharacterUpgrades();
         this.initializeSlotMachine();
         this.startAllLanes();
+        this.setupKeyboardControls();
     }
 
     ngOnDestroy() {
         this.stopAllAnimations();
+        this.removeKeyboardControls();
+    }
+
+    /**
+     * Setup keyboard controls for skip/continue
+     */
+    private setupKeyboardControls(): void {
+        this.keyboardHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                this.handleSkip();
+            }
+        };
+        window.addEventListener('keydown', this.keyboardHandler);
+    }
+
+    /**
+     * Remove keyboard controls
+     */
+    private removeKeyboardControls(): void {
+        if (this.keyboardHandler) {
+            window.removeEventListener('keydown', this.keyboardHandler);
+            this.keyboardHandler = null;
+        }
+    }
+
+    /**
+     * Handle skip action based on current state
+     */
+    private handleSkip(): void {
+        if (!this.allLanesStopped) {
+            // Skip spinning animation - stop all lanes immediately
+            this.stopAllAnimations();
+            this.lanes.forEach(lane => {
+                const winnerIndex = lane.items.findIndex(item => item === lane.winner);
+                lane.currentIndex = winnerIndex;
+                lane.isSpinning = false;
+            });
+            this.allLanesStopped = true;
+            // Immediately select winner
+            this.selectFinalWinner();
+        } else if (this.showWinnerReveal && !this.showFinalResult) {
+            // Skip reveal animation - go to final result
+            this.showFinalResult = true;
+        } else if (this.showFinalResult) {
+            // Skip final result - apply upgrade immediately
+            this.applyUpgrade();
+        }
     }
 
     /**
@@ -190,17 +244,27 @@ export class LevelUpComponent implements OnInit, OnDestroy {
 
     /**
      * Select final winner from the 3 lane winners
+     * Fase 1: Reveal winner among the 3 cards (winner highlighted, others fade)
+     * Fase 2: Show final result card
      */
     private selectFinalWinner(): void {
         const winners = this.lanes.map(lane => lane.winner).filter(w => w !== null) as RouletteUpgrade[];
         const randomIndex = Math.floor(Math.random() * winners.length);
         this.finalSelection = winners[randomIndex];
-        this.showFinalResult = true;
+        this.winnerLaneIndex = randomIndex;
 
-        // Auto-apply after showing result
+        // Fase 1: Show winner reveal with all 3 cards visible
+        this.showWinnerReveal = true;
+
+        // Fase 2: After 2s, show the final big card
+        setTimeout(() => {
+            this.showFinalResult = true;
+        }, 2000);
+
+        // Fase 3: Auto-apply after showing final result
         setTimeout(() => {
             this.applyUpgrade();
-        }, 2000);
+        }, 4000);
     }
 
     /**

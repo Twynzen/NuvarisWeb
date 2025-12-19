@@ -73,6 +73,37 @@ $rarity-legendary: $qdt-white;
 .slot-machine {
     position: relative;
     padding: 20px 0;
+
+    // Estado de revelacion del ganador
+    &.revealing-winner {
+        .lane-container {
+            .slot-lane {
+                transition: all 0.8s ease-out;
+
+                &.is-winner {
+                    transform: scale(1.15);
+                    z-index: 10;
+                    border-color: $qdt-white;
+                    box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
+
+                    .slot-item {
+                        animation: winnerGlow 1s infinite;
+                    }
+                }
+
+                &.is-loser {
+                    opacity: 0.3;
+                    transform: scale(0.9);
+                    filter: grayscale(0.5);
+                }
+            }
+        }
+
+        .selection-pointer {
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+        }
+    }
 }
 
 .lane-container {
@@ -251,6 +282,25 @@ $rarity-legendary: $qdt-white;
         font-size: 14px;
         font-weight: bold;
     }
+}
+
+// Etiqueta de ganador
+.winner-label {
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: $qdt-white;
+    color: $qdt-bg;
+    padding: 8px 20px;
+    font-size: 0.85em;
+    letter-spacing: 2px;
+    font-weight: 600;
+    border-radius: 4px;
+    animation: labelPop 0.5s ease-out;
+    z-index: 20;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
 }
 
 // ==================== SELECTION POINTER ====================
@@ -498,6 +548,29 @@ $rarity-legendary: $qdt-white;
     }
     100% {
         transform: scale(1);
+    }
+}
+
+@keyframes winnerGlow {
+    0%, 100% {
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 50px rgba(255, 255, 255, 0.7);
+    }
+}
+
+@keyframes labelPop {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px) scale(0.8);
+    }
+    50% {
+        transform: translateX(-50%) translateY(-5px) scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
     }
 }
 
