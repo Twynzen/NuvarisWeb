@@ -209,9 +209,9 @@ export class ThreeEngineService implements OnDestroy {
     // ========== MOUSE/TOUCH HANDLERS FOR LARS CHARGE ==========
 
     private handleMouseDown(e: MouseEvent): void {
-        // Only left click, and only for Lars
+        // Only left click, and only for Lars and Proyecto-Y (charge attack characters)
         if (e.button !== 0) return;
-        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         this.isMouseDown = true;
@@ -229,7 +229,7 @@ export class ThreeEngineService implements OnDestroy {
 
         this.isMouseDown = false;
 
-        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         // Get world position from mouse
@@ -239,8 +239,12 @@ export class ThreeEngineService implements OnDestroy {
         const result = this.player.releaseCharge(worldPos);
 
         if (result) {
-            // Execute the attack based on charge level
-            this.executeLarsChargeAttack(result.chargeLevel, worldPos);
+            // Execute the attack based on character and charge level
+            if (this.currentCharacterId === 'lars') {
+                this.executeLarsChargeAttack(result.chargeLevel, worldPos);
+            } else if (this.currentCharacterId === 'proyecto-y') {
+                this.executeProyectoYChargeAttack(result.chargeLevel, worldPos);
+            }
         }
 
         // Clean up visual effects
@@ -258,7 +262,7 @@ export class ThreeEngineService implements OnDestroy {
 
     private handleTouchStart(e: TouchEvent): void {
         if (e.touches.length === 0) return;
-        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         // Use first touch
@@ -276,7 +280,7 @@ export class ThreeEngineService implements OnDestroy {
 
         this.isMouseDown = false;
 
-        if (!this.player || this.currentCharacterId !== 'lars') return;
+        if (!this.player || (this.currentCharacterId !== 'lars' && this.currentCharacterId !== 'proyecto-y')) return;
         if (this.gameState.isPaused || this.gameState.isLevelingUp || this.gameState.isGameOver) return;
 
         // Use last known mouse position
@@ -285,7 +289,12 @@ export class ThreeEngineService implements OnDestroy {
         const result = this.player.releaseCharge(worldPos);
 
         if (result) {
-            this.executeLarsChargeAttack(result.chargeLevel, worldPos);
+            // Execute the attack based on character and charge level
+            if (this.currentCharacterId === 'lars') {
+                this.executeLarsChargeAttack(result.chargeLevel, worldPos);
+            } else if (this.currentCharacterId === 'proyecto-y') {
+                this.executeProyectoYChargeAttack(result.chargeLevel, worldPos);
+            }
         }
 
         this.clearChargeVisualEffects();
@@ -1400,7 +1409,14 @@ export class ThreeEngineService implements OnDestroy {
         // Update player charge animation based on mouse direction
         if (this.player && this.mousePosition) {
             const worldPos = this.screenToWorld(this.mousePosition.x, this.mousePosition.y);
-            this.player.updateChargeDirection(worldPos);
+
+            if (this.currentCharacterId === 'proyecto-y') {
+                // Proyecto-Y: Use dedicated charge update method
+                this.player.updateProyectoYCharge(0.016, worldPos);  // Approximate delta
+            } else {
+                // Lars: Use existing charge direction method
+                this.player.updateChargeDirection(worldPos);
+            }
         }
         // Update visual effects
         this.updateChargeVisualEffects();
@@ -1519,6 +1535,58 @@ export class ThreeEngineService implements OnDestroy {
     }
 
     /**
+     * Execute Proyecto-Y charge chain attack based on charge level
+     * Chain lightning that hits multiple enemies with decreasing damage
+     */
+    private executeProyectoYChargeAttack(chargeLevel: number, targetPosition: THREE.Vector3): void {
+        if (!this.player || !this.characterAbility) return;
+
+        const proyectoYAbility = this.characterAbility as ProyectoYAbilityThree;
+
+        // Execute chain attack and get results
+        const results = proyectoYAbility.executeChargeChainAttack(
+            chargeLevel,
+            targetPosition,
+            this.enemies,
+            this.scene,
+            this.player.mesh.position
+        );
+
+        // Process results (XP, score, remove dead enemies)
+        let totalDamage = 0;
+        const deadEnemyIndices: number[] = [];
+
+        for (const result of results) {
+            totalDamage += result.damage;
+
+            if (result.orb) {
+                // Enemy died - collect reward
+                this.addXp(result.orb.xp);
+                this.gameState.score += result.orb.score;
+
+                // Mark for removal
+                const idx = this.enemies.indexOf(result.enemy);
+                if (idx > -1 && !deadEnemyIndices.includes(idx)) {
+                    deadEnemyIndices.push(idx);
+                }
+            }
+        }
+
+        // Remove dead enemies (in reverse order to preserve indices)
+        deadEnemyIndices.sort((a, b) => b - a);
+        for (const idx of deadEnemyIndices) {
+            this.enemies.splice(idx, 1);
+        }
+
+        if (results.length > 0) {
+            console.log(`[PROYECTO-Y] Chain attack complete! Hit ${results.length} enemies for ${totalDamage} total damage`);
+        }
+
+        // Play sound
+        this.audioService.playShoot(this.currentCharacterId);
+    }
+
+    /**
      * Find enemy near a world position
      */
     private findEnemyNearPosition(position: THREE.Vector3, maxDistance: number): EnemyThree | null {
@@ -1563,6 +1631,9 @@ export class ThreeEngineService implements OnDestroy {
     private autoShoot() {
         // Check if auto-shoot is disabled via Dev Mode
         if (!this.gameState.autoShootEnabled) return;
+
+        // Lars and Proyecto-Y use manual charge system, not auto-shoot
+        if (this.currentCharacterId === 'lars' || this.currentCharacterId === 'proyecto-y') return;
 
         const currentTime = this.clock.getElapsedTime();
 
@@ -2216,9 +2287,16 @@ export class ThreeEngineService implements OnDestroy {
                 this.characterAbility.update(delta, this.scene, this.player, this.enemies);
             }
 
-            // Update Lars charge visual effects (if charging)
-            if (this.currentCharacterId === 'lars' && this.player.isChargingAttack()) {
-                this.updateChargeVisualEffects();
+            // Update charge system (if charging)
+            if (this.player.isChargingAttack()) {
+                if (this.currentCharacterId === 'proyecto-y') {
+                    // Proyecto-Y: Update charge phase and direction
+                    const worldPos = this.screenToWorld(this.mousePosition.x, this.mousePosition.y);
+                    this.player.updateProyectoYCharge(delta, worldPos);
+                } else if (this.currentCharacterId === 'lars') {
+                    // Lars: Update visual effects
+                    this.updateChargeVisualEffects();
+                }
             }
 
             // Auto-shoot at nearest enemy (not used by Lars - uses manual charge system)
@@ -2603,8 +2681,8 @@ export class ThreeEngineService implements OnDestroy {
                     // Apply damage to player
                     this.gameState.health -= damageAmount;
 
-                    // Cancel Lars charge if hit while charging
-                    if (this.currentCharacterId === 'lars' && this.player.isChargingAttack()) {
+                    // Cancel charge if hit while charging (Lars and Proyecto-Y)
+                    if ((this.currentCharacterId === 'lars' || this.currentCharacterId === 'proyecto-y') && this.player.isChargingAttack()) {
                         this.player.cancelCharge();
                         this.clearChargeVisualEffects();
                         this.isMouseDown = false;

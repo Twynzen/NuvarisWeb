@@ -382,7 +382,99 @@ export class PlayerThree {
         // === SHOOT ANIMATIONS ===
         this.loadShootAnimations(folder, prefix);
 
-        console.log('[PROYECTO-Y] Loaded 8-directional movement + shoot animations');
+        // === CHARGE ANIMATIONS (for chain attack) ===
+        this.animator.loadAnimation({
+            name: 'charge-down',
+            texturePath: `assets/${folder}/charge-down`,
+            prefix: `${prefix}charge-down-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 45,
+            loop: false
+        });
+
+        this.animator.loadAnimation({
+            name: 'charge-up',
+            texturePath: `assets/${folder}/charge-up`,
+            prefix: `${prefix}charge-up-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 38,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'charge-left',
+            texturePath: `assets/${folder}/charge-left`,
+            prefix: `${prefix}charge-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 38,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'charge-right',
+            texturePath: `assets/${folder}/charge-right`,
+            prefix: `${prefix}charge-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 38,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'charge-rotation',
+            texturePath: `assets/${folder}/charge-rotation`,
+            prefix: `${prefix}charge-rotation-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 40,  // 40fps for 0.75s charge time
+            loop: false
+        });
+
+        // === DIAGONAL CHARGE ANIMATIONS ===
+        this.animator.loadAnimation({
+            name: 'charge-up-left',
+            texturePath: `assets/${folder}/charge-up-left`,
+            prefix: `${prefix}charge-up-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 15,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'charge-up-right',
+            texturePath: `assets/${folder}/charge-up-right`,
+            prefix: `${prefix}charge-up-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 15,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'charge-down-left',
+            texturePath: `assets/${folder}/charge-down-left`,
+            prefix: `${prefix}charge-down-left-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 15,
+            loop: true
+        });
+
+        this.animator.loadAnimation({
+            name: 'charge-down-right',
+            texturePath: `assets/${folder}/charge-down-right`,
+            prefix: `${prefix}charge-down-right-`,
+            suffix: '.png',
+            frameCount: 30,
+            frameRate: 15,
+            loop: true
+        });
+
+        console.log('[PROYECTO-Y] Loaded 8-directional movement + shoot + 9 charge animations');
     }
 
     /**
@@ -686,23 +778,33 @@ export class PlayerThree {
 
     /**
      * Start charging attack (called on mouse down / touch start)
-     * Only works for Lars
+     * Lars and Proyecto-Y use different charge systems
      */
-    private currentChargeAnim: 'charge-down' | 'charge-up' | 'charge-left' | 'charge-right' = 'charge-down';
+    private currentChargeAnim: string = 'charge-down';
+    private proyectoYChargeComplete = false;  // Track if Proyecto-Y reached 100%
 
     public startCharge(): boolean {
-        if (this.characterId !== 'lars') return false;
+        // Only Lars and Proyecto-Y can use charge attacks
+        if (this.characterId !== 'lars' && this.characterId !== 'proyecto-y') return false;
         if (this.isCharging || this.isAttacking || this.isDead) return false;
 
         this.isCharging = true;
         this.chargeStartTime = Date.now();
         this.chargeLevel = 0;
-        this.currentChargeAnim = 'charge-down';
 
-        // Play default charge animation (loops)
-        this.animator.play('charge-down');
+        if (this.characterId === 'proyecto-y') {
+            // Proyecto-Y: Start with charge-down, will update direction based on mouse
+            this.currentChargeAnim = 'charge-down';
+            this.proyectoYChargeComplete = false;
+            this.animator.play('charge-down', true, 30);  // Loop until direction changes
+            console.log('[PROYECTO-Y] Charge started - charge-down');
+        } else {
+            // Lars: Use charge-down (existing behavior)
+            this.currentChargeAnim = 'charge-down';
+            this.animator.play('charge-down');
+            console.log('[LARS] Charge started - charge-down');
+        }
 
-        console.log('[LARS] Charge started');
         return true;
     }
 
@@ -786,13 +888,60 @@ export class PlayerThree {
     }
 
     /**
+     * Update Proyecto-Y charge system (different from Lars)
+     * Phase 1 (0-99%): charge-rotation synced with charge level
+     * Phase 2 (100%): hold loop of charge-[direction] pointing at mouse
+     */
+    public updateProyectoYCharge(delta: number, targetPosition: THREE.Vector3): void {
+        if (!this.isCharging || this.characterId !== 'proyecto-y') return;
+
+        // Update charge level
+        const elapsed = (Date.now() - this.chargeStartTime) / 1000;
+        this.chargeLevel = Math.min(elapsed / this.maxChargeTime, 1.0);
+
+        // Get 8-directional direction to mouse
+        const direction = this.getDirection8ToTarget(targetPosition);
+        const animName = `charge-${direction}`;
+
+        // Update facing based on direction
+        if (direction.includes('right')) {
+            this.facingRight = true;
+        } else if (direction.includes('left')) {
+            this.facingRight = false;
+        }
+
+        if (this.chargeLevel < 1.0) {
+            // During charge: Play charge-[direction] animation, update if direction changes
+            if (this.currentChargeAnim !== animName) {
+                this.currentChargeAnim = animName;
+                this.animator.play(animName, true, 30);  // Loop the charge animation
+                console.log(`[PROYECTO-Y] Charging direction: ${direction}`);
+            }
+        } else {
+            // Charge complete: Switch to hold loop (frames 20-29)
+            if (!this.proyectoYChargeComplete) {
+                this.proyectoYChargeComplete = true;
+                this.currentChargeAnim = '';  // Force animation switch
+                console.log('[PROYECTO-Y] Charge complete!');
+            }
+
+            // Play hold loop if direction changed or just completed
+            if (this.currentChargeAnim !== animName) {
+                this.currentChargeAnim = animName;
+                this.animator.playSubsetLoop(animName, 20, 29, 15);
+                console.log(`[PROYECTO-Y] Hold direction: ${direction}`);
+            }
+        }
+    }
+
+    /**
      * Release charge and execute attack (called on mouse up / touch end)
      * @param targetPosition Position to attack towards
      * @returns Object with charge level and direction for the engine to process
      */
     public releaseCharge(targetPosition: THREE.Vector3): { chargeLevel: number; direction: Direction8 } | null {
         if (!this.isCharging) return null;
-        if (this.characterId !== 'lars') return null;
+        if (this.characterId !== 'lars' && this.characterId !== 'proyecto-y') return null;
 
         const finalChargeLevel = this.chargeLevel;
         this.isCharging = false;
@@ -825,10 +974,28 @@ export class PlayerThree {
         this.isAttacking = true;
         this.lastAttackTime = Date.now();
 
-        const attackAnim = `attack-${direction}`;
-        this.animator.play(attackAnim, false, 30);
+        // Lars uses attack animations, Proyecto-Y uses charge final frames
+        if (this.characterId === 'lars') {
+            const attackAnim = `attack-${direction}`;
+            this.animator.play(attackAnim, false, 30);
+        } else if (this.characterId === 'proyecto-y') {
+            // Proyecto-Y: Use final frames of charge-[direction] as attack animation
+            const chargeAnim = `charge-${direction}`;
+            // Play frames 27-29 as "fire" animation (3 frames @ 30fps = ~100ms)
+            this.animator.playSubsetLoop(chargeAnim, 27, 29, 30);
 
-        console.log(`[LARS] Charge released! Level: ${(finalChargeLevel * 100).toFixed(0)}%, Direction: ${direction}`);
+            // Stop the loop after one pass (simulate one-shot animation)
+            setTimeout(() => {
+                this.animator.stopSubsetLoop();
+            }, 100);
+        }
+
+        // Reset Proyecto-Y specific state
+        if (this.characterId === 'proyecto-y') {
+            this.proyectoYChargeComplete = false;
+        }
+
+        console.log(`[${this.characterId.toUpperCase()}] Charge released! Level: ${(finalChargeLevel * 100).toFixed(0)}%, Direction: ${direction}`);
 
         // Reset attacking state after animation completes
         setTimeout(() => {
