@@ -273,23 +273,32 @@ export class EnemyThree {
 
     /**
      * Initialize cinematic spawn sequence for worms
-     * Sequence: spawn (30f) -> emerge (30f) -> idle
+     * Flujo seamless: spawn → bury2_reverse → bury1_reverse → idle
+     * Esto conecta perfectamente porque bury1-001 ≈ idle-001
      */
     private initializeSpawn(): void {
         this.isSpawning = true;
         this.spawnPhase = 'spawn';
         this.mesh.visible = true;
 
-        // Start spawn animation with callback chain
+        // Phase 1: spawn (001→030) - cola aparece del suelo
         this.animator.play('spawn', false, 25);
         this.animator.setOnComplete(() => {
+            // Phase 2: bury2 reverse (030→001) - cuerpo emerge
+            // spawn-030 ≈ bury2-030 → skip 1 frame
             this.spawnPhase = 'emerge';
-            this.animator.play('emerge', false, 40);
+            this.animator.playReverse('bury2', 45, 1);
             this.animator.setOnComplete(() => {
-                this.spawnPhase = 'ready';
-                this.isSpawning = false;
-                this.animator.play('idle', true, 18);
-                console.log('[WORM] Spawn complete - ready to fight');
+                // Phase 3: bury1 reverse (030→001) - worm completo aparece
+                // bury2-001 ≈ bury1-030 → skip 1 frame
+                this.animator.playReverse('bury1', 45, 1);
+                this.animator.setOnComplete(() => {
+                    // Phase 4: idle - CONEXIÓN PERFECTA (bury1-001 ≈ idle-001)
+                    this.spawnPhase = 'ready';
+                    this.isSpawning = false;
+                    this.animator.play('idle', true, 18, 1);
+                    console.log('[WORM] Spawn complete - ready to fight');
+                });
             });
         });
 
