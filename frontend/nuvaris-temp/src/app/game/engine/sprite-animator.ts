@@ -29,6 +29,12 @@ export class SpriteAnimator {
     // Static frame mode (for 360 rotation - display specific frame without animation)
     private isStaticMode = false;
 
+    // Reverse playback mode
+    private isReversed = false;
+
+    // Animation complete callback
+    private onAnimationComplete: (() => void) | null = null;
+
     constructor(material: THREE.SpriteMaterial) {
         this.spriteMaterial = material;
     }
@@ -47,24 +53,92 @@ export class SpriteAnimator {
         this.animations[config.name] = frames;
     }
 
-    play(name: string, loop = true, frameRate = 10) {
-        if (this.currentAnimation === name && !this.useSubset && !this.isStaticMode) return;
+    /**
+     * Play animation forward
+     * @param name Animation name
+     * @param loop Whether to loop
+     * @param frameRate Frames per second
+     * @param skipFrames Number of frames to skip at start (for seamless transitions)
+     * @param forceReset Force restart even if same animation is playing
+     */
+    play(name: string, loop = true, frameRate = 10, skipFrames = 0, forceReset = false) {
+        if (!forceReset && this.currentAnimation === name && !this.useSubset && !this.isStaticMode && !this.isReversed && skipFrames === 0) return;
 
-        // Exit subset mode and static mode when playing a new animation
+        // Exit all special modes when playing a new animation
+        this.useSubset = false;
+        this.subsetStart = 0;
+        this.subsetEnd = 0;
+        this.isStaticMode = false;
+        this.isReversed = false;
+
+        if (this.animations[name]) {
+            this.currentAnimation = name;
+            // Skip frames for seamless transitions (e.g., skipFrames=1 starts at frame index 1)
+            const frames = this.animations[name];
+            this.currentFrameIndex = Math.min(skipFrames, frames.length - 1);
+            this.loop = loop;
+            this.frameDuration = 1 / frameRate;
+            this.timeSinceLastFrame = 0;
+
+            this.spriteMaterial.map = frames[this.currentFrameIndex];
+        }
+    }
+
+    /**
+     * Play animation in reverse (from last frame to first)
+     * Useful for recovery animations
+     * @param name Animation name
+     * @param frameRate Frames per second
+     * @param skipFrames Number of frames to skip at start (from end, for seamless transitions)
+     */
+    playReverse(name: string, frameRate: number = 30, skipFrames: number = 0): void {
+        if (!this.animations[name]) return;
+
+        // Exit all special modes
         this.useSubset = false;
         this.subsetStart = 0;
         this.subsetEnd = 0;
         this.isStaticMode = false;
 
-        if (this.animations[name]) {
-            this.currentAnimation = name;
-            this.currentFrameIndex = 0;
-            this.loop = loop;
-            this.frameDuration = 1 / frameRate;
-            this.timeSinceLastFrame = 0;
+        this.currentAnimation = name;
+        const frames = this.animations[name];
+        // Skip frames from end for seamless transitions (e.g., skipFrames=1 starts at frames.length-2)
+        this.currentFrameIndex = Math.max(0, frames.length - 1 - skipFrames);
+        this.loop = false;
+        this.frameDuration = 1 / frameRate;
+        this.timeSinceLastFrame = 0;
+        this.isReversed = true;
 
-            this.spriteMaterial.map = this.animations[name][0];
+        this.spriteMaterial.map = frames[this.currentFrameIndex];
+    }
+
+    /**
+     * Set callback for when animation completes (non-looping animations only)
+     * @param callback Function to call when animation finishes
+     */
+    setOnComplete(callback: (() => void) | null): void {
+        this.onAnimationComplete = callback;
+    }
+
+    /**
+     * Check if current animation has completed
+     */
+    isAnimationComplete(): boolean {
+        if (!this.currentAnimation) return true;
+        if (this.loop) return false;
+
+        const frames = this.animations[this.currentAnimation];
+        if (this.isReversed) {
+            return this.currentFrameIndex <= 0;
         }
+        return this.currentFrameIndex >= frames.length - 1;
+    }
+
+    /**
+     * Check if currently playing in reverse
+     */
+    isPlayingReverse(): boolean {
+        return this.isReversed;
     }
 
     /**
@@ -81,6 +155,7 @@ export class SpriteAnimator {
         // Stop any ongoing animation modes
         this.useSubset = false;
         this.isStaticMode = true;
+        this.isReversed = false;
         this.currentAnimation = name;
         this.currentFrameIndex = clampedIndex;
 
@@ -116,7 +191,8 @@ export class SpriteAnimator {
         this.timeSinceLastFrame = 0;
         this.useSubset = true;
         this.loop = true;
-        this.isStaticMode = false; // Exit static mode to allow animation
+        this.isStaticMode = false;
+        this.isReversed = false;
 
         this.spriteMaterial.map = frames[this.subsetStart];
     }
@@ -145,20 +221,45 @@ export class SpriteAnimator {
 
         if (this.timeSinceLastFrame >= this.frameDuration) {
             this.timeSinceLastFrame = 0;
-            this.currentFrameIndex++;
 
             const frames = this.animations[this.currentAnimation];
 
-            // Determine loop boundaries based on subset mode
-            const maxFrame = this.useSubset ? this.subsetEnd : frames.length - 1;
-            const minFrame = this.useSubset ? this.subsetStart : 0;
+            if (this.isReversed) {
+                // REVERSE MODE: decrement frames
+                this.currentFrameIndex--;
 
-            if (this.currentFrameIndex > maxFrame) {
-                if (this.loop) {
-                    this.currentFrameIndex = minFrame;
-                } else {
-                    this.currentFrameIndex = maxFrame;
-                    // Animation finished
+                if (this.currentFrameIndex < 0) {
+                    this.currentFrameIndex = 0;
+                    this.isReversed = false;
+
+                    // Fire callback when reverse animation completes
+                    if (this.onAnimationComplete) {
+                        const callback = this.onAnimationComplete;
+                        this.onAnimationComplete = null;
+                        callback();
+                    }
+                }
+            } else {
+                // NORMAL MODE: increment frames
+                this.currentFrameIndex++;
+
+                // Determine loop boundaries based on subset mode
+                const maxFrame = this.useSubset ? this.subsetEnd : frames.length - 1;
+                const minFrame = this.useSubset ? this.subsetStart : 0;
+
+                if (this.currentFrameIndex > maxFrame) {
+                    if (this.loop) {
+                        this.currentFrameIndex = minFrame;
+                    } else {
+                        this.currentFrameIndex = maxFrame;
+
+                        // Fire callback when non-loop animation completes
+                        if (this.onAnimationComplete) {
+                            const callback = this.onAnimationComplete;
+                            this.onAnimationComplete = null;
+                            callback();
+                        }
+                    }
                 }
             }
 
