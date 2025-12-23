@@ -2846,16 +2846,26 @@ export class ThreeEngineService implements OnDestroy {
                 this.collisionChecksPerFrame++;
 
                 // Only apply damage ONCE per attack (not every frame)
-                // For dash attacks, use separate damage flag to prevent double hits
+                // Check attack type: dash, burrow emerge, or normal attack
                 const isDashing = enemy.isCurrentlyDashing();
-                const damageAlreadyDealt = isDashing ? enemy.hasDealtDashDamage() : enemy.hasDealtDamage();
+                const isBurrowEmerge = enemy.getType() === 'worm' && enemy.isInEmergePhase();
+
+                // Determine if damage was already dealt based on attack type
+                let damageAlreadyDealt: boolean;
+                if (isBurrowEmerge) {
+                    damageAlreadyDealt = enemy.hasDealtBurrowDamage();
+                } else if (isDashing) {
+                    damageAlreadyDealt = enemy.hasDealtDashDamage();
+                } else {
+                    damageAlreadyDealt = enemy.hasDealtDamage();
+                }
 
                 // Check if player is currently immune from recent damage
                 const isPlayerImmune = this.playerDamageImmunityTime > 0;
 
                 if (!damageAlreadyDealt && !isPlayerImmune) {
-                    // Get base damage from enemy
-                    let damageAmount = enemy.getAttackDamage();
+                    // Get base damage from enemy (use burrow damage for burrow attack)
+                    let damageAmount = isBurrowEmerge ? enemy.getBurrowDamage() : enemy.getAttackDamage();
 
                     // CALL ABILITY HOOK: onEnemyHitPlayer (for dodge, thorns, etc.)
                     if (this.characterAbility) {
@@ -2889,7 +2899,9 @@ export class ThreeEngineService implements OnDestroy {
                     this.playerDamageImmunityTime = this.playerDamageImmunityDuration;
 
                     // Mark damage as dealt (use appropriate flag based on attack type)
-                    if (isDashing) {
+                    if (isBurrowEmerge) {
+                        enemy.markBurrowDamageDealt();
+                    } else if (isDashing) {
                         enemy.markDashDamageDealt();
                     } else {
                         enemy.markDamageDealt();

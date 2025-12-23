@@ -7,9 +7,12 @@
       "Bash(git checkout:*)",
       "mcp__ide__getDiagnostics",
       "Bash(identify:*)",
-      "Bash(ls -la \"C:\\Users\\Daniel\\Desktop\\Daniel\\nuvaris\\NuvarisWeb\\frontend\\nuvaris-temp\\src\\assets\\lars\"\" 2>/dev/null || dir \"C:UsersDanielDesktopDanielnuvarisNuvarisWebfrontendnuvaris-tempsrcassetslars \")",
       "Bash(dir:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(python:*)",
+      "Bash(git fetch:*)",
+      "Bash(cat:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []
