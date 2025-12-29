@@ -12,7 +12,8 @@
       "Bash(python:*)",
       "Bash(git fetch:*)",
       "Bash(cat:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []

@@ -45,7 +45,100 @@
 
 ---
 
-## 2. ESTRUCTURA DEL PROYECTO
+## 2. ARQUITECTURA FÍSICA DEL PROYECTO
+
+### 📍 UBICACIÓN RAÍZ
+**Path absoluto**: `C:\Users\Daniel\Desktop\Daniel\nuvaris\NuvarisWeb\`
+
+### 🗂️ Estructura Completa
+
+```
+NuvarisWeb/                                  ← RAÍZ DEL PROYECTO
+│
+├── 📂 frontend/                             ← TODO EL CÓDIGO FRONTEND
+│   └── nuvaris-temp/                        ← ⭐ PROYECTO ACTIVO (Angular + Three.js)
+│       ├── src/
+│       │   ├── app/                         ← Código TypeScript Angular
+│       │   │   ├── game/                    ← ⭐ MOTOR DEL JUEGO (Three.js)
+│       │   │   ├── features/                ← Features (menús, UI)
+│       │   │   └── map-editor/              ← Editor de mapas
+│       │   └── assets/                      ← Sprites, sonidos, mapas JSON
+│       ├── angular.json
+│       ├── package.json
+│       └── tsconfig.json
+│
+├── 📂 backend/                              ← ⚠️ FUTURO (todavía no existe)
+│   └── README.md                            ← Placeholder
+│
+├── 📂 docs/                                 ← 📚 TODA LA DOCUMENTACIÓN
+│   ├── README.md                            ← Índice completo
+│   ├── CLAUDE.md                            ← ⭐ ESTE ARCHIVO (arquitectura para agentes)
+│   ├── ARCHITECTURE.md                      ← Arquitectura técnica
+│   │
+│   ├── setup/                               ← Guías de configuración
+│   │   └── CLAUDE_CODE_ACTION_SETUP.md
+│   │
+│   ├── implementation/                      ← Implementaciones técnicas
+│   │   ├── frontend/                        ← Docs específicos del frontend
+│   │   │   ├── THREEJS_IMPLEMENTATION.md
+│   │   │   ├── isometric_guide.md
+│   │   │   └── ...
+│   │   ├── MAP_SYSTEM_DOCUMENTATION.md
+│   │   └── ...
+│   │
+│   ├── planning/                            ← Planes y análisis
+│   │   ├── frontend/
+│   │   └── ...
+│   │
+│   ├── research/                            ← Investigaciones técnicas
+│   │   ├── frontend/
+│   │   └── ...
+│   │
+│   ├── development/                         ← Testing, debugging, sesiones
+│   │   ├── frontend/
+│   │   └── ...
+│   │
+│   ├── lore/                                ← Historia y narrativa del juego
+│   │   ├── Lore.md
+│   │   └── ...
+│   │
+│   └── archive/                             ← Documentos obsoletos
+│
+├── 📂 .github/                              ← GitHub Actions
+│   └── workflows/
+│       └── claude.yml                       ← Claude Code Action workflow
+│
+├── 📂 maps/                                 ← Mapas exportados del editor
+│
+└── README.md                                ← ⭐ README PRINCIPAL DEL PROYECTO
+```
+
+### 🎯 REGLAS PARA AGENTES/CLAUDE
+
+**Cuando te pidan sobre:**
+
+| Solicitud | Ubicación |
+|-----------|-----------|
+| **"Frontend"**, **"código del juego"**, **"UI"**, **"visual"** | `frontend/nuvaris-temp/src/app/` |
+| **"Motor"**, **"Three.js"**, **"engine"** | `frontend/nuvaris-temp/src/app/game/engine/` |
+| **"Personajes"**, **"player"**, **"enemigos"** | `frontend/nuvaris-temp/src/app/game/entities/` |
+| **"Habilidades"**, **"skills"**, **"ataques"** | `frontend/nuvaris-temp/src/app/game/abilities/` |
+| **"Mapas"**, **"rooms"**, **"procedural"** | `frontend/nuvaris-temp/src/app/game/world/` |
+| **"Map editor"**, **"editor visual"** | `frontend/nuvaris-temp/src/app/map-editor/` |
+| **"Sprites"**, **"assets"**, **"sonidos"** | `frontend/nuvaris-temp/src/assets/` |
+| **"Documentación"**, **"docs"** | `docs/` (subcarpetas por categoría) |
+| **"Backend"**, **"API"**, **"servidor"** | ⚠️ No existe todavía - ver `backend/README.md` |
+
+### 🚨 IMPORTANTE
+
+- **Proyecto Phaser ELIMINADO**: Ya no existe `frontend/src/`. TODO el código está en `frontend/nuvaris-temp/`
+- **Documentación centralizada**: TODO en `docs/`, NO en carpetas de código
+- **Backend futuro**: Existe `backend/` pero solo con README placeholder
+- **Rama default**: `development`
+
+---
+
+## 3. ESTRUCTURA DEL CÓDIGO (frontend/nuvaris-temp)
 
 ```
 frontend/nuvaris-temp/
@@ -102,7 +195,7 @@ frontend/nuvaris-temp/
 
 ---
 
-## 3. SISTEMA DE ROOMS Y VISIBILIDAD LIMITADA
+## 11. SISTEMA DE ROOMS Y VISIBILIDAD LIMITADA
 
 ### 3.1 Arquitectura General
 
@@ -228,7 +321,7 @@ Oeste: center=(cx - w/2, cz), width=wallThickness, depth=d
 
 ---
 
-## 4. DEV CONSOLE
+## 11. DEV CONSOLE
 
 Abrir con **Ctrl+K**
 
@@ -245,7 +338,7 @@ Abrir con **Ctrl+K**
 
 ---
 
-## 5. PERSONAJES JUGABLES
+## 11. PERSONAJES JUGABLES
 
 ### 5.1 ARCADIO (Titan)
 | Stat | Valor |
@@ -273,7 +366,7 @@ Abrir con **Ctrl+K**
 
 ---
 
-## 6. SISTEMA DE COMBATE
+## 11. SISTEMA DE COMBATE
 
 ### Armas Disponibles
 | Arma | Dano | Cooldown | Rango |
@@ -291,7 +384,7 @@ Abrir con **Ctrl+K**
 
 ---
 
-## 7. MAP EDITOR
+## 11. MAP EDITOR
 
 ### Ruta
 `http://localhost:4200/map-editor`
@@ -348,7 +441,7 @@ Ver `docs/PROCEDURAL_MAP_GENERATOR.md` para ejemplos y matematicas.
 
 ---
 
-## 8. COMO EJECUTAR
+## 11. COMO EJECUTAR
 
 ```bash
 cd frontend/nuvaris-temp
@@ -365,7 +458,7 @@ npm run start
 
 ---
 
-## 9. ARCHIVOS CLAVE PARA REFERENCIA
+## 11. ARCHIVOS CLAVE PARA REFERENCIA
 
 | Archivo | Proposito |
 |---------|-----------|
@@ -379,7 +472,7 @@ npm run start
 
 ---
 
-## 10. PROXIMOS PASOS (TODO)
+## 11. PROXIMOS PASOS (TODO)
 
 ### Iluminacion Avanzada
 - [ ] Sistema de iluminacion completamente focalizada en room del player
