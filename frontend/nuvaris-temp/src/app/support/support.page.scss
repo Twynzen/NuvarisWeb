@@ -1,0 +1,419 @@
+// Clinical Horror palette - Support Page
+$clinical-black: #0a0a0a;
+$clinical-bg: #101012;
+$clinical-surface: #1a1a1e;
+$clinical-border: #2a2a30;
+$clinical-border-light: #3a3a42;
+$clinical-text: #b0b0b8;
+$clinical-text-bright: #e8e8f0;
+$clinical-accent: #ffffff;
+$clinical-glow: rgba(255, 255, 255, 0.5);
+$clinical-glow-subtle: rgba(255, 255, 255, 0.2);
+
+// Accent colors for each option
+$accent-donation: #186655;    // Verde - generosidad
+$accent-character: #661818;   // Rojo - personaje único
+$accent-currency: #183366;    // Azul - economía
+
+.support-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 100%;
+  background: $clinical-black;
+  color: $clinical-text;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 40px;
+  box-sizing: border-box;
+  overflow-y: auto;
+
+  // Scanlines overlay
+  &::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.05) 3px,
+      rgba(0, 0, 0, 0.05) 6px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+}
+
+// Header
+.support-header {
+  text-align: center;
+  margin-bottom: 60px;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid $clinical-border;
+  color: $clinical-text;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8em;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: $clinical-border-light;
+    color: $clinical-text-bright;
+    transform: translateX(-5px);
+  }
+
+  .back-icon {
+    font-size: 1.2em;
+  }
+}
+
+.main-title {
+  font-family: 'Arial', sans-serif;
+  font-size: 3em;
+  font-weight: 300;
+  letter-spacing: 0.5em;
+  color: $clinical-text-bright;
+  text-shadow: 0 0 30px $clinical-glow-subtle;
+  margin: 0 0 15px 0;
+}
+
+.main-subtitle {
+  font-size: 0.9em;
+  letter-spacing: 0.3em;
+  color: $clinical-text;
+  text-transform: uppercase;
+}
+
+// Options Grid
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  max-width: 1400px;
+  margin: 0 auto 60px auto;
+}
+
+// Option Card
+.option-card {
+  background: rgba($clinical-surface, 0.3);
+  border: 1px solid $clinical-border;
+  padding: 30px;
+  position: relative;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+
+  // Left accent bar
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: $clinical-border;
+    transition: all 0.3s ease;
+  }
+
+  &:hover:not(.disabled) {
+    background: rgba($clinical-surface, 0.5);
+    border-color: $clinical-border-light;
+    transform: translateY(-5px);
+
+    &::before {
+      background: $clinical-accent;
+      box-shadow: 0 0 15px $clinical-glow;
+    }
+
+    .option-title {
+      color: $clinical-accent;
+      text-shadow: 0 0 20px $clinical-glow;
+    }
+  }
+
+  // Type-specific accent colors
+  &[data-type="donation"] {
+    &:hover:not(.disabled)::before {
+      background: $accent-donation;
+      box-shadow: 0 0 15px rgba($accent-donation, 0.5);
+    }
+    .action-button:not(.disabled) {
+      border-color: $accent-donation;
+      &:hover {
+        background: rgba($accent-donation, 0.2);
+        box-shadow: 0 0 20px rgba($accent-donation, 0.3);
+      }
+    }
+  }
+
+  &[data-type="character"] {
+    &:hover:not(.disabled)::before {
+      background: $accent-character;
+      box-shadow: 0 0 15px rgba($accent-character, 0.5);
+    }
+    .action-button:not(.disabled) {
+      border-color: $accent-character;
+      &:hover {
+        background: rgba($accent-character, 0.2);
+        box-shadow: 0 0 20px rgba($accent-character, 0.3);
+      }
+    }
+  }
+
+  &[data-type="currency"] {
+    &::before {
+      background: $accent-currency;
+      opacity: 0.3;
+    }
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+
+    .card-body, .card-header {
+      opacity: 0.7;
+    }
+  }
+}
+
+.card-header {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid $clinical-border;
+}
+
+.option-title {
+  font-family: 'Arial', sans-serif;
+  font-size: 1.8em;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  color: $clinical-text-bright;
+  margin: 0 0 8px 0;
+  transition: all 0.3s ease;
+}
+
+.option-subtitle {
+  font-size: 0.75em;
+  letter-spacing: 0.15em;
+  color: $clinical-text;
+  text-transform: uppercase;
+}
+
+.card-body {
+  flex: 1;
+}
+
+.option-description {
+  font-size: 0.85em;
+  line-height: 1.6;
+  color: $clinical-text;
+  margin-bottom: 25px;
+}
+
+.price-section {
+  margin-bottom: 25px;
+  padding: 15px;
+  background: rgba($clinical-bg, 0.5);
+  border: 1px solid $clinical-border;
+  text-align: center;
+}
+
+.price {
+  display: block;
+  font-family: 'Arial', sans-serif;
+  font-size: 1.5em;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: $clinical-accent;
+  text-shadow: 0 0 10px $clinical-glow-subtle;
+}
+
+.price-note {
+  display: block;
+  font-size: 0.7em;
+  letter-spacing: 0.1em;
+  color: $clinical-text;
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 0.8em;
+    color: $clinical-text;
+    border-bottom: 1px solid rgba($clinical-border, 0.3);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .benefit-marker {
+    color: $clinical-accent;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+}
+
+.card-footer {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid $clinical-border;
+}
+
+.action-button {
+  width: 100%;
+  padding: 15px 20px;
+  background: transparent;
+  border: 1px solid $clinical-border-light;
+  color: $clinical-text-bright;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+
+  &:hover:not(.disabled) {
+    color: $clinical-accent;
+    border-color: $clinical-accent;
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+// Contact Section
+.contact-section {
+  text-align: center;
+  padding: 30px;
+  border-top: 1px solid $clinical-border;
+  max-width: 600px;
+  margin: 0 auto;
+
+  p {
+    font-size: 0.85em;
+    color: $clinical-text;
+    letter-spacing: 0.05em;
+  }
+
+  a {
+    color: $clinical-text-bright;
+    text-decoration: none;
+    border-bottom: 1px solid $clinical-border;
+    transition: all 0.3s ease;
+
+    &:hover {
+      color: $clinical-accent;
+      border-color: $clinical-accent;
+      text-shadow: 0 0 10px $clinical-glow-subtle;
+    }
+  }
+}
+
+// Corner Decorations
+.corner-decoration {
+  position: fixed;
+  width: 30px;
+  height: 30px;
+  border-color: rgba($clinical-text, 0.15);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+  z-index: 999;
+
+  &.top-left {
+    top: 20px;
+    left: 20px;
+    border-top-width: 1px;
+    border-left-width: 1px;
+  }
+
+  &.top-right {
+    top: 20px;
+    right: 20px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+  }
+
+  &.bottom-left {
+    bottom: 20px;
+    left: 20px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+  }
+
+  &.bottom-right {
+    bottom: 20px;
+    right: 20px;
+    border-bottom-width: 1px;
+    border-right-width: 1px;
+  }
+}
+
+// Responsive
+@media (max-width: 1200px) {
+  .options-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .support-container {
+    padding: 20px;
+  }
+
+  .main-title {
+    font-size: 2em;
+    letter-spacing: 0.3em;
+  }
+
+  .back-button {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .options-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .option-card {
+    padding: 20px;
+  }
+
+  .option-title {
+    font-size: 1.4em;
+  }
+
+  .corner-decoration {
+    display: none;
+  }
+}

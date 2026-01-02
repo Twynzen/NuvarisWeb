@@ -1,0 +1,65 @@
+<ion-content [fullscreen]="true">
+  <div class="support-container">
+
+    <!-- Header -->
+    <div class="support-header">
+      <button class="back-button" (click)="goBack()">
+        <span class="back-icon">←</span>
+        <span class="back-text">VOLVER</span>
+      </button>
+      <h1 class="main-title">SUPPORT NUVARIS</h1>
+      <p class="main-subtitle">Contribuye al desarrollo del proyecto</p>
+    </div>
+
+    <!-- Support Options Grid -->
+    <div class="options-grid">
+      <div
+        class="option-card"
+        *ngFor="let option of supportOptions"
+        [class.disabled]="option.disabled"
+        [attr.data-type]="option.id">
+
+        <div class="card-header">
+          <h2 class="option-title">{{option.title}}</h2>
+          <span class="option-subtitle">{{option.subtitle}}</span>
+        </div>
+
+        <div class="card-body">
+          <p class="option-description">{{option.description}}</p>
+
+          <div class="price-section">
+            <span class="price">{{option.price}}</span>
+            <span class="price-note" *ngIf="option.priceNote">{{option.priceNote}}</span>
+          </div>
+
+          <ul class="benefits-list">
+            <li *ngFor="let benefit of option.benefits">
+              <span class="benefit-marker">+</span>
+              {{benefit}}
+            </li>
+          </ul>
+        </div>
+
+        <div class="card-footer">
+          <button
+            class="action-button"
+            [class.disabled]="option.disabled"
+            (click)="onOptionAction(option)">
+            {{option.action}}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Section -->
+    <div class="contact-section">
+      <p>¿Preguntas? Escríbenos a <a href="mailto:{{contactEmail}}">{{contactEmail}}</a></p>
+    </div>
+
+    <!-- Corner Decorations -->
+    <div class="corner-decoration top-left"></div>
+    <div class="corner-decoration top-right"></div>
+    <div class="corner-decoration bottom-left"></div>
+    <div class="corner-decoration bottom-right"></div>
+  </div>
+</ion-content>

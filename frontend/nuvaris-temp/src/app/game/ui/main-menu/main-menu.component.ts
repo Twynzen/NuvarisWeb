@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { AudioService } from '../../services/audio.service';
 
 interface Character {
@@ -59,7 +60,10 @@ export class MainMenuComponent implements OnInit, OnDestroy {
   private animationInterval: any;
   private currentFrameIndex = 1;
 
-  constructor(private audioService: AudioService) { }
+  constructor(
+    private audioService: AudioService,
+    private router: Router
+  ) { }
 
   ngOnInit() {
     this.hoveredCharacter = this.characters[0];
@@ -119,5 +123,10 @@ export class MainMenuComponent implements OnInit, OnDestroy {
     if (this.animationInterval) {
       clearInterval(this.animationInterval);
     }
+  }
+
+  goToSupport() {
+    this.audioService.play('ui-select');
+    this.router.navigate(['/support']);
   }
 }
