@@ -19,6 +19,10 @@ const routes: Routes = [
     loadChildren: () => import('./features/tartarus/tartarus.module').then( m => m.TartarusModule)
   },
   {
+    path: 'support',
+    loadChildren: () => import('./support/support.module').then( m => m.SupportModule)
+  },
+  {
     path: 'home',
     redirectTo: '',
     pathMatch: 'full'

@@ -190,6 +190,48 @@ $accent-proyecto-y: #186655;
     }
 }
 
+// Support Link (Discrete)
+.support-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 40px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0.4;
+    border: 1px solid transparent;
+
+    &:hover {
+        opacity: 0.9;
+        border-color: $clinical-border;
+        background: rgba($clinical-surface, 0.3);
+
+        .support-icon {
+            color: $accent-proyecto-y;
+            text-shadow: 0 0 10px rgba($accent-proyecto-y, 0.5);
+        }
+
+        .support-text {
+            color: $clinical-text-bright;
+        }
+    }
+
+    .support-icon {
+        font-size: 1em;
+        color: $clinical-text;
+        transition: all 0.3s ease;
+    }
+
+    .support-text {
+        font-size: 0.7em;
+        letter-spacing: 0.2em;
+        color: $clinical-text;
+        text-transform: uppercase;
+        transition: all 0.3s ease;
+    }
+}
+
 // Scanlines overlay (subtle)
 .menu-container::after {
     content: '';
