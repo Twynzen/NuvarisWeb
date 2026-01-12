@@ -1,8 +1,8 @@
-# NUVARIS - Plan de Monetización e Integración de Pagos
+# NUVARIZ - Plan de Monetización e Integración de Pagos
 
 ## Resumen Ejecutivo
 
-Este documento detalla las opciones de monetización de Nuvaris, las plataformas de pago recomendadas, y los aspectos legales críticos a considerar.
+Este documento detalla las opciones de monetización de Nuvariz, las plataformas de pago recomendadas, y los aspectos legales críticos a considerar.
 
 ---
 
@@ -154,7 +154,7 @@ Este documento detalla las opciones de monetización de Nuvaris, las plataformas
 ```
 
 **Términos de uso requeridos:**
-> "La moneda virtual de Nuvaris representa una licencia limitada, no transferible y no exclusiva para usar contenido digital dentro del juego. No tiene valor monetario real y no puede ser canjeada, reembolsada, transferida ni vendida por dinero real."
+> "La moneda virtual de Nuvariz representa una licencia limitada, no transferible y no exclusiva para usar contenido digital dentro del juego. No tiene valor monetario real y no puede ser canjeada, reembolsada, transferida ni vendida por dinero real."
 
 **Opción B: Moneda comercializable (requiere estructura legal)**
 - Formar empresa en jurisdicción favorable (Malta, Gibraltar, Estonia)

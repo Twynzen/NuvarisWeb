@@ -30,7 +30,7 @@ export class DevConsoleComponent implements AfterViewInit {
     private wasGamePaused = false;
 
     // Persistence key
-    private readonly STORAGE_KEY = 'nuvaris_dev_console_last_cmd';
+    private readonly STORAGE_KEY = 'nuvariz_dev_console_last_cmd';
 
     constructor(private engineService: ThreeEngineService) {
         // Load last command
@@ -40,7 +40,7 @@ export class DevConsoleComponent implements AfterViewInit {
         }
 
         // Initial welcome message
-        this.addLog('info', 'Nuvaris Developer Console v1.0');
+        this.addLog('info', 'Nuvariz Developer Console v1.0');
         this.addLog('info', 'Type "help" for a list of commands.');
     }
 

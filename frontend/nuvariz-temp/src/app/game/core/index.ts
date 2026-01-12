@@ -1,5 +1,5 @@
 /**
- * NUVARIS Game Core Module
+ * NUVARIZ Game Core Module
  *
  * This module contains the core architecture for the game:
  * - GameEventBus: Decoupled event-based communication

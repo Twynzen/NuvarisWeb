@@ -1,7 +1,7 @@
 # Análisis Técnico Completo: Sistema 2.5D Three.js - Medidas y Estructura
 
 **Fecha**: 31 de Diciembre, 2025
-**Autor**: Análisis Técnico Sistema Nuvaris
+**Autor**: Análisis Técnico Sistema Nuvariz
 **Motor**: Three.js (r150+) con viewport ortográfico isométrico
 **Estado**: Juego 2.5D (sprites 2D en mundo 3D)
 
@@ -9,7 +9,7 @@
 
 ## 1. RESUMEN EJECUTIVO
 
-Este documento proporciona un análisis técnico exhaustivo del sistema Three.js implementado en Nuvaris, un juego roguelite 2.5D. El análisis cubre:
+Este documento proporciona un análisis técnico exhaustivo del sistema Three.js implementado en Nuvariz, un juego roguelite 2.5D. El análisis cubre:
 
 - **Medidas exactas** de todos los elementos del juego (suelos, paredes, puertas, personajes)
 - **Sistema de coordenadas** y cómo funciona la proyección isométrica

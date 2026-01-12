@@ -1,4 +1,4 @@
-# IMPLEMENTACIÓN COMPLETA - Sistema de Colisiones NUVARIS
+# IMPLEMENTACIÓN COMPLETA - Sistema de Colisiones NUVARIZ
 
 ## ✅ Estado Actual
 

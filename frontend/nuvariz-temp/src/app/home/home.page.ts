@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
-import { NuvarisIntroComponent } from '../game/ui/nuvaris-intro/nuvaris-intro.component';
+import { NuvarizIntroComponent } from '../game/ui/nuvariz-intro/nuvariz-intro.component';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [
     IonicModule,
-    NuvarisIntroComponent,
+    NuvarizIntroComponent,
     CommonModule,
     RouterModule
   ],
@@ -19,8 +19,8 @@ import { CommonModule } from '@angular/common';
 export class HomePage {
   constructor(private router: Router) { }
 
-  // Called when user presses any key or clicks on Nuvaris intro
-  onNuvarisContinue() {
+  // Called when user presses any key or clicks on Nuvariz intro
+  onNuvarizContinue() {
     this.router.navigate(['/qdt']);
   }
 }

@@ -1,4 +1,4 @@
-# NUVARIS - Three.js Implementation Guide
+# NUVARIZ - Three.js Implementation Guide
 
 **Última actualización**: Nov 27, 2025
 **Motor**: Three.js 2.5D Isométrico
@@ -8,7 +8,7 @@
 
 ## 1. VISIÓN GENERAL
 
-NUVARIS utiliza **Three.js** como motor principal para un juego roguelite 2.5D con perspectiva isométrica. No es un juego 3D puro, sino sprites 2D (billboards) posicionados en un espacio 3D.
+NUVARIZ utiliza **Three.js** como motor principal para un juego roguelite 2.5D con perspectiva isométrica. No es un juego 3D puro, sino sprites 2D (billboards) posicionados en un espacio 3D.
 
 ### Características Técnicas
 - **Cámara**: Perspectiva ortográfica (para efecto isométrico)

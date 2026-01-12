@@ -245,7 +245,7 @@ En nuestro caso:
 
 ## Notas Finales
 
-Esta guía está diseñada para investigar mejoras al sistema de colisiones del juego NUVARIS. Los fixes básicos ya están implementados en la rama de desarrollo. Esta investigación es para optimizaciones futuras y mejores prácticas.
+Esta guía está diseñada para investigar mejoras al sistema de colisiones del juego NUVARIZ. Los fixes básicos ya están implementados en la rama de desarrollo. Esta investigación es para optimizaciones futuras y mejores prácticas.
 
 **Prioridad de investigación:**
 1. ⭐⭐⭐ Optimización para múltiples enemigos

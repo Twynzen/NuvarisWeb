@@ -14,7 +14,7 @@ Lars no es un simple científico loco; es un genio que miró al abismo y decidi�
 *   **Origen:** Humano (anteriormente).
 *   **Estado Actual:** Post-humano. Su cuerpo ha sido modificado con tecnología de múltiples realidades para soportar la radiación dimensional y extender su vida indefinidamente.
 *   **Filosofía:** "El dolor es el único lenguaje universal. Si puedes infligirlo con precisión, puedes comunicarte con dioses."
-*   **Rol:** Diseñó este "mundo perfecto" de tortura y control para evitar que el infierno mismo se desate sobre Núvaris. Es el carcelero del multiverso.
+*   **Rol:** Diseñó este "mundo perfecto" de tortura y control para evitar que el infierno mismo se desate sobre Núvariz. Es el carcelero del multiverso.
 
 ## Los Sujetos (Nuestros "Héroes")
 No son voluntarios. Son experimentos o prisioneros forzados a luchar para probar las defensas del sistema.

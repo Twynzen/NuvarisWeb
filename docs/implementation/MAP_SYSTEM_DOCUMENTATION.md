@@ -1,4 +1,4 @@
-# NUVARIS - Sistema de Mapas: Documentacion Tecnica Completa
+# NUVARIZ - Sistema de Mapas: Documentacion Tecnica Completa
 
 ## Version: 1.0.0 | Fecha: 2025-11-28
 

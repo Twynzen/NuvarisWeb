@@ -35,7 +35,7 @@ export class SupportPage {
       id: 'donation',
       title: 'DONACIÓN',
       subtitle: 'Contribuye libremente',
-      description: 'Apoya el desarrollo de Nuvaris con la cantidad que desees. Cada contribución nos ayuda a seguir creando.',
+      description: 'Apoya el desarrollo de Nuvariz con la cantidad que desees. Cada contribución nos ayuda a seguir creando.',
       price: 'TÚ ELIGES',
       priceNote: 'Desde $1 USD',
       benefits: [
@@ -46,13 +46,13 @@ export class SupportPage {
       ],
       action: 'DONAR AHORA',
       actionType: 'link',
-      actionUrl: 'https://ko-fi.com/nuvaris' // Placeholder - cambiar por URL real
+      actionUrl: 'https://ko-fi.com/nuvariz' // Placeholder - cambiar por URL real
     },
     {
       id: 'character',
       title: 'TU PERSONAJE',
       subtitle: 'Inmortalízate en el juego',
-      description: 'Diseñamos un personaje basado en ti o tu idea. Incluye assets, comportamiento, habilidades y tu lugar en el universo de Nuvaris.',
+      description: 'Diseñamos un personaje basado en ti o tu idea. Incluye assets, comportamiento, habilidades y tu lugar en el universo de Nuvariz.',
       price: '$100 USD',
       priceNote: 'Pago único',
       benefits: [
@@ -63,13 +63,13 @@ export class SupportPage {
       ],
       action: 'CONTACTAR',
       actionType: 'email',
-      actionUrl: 'mailto:personajes@nuvaris.com?subject=Quiero mi personaje en Nuvaris'
+      actionUrl: 'mailto:personajes@nuvariz.com?subject=Quiero mi personaje en Nuvariz'
     },
     {
       id: 'currency',
       title: 'MONEDA QDT',
       subtitle: 'Economía del juego',
-      description: 'Sistema de moneda virtual para el universo de Nuvaris. Comercia, intercambia y desbloquea contenido exclusivo.',
+      description: 'Sistema de moneda virtual para el universo de Nuvariz. Comercia, intercambia y desbloquea contenido exclusivo.',
       price: 'PRÓXIMAMENTE',
       priceNote: 'En desarrollo',
       benefits: [
@@ -84,7 +84,7 @@ export class SupportPage {
     }
   ];
 
-  contactEmail = 'soporte@nuvaris.com'; // Placeholder
+  contactEmail = 'soporte@nuvariz.com'; // Placeholder
 
   constructor(private router: Router) { }
 

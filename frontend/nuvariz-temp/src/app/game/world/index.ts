@@ -1,5 +1,5 @@
 /**
- * NUVARIS Room-Based Visibility System
+ * NUVARIZ Room-Based Visibility System
  *
  * Complete system for managing room visibility, lighting, and collisions.
  *

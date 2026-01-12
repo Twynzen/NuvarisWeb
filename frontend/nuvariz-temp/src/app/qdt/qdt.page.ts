@@ -38,7 +38,7 @@ export class QdtPage {
         this.currentScreen = 'game';
     }
 
-    // Called when user quits the game - go back to Nuvaris home
+    // Called when user quits the game - go back to Nuvariz home
     onQuitGame() {
         this.router.navigate(['/']);
     }

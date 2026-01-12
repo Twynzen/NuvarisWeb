@@ -1107,5 +1107,5 @@ Tartarus Prime:
 
 *Documentación técnica completa actualizada: 2025-12-10*
 *Versión del sistema: 2.0 (Organic Volcanoes)*
-*Autor: Claude Code (Anthropic) + Daniel (Nuvaris Team)*
+*Autor: Claude Code (Anthropic) + Daniel (Nuvariz Team)*
 *Archivo: `TARTARUS_PRIME_NEW.md`*

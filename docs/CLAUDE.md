@@ -1,4 +1,4 @@
-# NUVARIS - Documentacion Completa del Proyecto
+# NUVARIZ - Documentacion Completa del Proyecto
 
 ## Estado: EN DESARROLLO - Three.js 2.5D Roguelite
 
@@ -6,12 +6,12 @@
 
 ## 1. RESUMEN EJECUTIVO
 
-**NUVARIS** es un juego roguelite estilo **Vampire Survivors** en desarrollo con **Three.js** como motor principal.
+**NUVARIZ** es un juego roguelite estilo **Vampire Survivors** en desarrollo con **Three.js** como motor principal.
 
 ### ESTADO ACTUAL (Dec 01, 2025)
 - **Motor Activo**: Three.js 2.5D (viewport ortografico isometrico)
 - **Rama de Desarrollo**: `feature/map-editor-v2-procedural-improvements`
-- **Base**: `claude/nuvaris-game-architecture-*`
+- **Base**: `claude/nuvariz-game-architecture-*`
 - **Nota**: La version anterior con Phaser 3 esta archivada. El desarrollo se enfoca ahora en Three.js.
 
 ### Tecnologias Principales
@@ -56,7 +56,7 @@
 NuvarisWeb/                                  ← RAÍZ DEL PROYECTO
 │
 ├── 📂 frontend/                             ← TODO EL CÓDIGO FRONTEND
-│   └── nuvaris-temp/                        ← ⭐ PROYECTO ACTIVO (Angular + Three.js)
+│   └── nuvariz-temp/                        ← ⭐ PROYECTO ACTIVO (Angular + Three.js)
 │       ├── src/
 │       │   ├── app/                         ← Código TypeScript Angular
 │       │   │   ├── game/                    ← ⭐ MOTOR DEL JUEGO (Three.js)
@@ -119,29 +119,29 @@ NuvarisWeb/                                  ← RAÍZ DEL PROYECTO
 
 | Solicitud | Ubicación |
 |-----------|-----------|
-| **"Frontend"**, **"código del juego"**, **"UI"**, **"visual"** | `frontend/nuvaris-temp/src/app/` |
-| **"Motor"**, **"Three.js"**, **"engine"** | `frontend/nuvaris-temp/src/app/game/engine/` |
-| **"Personajes"**, **"player"**, **"enemigos"** | `frontend/nuvaris-temp/src/app/game/entities/` |
-| **"Habilidades"**, **"skills"**, **"ataques"** | `frontend/nuvaris-temp/src/app/game/abilities/` |
-| **"Mapas"**, **"rooms"**, **"procedural"** | `frontend/nuvaris-temp/src/app/game/world/` |
-| **"Map editor"**, **"editor visual"** | `frontend/nuvaris-temp/src/app/map-editor/` |
-| **"Sprites"**, **"assets"**, **"sonidos"** | `frontend/nuvaris-temp/src/assets/` |
+| **"Frontend"**, **"código del juego"**, **"UI"**, **"visual"** | `frontend/nuvariz-temp/src/app/` |
+| **"Motor"**, **"Three.js"**, **"engine"** | `frontend/nuvariz-temp/src/app/game/engine/` |
+| **"Personajes"**, **"player"**, **"enemigos"** | `frontend/nuvariz-temp/src/app/game/entities/` |
+| **"Habilidades"**, **"skills"**, **"ataques"** | `frontend/nuvariz-temp/src/app/game/abilities/` |
+| **"Mapas"**, **"rooms"**, **"procedural"** | `frontend/nuvariz-temp/src/app/game/world/` |
+| **"Map editor"**, **"editor visual"** | `frontend/nuvariz-temp/src/app/map-editor/` |
+| **"Sprites"**, **"assets"**, **"sonidos"** | `frontend/nuvariz-temp/src/assets/` |
 | **"Documentación"**, **"docs"** | `docs/` (subcarpetas por categoría) |
 | **"Backend"**, **"API"**, **"servidor"** | ⚠️ No existe todavía - ver `backend/README.md` |
 
 ### 🚨 IMPORTANTE
 
-- **Proyecto Phaser ELIMINADO**: Ya no existe `frontend/src/`. TODO el código está en `frontend/nuvaris-temp/`
+- **Proyecto Phaser ELIMINADO**: Ya no existe `frontend/src/`. TODO el código está en `frontend/nuvariz-temp/`
 - **Documentación centralizada**: TODO en `docs/`, NO en carpetas de código
 - **Backend futuro**: Existe `backend/` pero solo con README placeholder
 - **Rama default**: `development`
 
 ---
 
-## 3. ESTRUCTURA DEL CÓDIGO (frontend/nuvaris-temp)
+## 3. ESTRUCTURA DEL CÓDIGO (frontend/nuvariz-temp)
 
 ```
-frontend/nuvaris-temp/
+frontend/nuvariz-temp/
 ├── src/app/game/
 │   ├── abilities/           # Habilidades de personajes
 │   │   ├── skills/          # Skills especificos por personaje
@@ -444,7 +444,7 @@ Ver `docs/PROCEDURAL_MAP_GENERATOR.md` para ejemplos y matematicas.
 ## 11. COMO EJECUTAR
 
 ```bash
-cd frontend/nuvaris-temp
+cd frontend/nuvariz-temp
 npm install
 npm run start
 # Juego: http://localhost:4200

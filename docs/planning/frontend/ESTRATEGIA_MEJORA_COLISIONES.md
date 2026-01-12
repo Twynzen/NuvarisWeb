@@ -1,4 +1,4 @@
-# Estrategia de Mejora del Sistema de Colisiones NUVARIS
+# Estrategia de Mejora del Sistema de Colisiones NUVARIZ
 
 ## Análisis Actual
 

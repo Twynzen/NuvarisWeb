@@ -1,6 +1,6 @@
-# 🌌 EL UNIVERSO NÚVARIS
+# 🌌 EL UNIVERSO NÚVARIZ
 
-Núvaris es un vasto universo narrativo en constante expansión, donde múltiples realidades convergen a través de portales interdimensionales. Es un cosmos donde la magia, la tecnología avanzada y lo sobrenatural coexisten en un delicado equilibrio.
+Núvariz es un vasto universo narrativo en constante expansión, donde múltiples realidades convergen a través de portales interdimensionales. Es un cosmos donde la magia, la tecnología avanzada y lo sobrenatural coexisten en un delicado equilibrio.
 
 ---
 

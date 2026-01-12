@@ -1,5 +1,5 @@
 # Plan de Implementacion: Attack Feel System
-## Nuvaris - Sensacion de Disparo por Personaje
+## Nuvariz - Sensacion de Disparo por Personaje
 
 ---
 

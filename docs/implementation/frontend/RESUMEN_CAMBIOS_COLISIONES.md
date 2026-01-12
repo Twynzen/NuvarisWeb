@@ -1,4 +1,4 @@
-# Resumen Ejecutivo: Mejoras Sistema de Colisiones NUVARIS
+# Resumen Ejecutivo: Mejoras Sistema de Colisiones NUVARIZ
 
 ## 📊 Análisis Inicial
 

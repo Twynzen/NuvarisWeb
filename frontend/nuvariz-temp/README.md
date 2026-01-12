@@ -1,4 +1,4 @@
-# NUVARIS - Frontend (Angular + Three.js)
+# NUVARIZ - Frontend (Angular + Three.js)
 
 ⭐ **Este es el proyecto activo del juego**
 

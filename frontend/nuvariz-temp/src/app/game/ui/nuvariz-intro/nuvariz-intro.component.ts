@@ -29,13 +29,13 @@ interface Nebula {
 }
 
 @Component({
-    selector: 'app-nuvaris-intro',
+    selector: 'app-nuvariz-intro',
     standalone: true,
     imports: [CommonModule],
-    templateUrl: './nuvaris-intro.component.html',
-    styleUrls: ['./nuvaris-intro.component.scss']
+    templateUrl: './nuvariz-intro.component.html',
+    styleUrls: ['./nuvariz-intro.component.scss']
 })
-export class NuvarisIntroComponent implements OnInit, OnDestroy, AfterViewInit {
+export class NuvarizIntroComponent implements OnInit, OnDestroy, AfterViewInit {
     @Output() continue = new EventEmitter<void>();
     @ViewChild('starCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
 

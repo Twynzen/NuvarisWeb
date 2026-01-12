@@ -1,4 +1,4 @@
-# PROMPT PARA SONNET - Testing Sistema de Colisiones NUVARIS
+# PROMPT PARA SONNET - Testing Sistema de Colisiones NUVARIZ
 
 ## Contexto
 Se implementaron mejoras al sistema de colisiones en Three.js basadas en la GUIA_INVESTIGACION_COLISIONES_THREEJS.

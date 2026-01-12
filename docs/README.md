@@ -1,4 +1,4 @@
-# Documentación de NUVARIS
+# Documentación de NUVARIZ
 
 Índice completo de la documentación del proyecto organizada por categorías.
 
@@ -77,7 +77,7 @@ Mapeo matemático y técnico del sistema QDT (Quadtree).
 Contenido narrativo y ambientación del juego:
 
 ### [lore/Lore.md](lore/Lore.md)
-Historia y lore principal de NUVARIS.
+Historia y lore principal de NUVARIZ.
 
 ### [lore/Lore_Relevante_QDT.md](lore/Lore_Relevante_QDT.md)
 Lore específico relacionado con el sistema QDT.

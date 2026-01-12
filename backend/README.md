@@ -1,4 +1,4 @@
-# Backend - NUVARIS
+# Backend - NUVARIZ
 
 ⚠️ **Este módulo aún no está implementado**
 

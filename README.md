@@ -1,4 +1,4 @@
-# NUVARIS Web
+# NUVARIZ Web
 
 Roguelite 2.5D estilo Vampire Survivors desarrollado con Angular 17+ y Three.js.
 
@@ -10,7 +10,7 @@ Roguelite 2.5D estilo Vampire Survivors desarrollado con Angular 17+ y Three.js.
 NuvarisWeb/
 │
 ├── 📂 frontend/                    ← Aplicación web del juego
-│   └── nuvaris-temp/               ← ⭐ PROYECTO ACTIVO
+│   └── nuvariz-temp/               ← ⭐ PROYECTO ACTIVO
 │       ├── src/app/                   - Código Angular + Three.js
 │       ├── src/assets/                - Sprites, sonidos, mapas
 │       └── README.md                  - Guía del código frontend
@@ -49,7 +49,7 @@ NuvarisWeb/
 ### Ejecutar el Juego
 
 ```bash
-cd frontend/nuvaris-temp
+cd frontend/nuvariz-temp
 npm install
 npm run start
 ```
@@ -59,7 +59,7 @@ Abre: `http://localhost:4200`
 ### Ejecutar el Map Editor
 
 ```bash
-cd frontend/nuvaris-temp
+cd frontend/nuvariz-temp
 npm run start
 ```
 
@@ -67,7 +67,7 @@ Abre: `http://localhost:4200/map-editor`
 
 ---
 
-## 🎮 Qué es NUVARIS
+## 🎮 Qué es NUVARIZ
 
 **Género**: Roguelite 2.5D bullet hell
 **Motor**: Three.js (viewport ortográfico isométrico)
@@ -106,7 +106,7 @@ Abre: `http://localhost:4200/map-editor`
 
 ### Código Frontend (Angular + Three.js)
 
-**Ruta**: `frontend/nuvaris-temp/src/app/`
+**Ruta**: `frontend/nuvariz-temp/src/app/`
 
 | Qué | Dónde |
 |-----|-------|
@@ -121,7 +121,7 @@ Abre: `http://localhost:4200/map-editor`
 
 ### Assets
 
-**Ruta**: `frontend/nuvaris-temp/src/assets/`
+**Ruta**: `frontend/nuvariz-temp/src/assets/`
 
 | Qué | Dónde |
 |-----|-------|

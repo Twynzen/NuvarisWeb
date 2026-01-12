@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /**
- * NUVARIS Room-Based Visibility System
+ * NUVARIZ Room-Based Visibility System
  *
  * This system manages:
  * - Room templates (reusable room definitions)

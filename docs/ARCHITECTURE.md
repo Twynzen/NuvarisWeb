@@ -1,4 +1,4 @@
-# NUVARIS - Arquitectura del Proyecto
+# NUVARIZ - Arquitectura del Proyecto
 
 ## Carpetas Principales
 
@@ -15,7 +15,7 @@ Configuraciones de GitHub Actions, workflows y automatizaciones del repositorio.
 
 ## Estructura Frontend
 
-### `/frontend/nuvaris-temp`
+### `/frontend/nuvariz-temp`
 Aplicación principal del juego desarrollada en Angular 17+ con Three.js como motor gráfico.
 
 ### `/frontend/assets3D`
@@ -30,7 +30,7 @@ Código fuente secundario o componentes auxiliares del sistema.
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              NUVARIS WEB                        │
+│              NUVARIZ WEB                        │
 │         Roguelite 2.5D Game (Three.js)          │
 └─────────────────────────────────────────────────┘
                       │
