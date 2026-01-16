@@ -86,8 +86,8 @@ Tartarus Pryme existe en un equilibrio entre:
 
 ## 👥 LAS RAZAS (Resumen)
 
-*   **HUMANOS:** Fundadores de QDT. Versátiles, ambiciosos, adaptables (+1 Todo, CHA+2, LUCK+3).
-*   **VULNARI:** Nobles melancólicos de piel escamosa y tentáculos. Magos del canto (WIS+6, INT+5).
-*   **EXÓPODOS:** Ingenieros mente-colmena con exoesqueleto y 4 brazos (INT+3, DEX+2).
-*   **REPTILIANOS:** Guerreros de honor con escamas metálicas y fuerza bruta (STR+1, CON+2).
+*   **HUMANOS:** Principal razá de inmigración por portales, nativos de diferentes planetas y realidades normalmente proveniente su estirpe de un planeta llamado Tierra (STR:5, AGI:5, RES:5, INT:5).
+*   **VULNARI:** Nobles melancólicos de piel escamosa y tentáculos. Magos del canto. Los Vúlnari son humanoides de pieles multicolor cuya característica más distintiva son sus Ulnar, un conjunto de apéndices cerebrales prensiles que nacen de la cabeza (como el cabello) y funcionan tanto para la comunicación como para la percepción sensorial.
+*   **EXÓPODOS:**  Ormigas humanoides, muy inteligentes, nativos del subvapor, viven bajo el vapor la mayoría son clase trabajadora. Principal mano de obra para la coorporación QDT (STR:2, AGI:6, RES:4, INT:8).
+*   **REPTILIANOS:** Guerreros de honor con escamas metálicas y fuerza bruta, Son especies de sangre fría caracterizadas por sus pieles escamosas, habilidades regenerativas o visión térmica, destacando por ser pioneros en construir en la superficie del ocenao de vapor y cazadores implacables de las criaturas del vapor .
 *   **INMIGRANTES:** Seres de otros universos con formas y habilidades impredecibles.
