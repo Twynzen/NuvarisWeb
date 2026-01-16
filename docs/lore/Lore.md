@@ -87,7 +87,11 @@ Tartarus Pryme existe en un equilibrio entre:
 ## 👥 LAS RAZAS (Resumen)
 
 *   **HUMANOS:** Principal razá de inmigración por portales, nativos de diferentes planetas y realidades normalmente proveniente su estirpe de un planeta llamado Tierra (STR:5, AGI:5, RES:5, INT:5).
-*   **VULNARI:** Nobles melancólicos de piel escamosa y tentáculos. Magos del canto. Los Vúlnari son humanoides de pieles multicolor cuya característica más distintiva son sus Ulnar, un conjunto de apéndices cerebrales prensiles que nacen de la cabeza (como el cabello) y funcionan tanto para la comunicación como para la percepción sensorial.
+
+*   **VULNARI:** Nobles melancólicos de piel escamosa y tentáculos. Magos del canto. Los Vúlnari son humanoides de pieles multicolor cuya característica más distintiva son sus Ulnar, un conjunto de apéndices cerebrales prensiles que nacen de la cabeza (como el cabello) y funcionan tanto para la comunicación como para la percepción sensorial (STR:2, AGI:6, RES:5, INT:7).
+
 *   **EXÓPODOS:**  Ormigas humanoides, muy inteligentes, nativos del subvapor, viven bajo el vapor la mayoría son clase trabajadora. Principal mano de obra para la coorporación QDT (STR:2, AGI:6, RES:4, INT:8).
-*   **REPTILIANOS:** Guerreros de honor con escamas metálicas y fuerza bruta, Son especies de sangre fría caracterizadas por sus pieles escamosas, habilidades regenerativas o visión térmica, destacando por ser pioneros en construir en la superficie del ocenao de vapor y cazadores implacables de las criaturas del vapor .
-*   **INMIGRANTES:** Seres de otros universos con formas y habilidades impredecibles.
+
+*   **REPTILIANOS:** Guerreros de honor con escamas metálicas y fuerza bruta, Son especies de sangre fría caracterizadas por sus pieles escamosas, habilidades regenerativas o visión térmica, destacando por ser pioneros en construir en la superficie del ocenao de vapor y cazadores implacables de las criaturas del vapor (STR:8, AGI:3, RES:7, INT:2).
+
+*   **INMIGRANTES:** Seres de otros universos con formas y habilidades impredecibles (20 libres).
