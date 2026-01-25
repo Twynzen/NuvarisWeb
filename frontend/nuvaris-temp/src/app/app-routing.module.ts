@@ -23,6 +23,10 @@ const routes: Routes = [
     loadChildren: () => import('./support/support.module').then( m => m.SupportModule)
   },
   {
+    path: 'portal-control',
+    loadChildren: () => import('./features/portal-control/portal-control.module').then( m => m.PortalControlModule)
+  },
+  {
     path: 'home',
     redirectTo: '',
     pathMatch: 'full'
