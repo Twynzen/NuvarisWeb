@@ -27,10 +27,10 @@ import { PlayerResources, DayState, PlayerStats, GamePhase } from '../../models'
           <span class="time-value">{{ formatTime(dayState?.timeRemaining || 0) }}</span>
         </div>
 
-        <!-- Credits -->
-        <div class="credits-info">
-          <span class="credits-icon">💰</span>
-          <span class="credits-value">{{ resources?.credits || 0 }}</span>
+        <!-- Dollars (Oro Blanco) -->
+        <div class="dollars-info">
+          <span class="dollars-icon">💵</span>
+          <span class="dollars-value">\${{ resources?.dollars || 0 }}</span>
         </div>
 
         <!-- Reputation -->
@@ -183,7 +183,7 @@ import { PlayerResources, DayState, PlayerStats, GamePhase } from '../../models'
       color: white;
     }
 
-    .credits-info {
+    .dollars-info {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -193,11 +193,11 @@ import { PlayerResources, DayState, PlayerStats, GamePhase } from '../../models'
       border: 1px solid rgba(255,193,7,0.3);
     }
 
-    .credits-icon {
+    .dollars-icon {
       font-size: 18px;
     }
 
-    .credits-value {
+    .dollars-value {
       font-size: 18px;
       font-weight: bold;
       color: #FFC107;

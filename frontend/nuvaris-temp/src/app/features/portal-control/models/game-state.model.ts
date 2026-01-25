@@ -63,15 +63,203 @@ export interface PlayerStats {
 
 /** Player resources */
 export interface PlayerResources {
-  credits: number;            // Currency
+  dollars: number;            // Currency (Oro Blanco)
   reputation: number;         // 0-100, affects game ending
   warnings: number;           // Too many = game over
   maxWarnings: number;
 
   // Daily limits
-  dailyCreditsEarned: number;
-  dailyCreditsPenalty: number;
+  dailyDollarsEarned: number;
+  dailyDollarsPenalty: number;
   dailyBonus: number;
+}
+
+/** Upgrade categories */
+export type UpgradeCategory =
+  | 'HERRAMIENTAS'      // Tool upgrades
+  | 'ESTACION'          // Station improvements
+  | 'PERSONAL'          // Personal perks
+  | 'TECNOLOGIA';       // Tech upgrades
+
+/** Station upgrade definition */
+export interface StationUpgrade {
+  id: string;
+  name: string;
+  description: string;
+  category: UpgradeCategory;
+  cost: number;
+  icon: string;
+
+  // Requirements
+  requiredDay: number;
+  requiredUpgrades: string[];
+  requiredReputation: number;
+
+  // Effects
+  effects: UpgradeEffect[];
+
+  // State
+  isPurchased: boolean;
+  purchasedAt?: number;
+  level: number;
+  maxLevel: number;
+}
+
+/** Upgrade effect types */
+export interface UpgradeEffect {
+  type: UpgradeEffectType;
+  value: number;
+  description: string;
+}
+
+export type UpgradeEffectType =
+  | 'TOOL_COOLDOWN_REDUCTION'    // Reduces tool cooldowns
+  | 'TOOL_ACCURACY_BOOST'       // Increases detection accuracy
+  | 'DOLLARS_MULTIPLIER'        // Multiplies earnings
+  | 'REPUTATION_PROTECTION'     // Reduces reputation loss
+  | 'EXTRA_WARNING'             // +1 max warning
+  | 'TIME_EXTENSION'            // More time per day
+  | 'VISITOR_INSIGHT'           // Shows hints about visitors
+  | 'AUTO_SCAN'                 // Auto-uses a tool
+  | 'ERROR_HIGHLIGHT'           // Highlights document errors
+  | 'SPEED_BONUS_INCREASE'      // Better speed bonus rewards
+  | 'NEW_DECISION_OPTION'       // Unlocks new decision type
+  | 'SPECIAL_VISITOR_CHANCE';   // More special visitors
+
+/** Shop item */
+export interface ShopItem {
+  id: string;
+  type: 'UPGRADE' | 'CONSUMABLE' | 'COSMETIC';
+  upgrade?: StationUpgrade;
+  consumable?: ConsumableItem;
+  isAvailable: boolean;
+  isNew: boolean;
+}
+
+/** Consumable item (one-time use) */
+export interface ConsumableItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  icon: string;
+  quantity: number;
+  maxQuantity: number;
+  effect: ConsumableEffect;
+}
+
+export type ConsumableEffect =
+  | 'SKIP_VISITOR'          // Skip current visitor without penalty
+  | 'EXTRA_TIME'            // +30 seconds for current visitor
+  | 'REVEAL_TRUTH'          // Reveals if visitor is legit or not
+  | 'REMOVE_WARNING'        // Removes one warning
+  | 'DOUBLE_REWARD';        // Double dollars for next correct decision
+
+/** Special event definition */
+export interface SpecialEvent {
+  id: string;
+  type: SpecialEventType;
+  title: string;
+  description: string;
+  dialogue: EventDialogue[];
+
+  // Trigger conditions
+  triggerDay: number | null;      // null = can happen any day
+  triggerChance: number;          // 0-1 probability
+  triggerConditions: EventCondition[];
+
+  // State
+  hasOccurred: boolean;
+  canRepeat: boolean;
+
+  // Consequences
+  choices?: EventChoice[];
+  rewards?: EventReward;
+  consequences?: EventConsequence;
+}
+
+export type SpecialEventType =
+  | 'VISITA_SUPERVISOR'
+  | 'INSPECTOR_CORRUPTO'
+  | 'CELEBRIDAD'
+  | 'FAMILIAR_FUGITIVO'
+  | 'SOBORNO'
+  | 'INVASIÓN_DIMENSIONAL'
+  | 'PLAGA'
+  | 'VISITA_DIRECTOR'
+  | 'SABOTAJE'
+  | 'REGALO_MISTERIOSO'
+  | 'EMERGENCIA_MEDICA'
+  | 'MANIFESTACION';
+
+export interface EventDialogue {
+  speaker: string;
+  text: string;
+  emotion?: string;
+  portrait?: string;
+}
+
+export interface EventCondition {
+  type: 'DAY_RANGE' | 'REPUTATION' | 'DOLLARS' | 'DECISIONS' | 'SPECIAL_FLAG';
+  operator: '>' | '<' | '==' | '>=' | '<=';
+  value: number | string;
+}
+
+export interface EventChoice {
+  id: string;
+  text: string;
+  requirements?: EventCondition[];
+  consequence: EventConsequence;
+}
+
+export interface EventReward {
+  dollars?: number;
+  reputation?: number;
+  items?: string[];
+  unlocks?: string[];
+}
+
+export interface EventConsequence {
+  dollarsChange?: number;
+  reputationChange?: number;
+  warningChange?: number;
+  specialFlag?: string;
+  triggersEvent?: string;
+  narrative?: string;
+}
+
+/** Special visitor (unique character) */
+export interface SpecialVisitor {
+  id: string;
+  name: string;
+  title: string;
+  species: string;
+  description: string;
+  portrait: string;
+
+  // When they appear
+  appearDay: number | null;
+  appearChance: number;
+
+  // Behavior
+  isAlwaysLegal: boolean;
+  isAlwaysIllegal: boolean;
+  hasForcedOutcome: boolean;
+  forcedDecision?: string;
+
+  // Dialogue
+  greetingDialogue: string[];
+  approvalDialogue: string[];
+  denialDialogue: string[];
+  detentionDialogue: string[];
+
+  // Rewards/consequences
+  correctReward: EventReward;
+  incorrectConsequence: EventConsequence;
+
+  // Story
+  unlocksStory?: string;
+  hasBeenSeen: boolean;
 }
 
 /** Day state */

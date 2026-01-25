@@ -10,3 +10,4 @@ export * from './document-generator.service';
 export * from './detection.service';
 export * from './game-state.service';
 export * from './sprite-assembler.service';
+export * from './shop.service';

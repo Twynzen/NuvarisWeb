@@ -6,3 +6,5 @@
 export * from './species.data';
 export * from './names.data';
 export * from './rules.data';
+export * from './upgrades.data';
+export * from './events.data';

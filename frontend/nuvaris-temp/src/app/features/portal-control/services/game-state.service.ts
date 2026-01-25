@@ -168,7 +168,7 @@ export class GameStateService {
    * Create initial resources
    */
   private createInitialResources(difficulty: GameDifficulty): PlayerResources {
-    const startingCredits = {
+    const startingDollars = {
       FACIL: 150,
       NORMAL: 100,
       DIFICIL: 75,
@@ -176,12 +176,12 @@ export class GameStateService {
     };
 
     return {
-      credits: startingCredits[difficulty],
+      dollars: startingDollars[difficulty],
       reputation: 50,
       warnings: 0,
       maxWarnings: difficulty === 'PESADILLA' ? 2 : 3,
-      dailyCreditsEarned: 0,
-      dailyCreditsPenalty: 0,
+      dailyDollarsEarned: 0,
+      dailyDollarsPenalty: 0,
       dailyBonus: 0,
     };
   }
@@ -571,11 +571,11 @@ export class GameStateService {
       const resources = { ...s.playerResources };
 
       if (evaluation.finalPoints > 0) {
-        resources.credits += evaluation.finalPoints;
-        resources.dailyCreditsEarned += evaluation.finalPoints;
+        resources.dollars += evaluation.finalPoints;
+        resources.dailyDollarsEarned += evaluation.finalPoints;
       } else {
-        resources.credits = Math.max(0, resources.credits + evaluation.finalPoints);
-        resources.dailyCreditsPenalty += Math.abs(evaluation.finalPoints);
+        resources.dollars = Math.max(0, resources.dollars + evaluation.finalPoints);
+        resources.dailyDollarsPenalty += Math.abs(evaluation.finalPoints);
       }
 
       // Update reputation

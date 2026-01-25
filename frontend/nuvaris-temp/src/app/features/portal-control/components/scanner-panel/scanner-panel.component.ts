@@ -410,7 +410,7 @@ export class ScannerPanelComponent {
   @Input() toolStates: Map<InspectorTool, InspectorToolState> = new Map();
   @Input() scannerResults: ScannerResults | null = null;
   @Input() lastToolResult: ToolUseResult | null = null;
-  @Input() credits: number = 0;
+  @Input() dollars: number = 0;
   @Output() onUseTool = new EventEmitter<InspectorTool>();
 
   private readonly toolIcons: Record<InspectorTool, string> = {
@@ -434,7 +434,7 @@ export class ScannerPanelComponent {
 
   canUseTool(tool: InspectorToolState): boolean {
     if (tool.currentCooldown > 0) return false;
-    if (tool.useCost > this.credits) return false;
+    if (tool.useCost > this.dollars) return false;
     return true;
   }
 
