@@ -47,7 +47,10 @@ export class SpriteAnimator {
         for (let i = 0; i < config.frameCount; i++) {
             const frameNum = (start + i).toString().padStart(3, '0');
             const path = `${config.texturePath}/${config.prefix}${frameNum}${config.suffix}`;
-            frames.push(this.textureLoader.load(path));
+            const texture = this.textureLoader.load(path);
+            texture.magFilter = THREE.NearestFilter;
+            texture.minFilter = THREE.NearestFilter;
+            frames.push(texture);
         }
 
         this.animations[config.name] = frames;

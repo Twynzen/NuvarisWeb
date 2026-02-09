@@ -1,6 +1,8 @@
 # NUVARIS - Documentacion Completa del Proyecto
 
-## Estado: EN DESARROLLO - Three.js 2.5D Roguelite
+## Estado: EN DESARROLLO ACTIVO - Three.js 2.5D Roguelite
+
+> **Nota**: Para contexto rapido, ver `CLAUDE.md` en la raiz del proyecto. Este documento contiene la documentacion completa.
 
 ---
 
@@ -8,18 +10,22 @@
 
 **NUVARIS** es un juego roguelite estilo **Vampire Survivors** en desarrollo con **Three.js** como motor principal.
 
-### ESTADO ACTUAL (Dec 01, 2025)
-- **Motor Activo**: Three.js 2.5D (viewport ortografico isometrico)
-- **Rama de Desarrollo**: `feature/map-editor-v2-procedural-improvements`
-- **Base**: `claude/nuvaris-game-architecture-*`
-- **Nota**: La version anterior con Phaser 3 esta archivada. El desarrollo se enfoca ahora en Three.js.
+### ESTADO ACTUAL (Feb 2026)
+- **Motor Activo**: Three.js 2.5D (PerspectiveCamera 60 FOV)
+- **Rama de Desarrollo**: `development`
+- **Nota**: La version anterior con Phaser 3 fue eliminada. El desarrollo se enfoca en Three.js.
 
 ### Tecnologias Principales
-- **Frontend**: Angular 17+ (Standalone Components)
-- **Motor Principal**: Three.js (r150+) - 2.5D isometrico
+- **Frontend**: Angular 20 (Standalone Components)
+- **Motor Principal**: Three.js 0.181.2 - 2.5D
 - **Framework Web**: Angular CLI / Webpack
-- **Lenguaje**: TypeScript 5.x
+- **UI Framework**: Ionic 8 + Capacitor 7
+- **Lenguaje**: TypeScript 5.9
 - **Build Tool**: Angular CLI
+
+### MCP Servers Configurados
+- **Playwright**: Automatizacion de browser, screenshots del juego, lectura de consola
+- **Context7**: Documentacion actualizada de Three.js inyectada en contexto
 
 ### Features Implementados
 - Sistema de portal para spawn de enemigos
@@ -492,6 +498,8 @@ npm run start
 
 ---
 
-*Documentacion actualizada: 2025-12-01*
+*Documentacion actualizada: 2026-02-08*
 *Sistema de Rooms y Visibilidad Limitada: FUNCIONAL*
 *Generador Radial Procedural: FUNCIONAL*
+*Renderer: preserveDrawingBuffer + ACESFilmicToneMapping*
+*Sprites: NearestFilter para texturas crisp*

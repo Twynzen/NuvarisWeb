@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "command": "echo '[NUVARIS] Tarea completada - verifica output visual en localhost:4200'"
+      }
+    ]
+  }
+}

@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { SpriteAnimator } from '../engine/sprite-animator';
+import { AtlasSpriteAnimator } from '../engine/atlas-sprite-animator';
 import { ProjectileThree } from './projectile.three';
 import { EnemyThree } from './enemy.three';
+
+// Set to true to use atlas sprite sheets instead of individual PNGs (proyecto-a only for now)
+const USE_ATLAS = true;
 
 // 8-directional movement/attack directions
 export type Direction8 = 'up' | 'down' | 'left' | 'right' | 'up-left' | 'up-right' | 'down-left' | 'down-right';
@@ -9,7 +13,7 @@ export type Direction8 = 'up' | 'down' | 'left' | 'right' | 'up-left' | 'up-righ
 export class PlayerThree {
     public mesh: THREE.Group;
     private sprite: THREE.Sprite;
-    private animator: SpriteAnimator;
+    private animator: SpriteAnimator | AtlasSpriteAnimator;
     private speed = 10;
 
     // State
@@ -147,13 +151,19 @@ export class PlayerThree {
 
         scene.add(this.mesh);
 
-        // Animator
-        this.animator = new SpriteAnimator(material);
-        this.loadAnimations();
+        // Animator - use atlas for proyecto-a if enabled, legacy SpriteAnimator for others
+        if (USE_ATLAS && this.characterId === 'proyecto-a') {
+            this.animator = new AtlasSpriteAnimator(material);
+            this.loadAtlasAnimations();
+        } else {
+            this.animator = new SpriteAnimator(material);
+            this.loadAnimations();
+        }
         this.animator.play('idle');
     }
 
     private loadAnimations() {
+        const animator = this.animator as SpriteAnimator;
         const folder = this.characterId;
         const prefix = `${this.characterId}-`;
 
@@ -163,7 +173,7 @@ export class PlayerThree {
             idlePrefix = 'lars-idle-one-';
         }
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'idle',
             texturePath: `assets/${folder}/idle`,
             prefix: idlePrefix,
@@ -174,7 +184,7 @@ export class PlayerThree {
         });
 
         // === CARDINAL MOVEMENT (all characters) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-right',
             texturePath: `assets/${folder}/right`,
             prefix: `${prefix}walk-right-`,
@@ -184,7 +194,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-left',
             texturePath: `assets/${folder}/left`,
             prefix: `${prefix}walk-left-`,
@@ -194,7 +204,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'up',
             texturePath: `assets/${folder}/up`,
             prefix: `${prefix}walk-up-`,
@@ -204,7 +214,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'down',
             texturePath: `assets/${folder}/down`,
             prefix: `${prefix}walk-down-`,
@@ -215,7 +225,7 @@ export class PlayerThree {
         });
 
         // === DEAD (all characters) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'dead',
             texturePath: `assets/${folder}/dead`,
             prefix: `${prefix}dead-`,
@@ -244,11 +254,12 @@ export class PlayerThree {
      * - 8 attack animations (3 frames each)
      */
     private loadLarsAnimations() {
+        const animator = this.animator as SpriteAnimator;
         const folder = 'lars';
         const prefix = 'lars-';
 
         // === DIAGONAL MOVEMENT (30 frames each) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-up-left',
             texturePath: `assets/${folder}/up-left`,
             prefix: `${prefix}walk-up-left-`,
@@ -258,7 +269,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-up-right',
             texturePath: `assets/${folder}/up-right`,
             prefix: `${prefix}walk-up-right-`,
@@ -268,7 +279,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-down-left',
             texturePath: `assets/${folder}/down-left`,
             prefix: `${prefix}walk-down-left-`,
@@ -278,7 +289,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-down-right',
             texturePath: `assets/${folder}/down-right`,
             prefix: `${prefix}walk-down-right-`,
@@ -295,7 +306,7 @@ export class PlayerThree {
         ];
 
         for (const dir of attackDirections) {
-            this.animator.loadAnimation({
+            animator.loadAnimation({
                 name: `attack-${dir}`,
                 texturePath: `assets/${folder}/attack/${dir}`,
                 prefix: `${prefix}attack-${dir}-`,
@@ -308,7 +319,7 @@ export class PlayerThree {
 
         // === CHARGE ANIMATIONS ===
         // Charge facing down (front view) - only animation used during 0-99% charge
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-down',
             texturePath: `assets/${folder}/charge-down`,
             prefix: `${prefix}charge-down-`,
@@ -319,7 +330,7 @@ export class PlayerThree {
         });
 
         // Charge facing up (back view)
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-up',
             texturePath: `assets/${folder}/charge-up`,
             prefix: `${prefix}charge-up-`,
@@ -330,7 +341,7 @@ export class PlayerThree {
         });
 
         // Charge facing left (will use charge-down as fallback until assets provided)
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-left',
             texturePath: `assets/${folder}/charge-left`,
             prefix: `${prefix}charge-left-`,
@@ -341,7 +352,7 @@ export class PlayerThree {
         });
 
         // Charge facing right (will use charge-down as fallback until assets provided)
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-right',
             texturePath: `assets/${folder}/charge-right`,
             prefix: `${prefix}charge-right-`,
@@ -352,7 +363,7 @@ export class PlayerThree {
         });
 
         // === CHARGE ROTATION (360° rotation at 100% charge) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-rotation',
             texturePath: `assets/${folder}/charge-rotation`,
             prefix: 'charge-rotation-',
@@ -371,11 +382,12 @@ export class PlayerThree {
      * - Shoot animations
      */
     private loadProyectoYAnimations() {
+        const animator = this.animator as SpriteAnimator;
         const folder = 'proyecto-y';
         const prefix = 'proyecto-y-';
 
         // === DIAGONAL MOVEMENT (30 frames each) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-up-left',
             texturePath: `assets/${folder}/up-left`,
             prefix: `${prefix}walk-up-left-`,
@@ -385,7 +397,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-up-right',
             texturePath: `assets/${folder}/up-right`,
             prefix: `${prefix}walk-up-right-`,
@@ -395,7 +407,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-down-left',
             texturePath: `assets/${folder}/down-left`,
             prefix: `${prefix}walk-down-left-`,
@@ -405,7 +417,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-down-right',
             texturePath: `assets/${folder}/down-right`,
             prefix: `${prefix}walk-down-right-`,
@@ -419,7 +431,7 @@ export class PlayerThree {
         this.loadShootAnimations(folder, prefix);
 
         // === CHARGE ANIMATIONS (for chain attack) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-down',
             texturePath: `assets/${folder}/charge-down`,
             prefix: `${prefix}charge-down-`,
@@ -429,7 +441,7 @@ export class PlayerThree {
             loop: false
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-up',
             texturePath: `assets/${folder}/charge-up`,
             prefix: `${prefix}charge-up-`,
@@ -439,7 +451,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-left',
             texturePath: `assets/${folder}/charge-left`,
             prefix: `${prefix}charge-left-`,
@@ -449,7 +461,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-right',
             texturePath: `assets/${folder}/charge-right`,
             prefix: `${prefix}charge-right-`,
@@ -459,7 +471,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-rotation',
             texturePath: `assets/${folder}/charge-rotation`,
             prefix: `${prefix}charge-rotation-`,
@@ -470,7 +482,7 @@ export class PlayerThree {
         });
 
         // === DIAGONAL CHARGE ANIMATIONS ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-up-left',
             texturePath: `assets/${folder}/charge-up-left`,
             prefix: `${prefix}charge-up-left-`,
@@ -480,7 +492,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-up-right',
             texturePath: `assets/${folder}/charge-up-right`,
             prefix: `${prefix}charge-up-right-`,
@@ -490,7 +502,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-down-left',
             texturePath: `assets/${folder}/charge-down-left`,
             prefix: `${prefix}charge-down-left-`,
@@ -500,7 +512,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'charge-down-right',
             texturePath: `assets/${folder}/charge-down-right`,
             prefix: `${prefix}charge-down-right-`,
@@ -520,11 +532,12 @@ export class PlayerThree {
      * - Berserk idle animation
      */
     private loadArcadioAnimations(): void {
+        const animator = this.animator as SpriteAnimator;
         const folder = 'proyecto-a';
         const prefix = 'proyecto-a-';
 
         // === DIAGONAL MOVEMENT (30 frames each) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-up-left',
             texturePath: `assets/${folder}/up-left`,
             prefix: `${prefix}walk-up-left-`,
@@ -534,7 +547,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-up-right',
             texturePath: `assets/${folder}/up-right`,
             prefix: `${prefix}walk-up-right-`,
@@ -544,7 +557,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-down-left',
             texturePath: `assets/${folder}/down-left`,
             prefix: `${prefix}walk-down-left-`,
@@ -554,7 +567,7 @@ export class PlayerThree {
             loop: true
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'run-down-right',
             texturePath: `assets/${folder}/down-right`,
             prefix: `${prefix}walk-down-right-`,
@@ -568,7 +581,7 @@ export class PlayerThree {
         // Each attack has 3 phases: wind-up (1-10), impact (11-20), recover (21-30)
         const attackDirections = ['down', 'left', 'right'];
         for (const dir of attackDirections) {
-            this.animator.loadAnimation({
+            animator.loadAnimation({
                 name: `attack-${dir}`,
                 texturePath: `assets/${folder}/attack/${dir}`,
                 prefix: `${prefix}attack-${dir}-`,
@@ -580,7 +593,7 @@ export class PlayerThree {
         }
 
         // === BERSERK IDLE (rage mode) ===
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'berserk-idle',
             texturePath: `assets/${folder}/berserk/idle`,
             prefix: `${prefix}berserk-idle-`,
@@ -594,10 +607,64 @@ export class PlayerThree {
     }
 
     /**
+     * Load proyecto-a animations using atlas sprite sheets instead of individual PNGs.
+     * Requires atlas files generated by: npm run generate-atlas -- --character proyecto-a
+     */
+    private loadAtlasAnimations(): void {
+        const atlas = this.animator as AtlasSpriteAnimator;
+        const base = 'assets/atlas/proyecto-a/proyecto-a';
+
+        // Helper to load an atlas animation
+        const load = (name: string, file: string, loop: boolean) => {
+            atlas.loadAnimation({
+                name,
+                atlasPath: `${base}-${file}.png`,
+                metadataPath: `${base}-${file}.json`,
+                frameRate: 30,
+                loop,
+            });
+        };
+
+        // Idle
+        load('idle', 'idle', true);
+
+        // Cardinal movement
+        load('run-right', 'right', true);
+        load('run-left', 'left', true);
+        load('up', 'up', true);
+        load('down', 'down', true);
+
+        // Diagonal movement
+        load('run-up-left', 'up-left', true);
+        load('run-up-right', 'up-right', true);
+        load('run-down-left', 'down-left', true);
+        load('run-down-right', 'down-right', true);
+
+        // Dead
+        load('dead', 'dead', false);
+
+        // Attack (3 directions)
+        load('attack-down', 'attack-down', false);
+        load('attack-left', 'attack-left', false);
+        load('attack-right', 'attack-right', false);
+
+        // Shoot (4 directions)
+        load('shoot-down', 'shoot-down', false);
+        load('shoot-left', 'shoot-left', false);
+        load('shoot-right', 'shoot-right', false);
+        load('shoot-up', 'shoot-up', false);
+
+        // Note: berserk-idle atlas not generated yet (uses legacy loader if needed)
+
+        console.log('[PROYECTO-A] Loaded atlas sprite sheets (17 animations)');
+    }
+
+    /**
      * Load shoot animations for non-Lars characters
      */
     private loadShootAnimations(folder: string, prefix: string) {
-        this.animator.loadAnimation({
+        const animator = this.animator as SpriteAnimator;
+        animator.loadAnimation({
             name: 'shoot-right',
             texturePath: `assets/${folder}/shoot/right`,
             prefix: `${prefix}shoot-right-`,
@@ -607,7 +674,7 @@ export class PlayerThree {
             loop: false
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'shoot-left',
             texturePath: `assets/${folder}/shoot/left`,
             prefix: `${prefix}shoot-left-`,
@@ -617,7 +684,7 @@ export class PlayerThree {
             loop: false
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'shoot-up',
             texturePath: `assets/${folder}/shoot/up`,
             prefix: `${prefix}shoot-up-`,
@@ -627,7 +694,7 @@ export class PlayerThree {
             loop: false
         });
 
-        this.animator.loadAnimation({
+        animator.loadAnimation({
             name: 'shoot-down',
             texturePath: `assets/${folder}/shoot/down`,
             prefix: `${prefix}shoot-down-`,
