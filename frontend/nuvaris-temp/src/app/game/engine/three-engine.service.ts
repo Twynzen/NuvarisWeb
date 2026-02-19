@@ -24,6 +24,8 @@ import { GameState, createInitialGameState } from '../models/game-state.interfac
 import { SpatialGrid } from '../systems/spatial-grid';
 import { DisposableManager } from '../systems/disposable.manager';
 import { CombatSystem, EntityManager, gameEventBus, GameEventType } from '../core';
+import { GameFeelOrchestrator } from './game-feel';
+import { FakeRagdollManager } from './fake-ragdoll';
 
 // Default map to load on game start
 const DEFAULT_MAP_NAME = 'labyrinth';
@@ -129,6 +131,11 @@ export class ThreeEngineService implements OnDestroy {
 
     // Debug Visualizer
     private debugVisualizer!: DebugVisualizer;
+
+    // Game Feel System (screen shake + hit stop)
+    private gameFeel!: GameFeelOrchestrator;
+   // Fake Ragdoll System (death physics)
+    private ragdollManager!: FakeRagdollManager;
 
     public get currentScene(): THREE.Scene {
         return this.scene;
@@ -2026,6 +2033,10 @@ export class ThreeEngineService implements OnDestroy {
 
         // Initialize Debug Visualizer
         this.debugVisualizer = new DebugVisualizer(this.scene);
+               // Initialize Game Feel System (screen shake + hit stop)
+        this.gameFeel = new GameFeelOrchestrator();
+       // Initialize Fake Ragdoll System
+        this.ragdollManager = new FakeRagdollManager();
 
         // Initialize Room Visibility System
         this.roomVisibilityManager.initialize(this.scene, this.camera).then(() => {
@@ -2413,10 +2424,21 @@ export class ThreeEngineService implements OnDestroy {
 
         if (this.gameState.isLevelingUp || this.gameState.isPaused || this.gameState.isGameOver) return;
 
-        let delta = this.clock.getDelta();
+        const rawDelta = this.clock.getDelta();
+
+        // Update Game Feel system (hit stop state)
+        if (this.gameFeel) { this.gameFeel.update(); }
+
+        // Calculate scaled delta
+        let delta = rawDelta * this.timeScale;
+        if (this.gameFeel) { delta *= this.gameFeel.getTimeScale(); }
 
         // Update SimpleTween animations (for room lighting transitions)
         SimpleTween.update(delta);
+       // Update ragdoll physics (uses raw delta for smooth death animations)
+        if (this.ragdollManager) {
+            this.ragdollManager.update(rawDelta);
+        }
 
         // Apply time scale (debug speed control)
         delta *= this.timeScale;
@@ -2684,11 +2706,22 @@ export class ThreeEngineService implements OnDestroy {
                         }
 
                         const reward = enemy.takeDamage(finalDamage, this.scene);
+                        // GAME FEEL: Screen shake + hit stop on enemy hit
+                        if (this.gameFeel) {
+                            const isKill = reward !== null;
+                            this.gameFeel.onEnemyHit(finalDamage, enemy.health + finalDamage, isKill);
+                        }
                         if (reward) {
                             // Add XP and score directly (no orbs)
                             this.addXp(reward.xp);
                             this.gameState.score += reward.score;
-                            // Enemy is marked as dead, will be filtered next frame
+                            // RAGDOLL: Start death physics
+                            if (this.ragdollManager) {
+                                const damageDir = new THREE.Vector3()
+                                    .subVectors(enemy.mesh.position, proj.mesh.position)
+                                    .normalize();
+                                this.ragdollManager.startRagdoll(enemy.getSprite(), damageDir);
+                            }
                             // Play enemy death sound
                             this.audioService.playEnemyDeath(enemyType);
 
@@ -2746,6 +2779,10 @@ export class ThreeEngineService implements OnDestroy {
             this.camera.position.x += (targetX - this.camera.position.x) * 0.1;
             this.camera.position.z += (targetZ - this.camera.position.z) * 0.1;
             this.camera.lookAt(this.player.mesh.position.x, 0, this.player.mesh.position.z);
+                       // Apply screen shake (uses rawDelta to keep shaking during hit stop)
+            if (this.gameFeel) {
+                this.gameFeel.applyShake(this.camera, rawDelta);
+            }
 
             // Update debug visuals
             this.updateDebugVisuals();
@@ -2882,6 +2919,10 @@ export class ThreeEngineService implements OnDestroy {
 
                     // Apply damage to player
                     this.gameState.health -= damageAmount;
+                    // GAME FEEL: Screen shake + hit stop when player takes damage
+                    if (this.gameFeel) {
+                        this.gameFeel.onPlayerHit(damageAmount, this.gameState.maxHealth);
+                    }
 
                     // Cancel charge if hit while charging (Lars and Proyecto-Y)
                     if ((this.currentCharacterId === 'lars' || this.currentCharacterId === 'proyecto-y') && this.player.isChargingAttack()) {
@@ -2912,18 +2953,7 @@ export class ThreeEngineService implements OnDestroy {
 
                     // Visual feedback on player when taking damage
                     if (this.player && this.player.mesh) {
-                        // Flash effect on player (tint red briefly)
-                        const sprite = (this.player.mesh.children[0] as THREE.Sprite);
-                        if (sprite && sprite.material) {
-                            const material = sprite.material as THREE.SpriteMaterial;
-                            // Always restore to white (0xffffff) - the true original color
-                            // This prevents the bug where rapid damage would capture red as "original"
-                            material.color.setHex(0xff3333); // Red flash
-
-                            setTimeout(() => {
-                                material.color.setHex(0xffffff); // Always restore to white
-                            }, 100);
-                        }
+                        // NOTE: Red flash removed - screen shake provides feedback instead
 
                         // Show damage number
                         const damageNum = new DamageNumber(

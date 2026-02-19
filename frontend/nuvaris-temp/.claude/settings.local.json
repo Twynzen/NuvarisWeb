@@ -5,15 +5,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "mcp__ide__getDiagnostics",
-      "Bash(identify:*)",
-      "Bash(dir:*)",
-      "Bash(ls:*)",
-      "Bash(python:*)",
-      "Bash(git fetch:*)",
+      "Bash(mkdir:*)",
       "Bash(cat:*)",
-      "Bash(powershell:*)",
-      "Bash(git mv:*)"
+      "Bash(perl -i -pe:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
