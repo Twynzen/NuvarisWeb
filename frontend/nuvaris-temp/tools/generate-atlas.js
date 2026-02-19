@@ -59,6 +59,22 @@ const CHARACTER_CONFIGS = {
             { folder: 'down-left', prefix: 'lars-down-left-' },
             { folder: 'down-right', prefix: 'lars-down-right-' },
             { folder: 'dead', prefix: 'lars-dead-' },
+            // Attack (8 directions, 3 frames each)
+            { folder: 'attack/up', prefix: 'lars-attack-up-' },
+            { folder: 'attack/down', prefix: 'lars-attack-down-' },
+            { folder: 'attack/left', prefix: 'lars-attack-left-' },
+            { folder: 'attack/right', prefix: 'lars-attack-right-' },
+            { folder: 'attack/up-left', prefix: 'lars-attack-up-left-' },
+            { folder: 'attack/up-right', prefix: 'lars-attack-up-right-' },
+            { folder: 'attack/down-left', prefix: 'lars-attack-down-left-' },
+            { folder: 'attack/down-right', prefix: 'lars-attack-down-right-' },
+            // Charge (4 cardinal directions)
+            { folder: 'charge-down', prefix: 'lars-charge-down-' },
+            { folder: 'charge-up', prefix: 'lars-charge-up-' },
+            { folder: 'charge-left', prefix: 'lars-charge-left-' },
+            { folder: 'charge-right', prefix: 'lars-charge-right-' },
+            // Charge rotation (360°)
+            { folder: 'charge-rotation', prefix: 'lars-charge-rotation-' },
         ]
     },
     'proyecto-y': {
@@ -74,6 +90,23 @@ const CHARACTER_CONFIGS = {
             { folder: 'down-left', prefix: 'proyecto-y-down-left-' },
             { folder: 'down-right', prefix: 'proyecto-y-down-right-' },
             { folder: 'dead', prefix: 'proyecto-y-dead-' },
+            // Shoot (4 directions)
+            { folder: 'shoot/right', prefix: 'proyecto-y-shoot-right-' },
+            { folder: 'shoot/left', prefix: 'proyecto-y-shoot-left-' },
+            { folder: 'shoot/up', prefix: 'proyecto-y-shoot-up-' },
+            { folder: 'shoot/down', prefix: 'proyecto-y-shoot-down-' },
+            // Charge (4 cardinal directions)
+            { folder: 'charge-down', prefix: 'proyecto-y-charge-down-' },
+            { folder: 'charge-up', prefix: 'proyecto-y-charge-up-' },
+            { folder: 'charge-left', prefix: 'proyecto-y-charge-left-' },
+            { folder: 'charge-right', prefix: 'proyecto-y-charge-right-' },
+            // Charge (4 diagonal directions)
+            { folder: 'charge-up-left', prefix: 'proyecto-y-charge-up-left-' },
+            { folder: 'charge-up-right', prefix: 'proyecto-y-charge-up-right-' },
+            { folder: 'charge-down-left', prefix: 'proyecto-y-charge-down-left-' },
+            { folder: 'charge-down-right', prefix: 'proyecto-y-charge-down-right-' },
+            // Charge rotation (360°)
+            { folder: 'charge-rotation', prefix: 'proyecto-y-charge-rotation-' },
         ]
     }
 };

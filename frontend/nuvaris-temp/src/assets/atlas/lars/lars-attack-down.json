@@ -1,0 +1,30 @@
+{
+  "image": "lars/lars-attack-down.png",
+  "frameWidth": 464,
+  "frameHeight": 688,
+  "columns": 2,
+  "rows": 2,
+  "frameCount": 3,
+  "atlasWidth": 928,
+  "atlasHeight": 1376,
+  "frames": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 464,
+      "h": 688
+    },
+    {
+      "x": 464,
+      "y": 0,
+      "w": 464,
+      "h": 688
+    },
+    {
+      "x": 0,
+      "y": 688,
+      "w": 464,
+      "h": 688
+    }
+  ]
+}
