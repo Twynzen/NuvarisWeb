@@ -2,7 +2,13 @@
   "hooks": {
     "Stop": [
       {
-        "command": "echo '[NUVARIS] Tarea completada - verifica output visual en localhost:4200'"
+        "matcher": {},
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[NUVARIS] Tarea completada - verifica output visual en localhost:4200'"
+          }
+        ]
       }
     ]
   }
